@@ -28,15 +28,20 @@ STRICT CONSTRAINTS:
    - Use 'font-heading' for all headings (h1, h2, h3, etc.).
    - Use 'font-body' for all body text.
    - These classes are pre-configured in the tailwind.config.js with fonts from the Design System.
-5. Images must use 'https://picsum.photos/seed/' + Math.floor(Math.random() * 1000) + '/800/600' for placeholders.
-6. Use 'lucide-react' for icons. Import example: import { Home } from 'lucide-react';
-7. Use 'framer-motion' for animations.
-8. COMPATIBILITY: React 18.2.0, Vite 5.2.0.
-9. Make the design complete, beautiful and production-ready.
+5. BUTTONS:
+   - ALWAYS use the 'buttonBackground' from the Design System for button backgrounds (e.g., bg-[#...]).
+   - ALWAYS use the 'buttonText' from the Design System for button text (e.g., text-[#...]).
+   - This applies to all CTA buttons in Header, Hero, and Features.
+6. Images must use 'https://picsum.photos/seed/' + Math.floor(Math.random() * 1000) + '/800/600' for placeholders.
+7. Use 'lucide-react' for icons. Import example: import { Home } from 'lucide-react';
+8. Use 'framer-motion' for animations.
+9. COMPATIBILITY: React 18.2.0, Vite 5.2.0.
+10. Make the design complete, beautiful and production-ready.
 
 DESIGN INTERPRETATION:
 - STRICTLY IMPLEMENT the 'heroStyle' defined in the Design System. This is critical for visual variety.
-- Vary the layout of other sections (Features, Testimonials, Footer) to match the 'vibe' and 'heroStyle'. Avoid repetitive centered text blocks if the design calls for asymmetry or grid layouts.
+- STRICTLY IMPLEMENT the 'headerStyle' and 'footerStyle' defined in the Design System.
+- Vary the layout of other sections (Features, Testimonials) to match the 'vibe' and chosen styles. Avoid repetitive centered text blocks if the design calls for asymmetry or grid layouts.
 
 RETURN ONLY THE JAVASCRIPT CODE. START WITH IMPORTS.
 `;
