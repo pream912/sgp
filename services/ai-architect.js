@@ -16,14 +16,19 @@ You are an AI Architect.
 Generate a Design System in JSON format based on the User Business Info.
 Include:
 - colorPalette (primary, secondary, accent, background, text, buttonBackground, buttonText - as HEX codes).
-  - IMPORTANT: Ensure 'buttonBackground' and 'buttonText' have HIGH CONTRAST (e.g., dark on light or light on dark) to be fully readable.
+  - STRICT ACCESSIBILITY RULE: Ensure WCAG AA compliance for contrast.
+  - 'background' vs 'text' MUST have a contrast ratio of at least 4.5:1.
+  - 'buttonBackground' vs 'buttonText' MUST have a contrast ratio of at least 4.5:1.
+  - If background is dark, text MUST be light (e.g., #F0F0F0).
+  - If background is light, text MUST be dark (e.g., #1A1A1A).
 - typography (fontFamily, scale)
 - googleFonts (Object with 'heading' and 'body' fields, containing valid Google Font names e.g., "Inter", "Playfair Display", "Roboto Mono")
 - vibe (adjectives describing the look and feel)
 - layoutStructure (brief description)
 - heroStyle (Choose one: "Split Screen (Text Left/Image Right)", "Centered Text with Large Background Image", "Minimalist Typography-Focused", "Grid Gallery Hero", "Asymmetrical Creative Layout", "Card-Based Hero")
-- headerStyle (Choose one: "Simple Logo Left, Links Right", "Centered Logo, Split Navigation", "Full Width with Hamburger Menu", "Minimalist Sticky Header", "Double Navbar (Top Info Bar + Main Nav)")
-- footerStyle (Choose one: "Simple Copyright Only", "Multi-Column Links", "Centered Logo & Socials", "Newsletter Focus", "Dark Minimalist")
+- headerStyle (Choose one: "Simple Logo Left, Links Right", "Centered Logo, Split Navigation", "Full Width with Hamburger Menu", "Minimalist Sticky Header", "Double Navbar (Top Info Bar + Main Nav)", "Sidebar Navigation (Left Aligned)", "Floating Pill Navigation (Centered)", "Mega Menu with Icons", "Transparent Overlay Header", "Brutalist Bordered Header")
+- footerStyle (Choose one: "Simple Copyright Only", "Multi-Column Links", "Centered Logo & Socials", "Newsletter Focus", "Dark Minimalist", "Big Typography Footer", "Interactive Map & Contact Footer", "Asymmetrical Grid Footer", "Sticky Bottom Bar", "Gradient Background Footer")
+- imageKeywords (Array of 5 strings: relevant search terms for images based on the business, e.g., ["coffee", "cafe", "latte", "beans", "barista"])
 
 Output JSON only.
 `;

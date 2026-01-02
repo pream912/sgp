@@ -21,26 +21,31 @@ STRICT CONSTRAINTS:
 1. OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS (e.g., \`\`\`jsx ... \`\`\`).
 2. NO EXTERNAL CSS IMPORTS (except standard library or './index.css' which is already handled).
 3. USE TAILWIND CSS FOR ALL STYLING.
-   - CRITICAL: You MUST use Tailwind's arbitrary value syntax for ALL colors from the Design System.
-   - Example: If primary color is "#FF5733", use "bg-[#FF5733]" or "text-[#FF5733]".
-   - DO NOT use generic classes like "bg-primary" or "text-accent" as they are not defined.
+   - USE THE DEFINED THEME COLORS: 'primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'.
+   - Example: Use "bg-primary" instead of "bg-[#FF5733]". Use "text-accent" instead of "text-[#...]"
+   - DO NOT use arbitrary values for main colors anymore. The config is already set up with the Design System colors.
 4. TYPOGRAPHY:
    - Use 'font-heading' for all headings (h1, h2, h3, etc.).
    - Use 'font-body' for all body text.
-   - These classes are pre-configured in the tailwind.config.js with fonts from the Design System.
 5. BUTTONS:
-   - ALWAYS use the 'buttonBackground' from the Design System for button backgrounds (e.g., bg-[#...]).
-   - ALWAYS use the 'buttonText' from the Design System for button text (e.g., text-[#...]).
-   - This applies to all CTA buttons in Header, Hero, and Features.
-6. Images must use 'https://picsum.photos/seed/' + Math.floor(Math.random() * 1000) + '/800/600' for placeholders.
+   - ALWAYS use 'bg-buttonBackground' and 'text-buttonText' for buttons.
+6. IMAGES:
+   - Use the 'imageUrls' array provided in the Design System.
+   - Cycle through these URLs for your images (e.g., imageUrls[0], imageUrls[1], etc.).
+   - If 'imageUrls' is empty or you run out of unique URLs, use this fallback: 'https://pollinations.ai/p/{keyword}?width=800&height=600&nologo=true' (replacing {keyword} with a relevant term).
 7. Use 'lucide-react' for icons. Import example: import { Home } from 'lucide-react';
 8. Use 'framer-motion' for animations.
 9. COMPATIBILITY: React 18.2.0, Vite 5.2.0.
 10. Make the design complete, beautiful and production-ready.
+11. TEXT ON IMAGES:
+    - If placing text over a background image, YOU MUST use a dark overlay (e.g., 'bg-black/50') or a strong text shadow to ensure readability.
 
 DESIGN INTERPRETATION:
 - STRICTLY IMPLEMENT the 'heroStyle' defined in the Design System. This is critical for visual variety.
 - STRICTLY IMPLEMENT the 'headerStyle' and 'footerStyle' defined in the Design System.
+  - For "Sidebar Navigation", ensure the main content is wrapped in a container with a left margin (e.g., 'ml-64') so it doesn't overlap.
+  - For "Transparent Overlay Header", use 'absolute top-0 w-full z-50' to overlay the hero.
+  - For "Floating Pill", ensure it is fixed or sticky with a high z-index.
 - Vary the layout of other sections (Features, Testimonials) to match the 'vibe' and chosen styles. Avoid repetitive centered text blocks if the design calls for asymmetry or grid layouts.
 
 RETURN ONLY THE JAVASCRIPT CODE. START WITH IMPORTS.

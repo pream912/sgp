@@ -59,7 +59,7 @@
 ### Phase 1: Design (JSON)
 *   **Input**: User Business Info.
 *   **Process**: AI generates a `DesignSystem` JSON (Colors, Fonts, Layout Vibe).
-*   **Rule**: Ensure colors are Tailwind-friendly hex codes.
+*   **Rule**: Ensure colors are Tailwind-friendly hex codes and **STRICTLY adhere to WCAG AA contrast standards**.
 
 ### Phase 2: Code Generation (JSX)
 *   **Input**: `DesignSystem` + `User Context`.
@@ -67,18 +67,21 @@
 *   **Strict constraints for the AI Model**:
     1.  No Markdown blocks in output.
     2.  No external CSS imports (except standard library).
-    3.  Images must use `unsplash.com` source URLs provided by the backend.
+    3.  Images must use the `imageUrls` array provided by the backend (fetched from Unsplash). Fallback to `pollinations.ai` if empty.
+    4.  Use defined Tailwind theme colors (e.g., `bg-primary`, `text-secondary`) as configured in `tailwind.config.js`.
+    5.  **Text Visibility**: When placing text over background images, use a dark overlay (e.g., `bg-black/50`) or text shadow.
 
 ### Phase 3: The Self-Healing Build Loop
 1.  Copy `skeleton-project` to `temp/{id}`.
 2.  Inject generated `App.jsx` and `main.jsx`.
-3.  Run `npm run build` (Vite).
-4.  **IF FAIL**:
+3.  Inject dynamic `tailwind.config.js` with fonts and color palette.
+4.  Run `npm run build` (Vite).
+5.  **IF FAIL**:
     *   Capture `stderr`.
     *   Send Code + Error Log back to Gemini (`services/ai-coder.js`).
     *   Overwrite `App.jsx` with the "Fixed" code.
     *   Retry (Max 3 attempts).
-5.  **IF SUCCESS**: Return path to `dist/`.
+6.  **IF SUCCESS**: Return path to `dist/`.
 
 ---
 

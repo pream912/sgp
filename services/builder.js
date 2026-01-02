@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
+const { fetchImages } = require('./images');
 
 const MAX_RETRIES = 3;
 
@@ -18,6 +19,11 @@ async function buildSite(id, userContext) {
         // 1. Design Phase
         console.log(`[${id}] Generating Design...`);
         const designSystem = await generateDesign(userContext);
+
+        // 1.5 Fetch Images (Unsplash)
+        console.log(`[${id}] Fetching Images...`);
+        const keywords = designSystem.imageKeywords || ['business', 'minimal'];
+        designSystem.imageUrls = await fetchImages(keywords, 12); // Fetch 12 images
         
         // 2. Code Gen Phase
         console.log(`[${id}] Generating Code...`);
@@ -28,7 +34,7 @@ async function buildSite(id, userContext) {
         await fs.copy(skeletonDir, tempDir);
         
         // 3.5. Dynamic Skeleton Configuration (Fonts & Config)
-        await setupFonts(tempDir, designSystem);
+        await setupConfig(tempDir, designSystem);
 
         // 4. Build Loop
         let attempts = 0;
@@ -64,23 +70,24 @@ async function buildSite(id, userContext) {
     }
 }
 
-async function setupFonts(dir, designSystem) {
-    const { googleFonts } = designSystem;
-    if (!googleFonts) return;
+async function setupConfig(dir, designSystem) {
+    const { googleFonts, colorPalette } = designSystem;
 
-    // 1. Construct Google Fonts URL
-    const heading = googleFonts.heading.replace(/\s+/g, '+');
-    const body = googleFonts.body.replace(/\s+/g, '+');
-    const fontUrl = `https://fonts.googleapis.com/css2?family=${heading}:wght@400;700&family=${body}:wght@300;400;600&display=swap`;
-    
-    // 2. Inject into index.html
-    const indexHtmlPath = path.join(dir, 'index.html');
-    let html = await fs.readFile(indexHtmlPath, 'utf-8');
-    const linkTag = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
-    html = html.replace('</head>', `${linkTag}\n</head>`);
-    await fs.writeFile(indexHtmlPath, html);
+    // 1. Construct Google Fonts URL (if exists)
+    if (googleFonts) {
+        const heading = googleFonts.heading.replace(/\s+/g, '+');
+        const body = googleFonts.body.replace(/\s+/g, '+');
+        const fontUrl = `https://fonts.googleapis.com/css2?family=${heading}:wght@400;700&family=${body}:wght@300;400;600&display=swap`;
+        
+        // Inject into index.html
+        const indexHtmlPath = path.join(dir, 'index.html');
+        let html = await fs.readFile(indexHtmlPath, 'utf-8');
+        const linkTag = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
+        html = html.replace('</head>', `${linkTag}\n</head>`);
+        await fs.writeFile(indexHtmlPath, html);
+    }
 
-    // 3. Update tailwind.config.js
+    // 2. Update tailwind.config.js
     const configPath = path.join(dir, 'tailwind.config.js');
     const newConfig = `
 /** @type {import('tailwindcss').Config} */
@@ -92,9 +99,18 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['"${googleFonts.heading}"', 'sans-serif'],
-        body: ['"${googleFonts.body}"', 'sans-serif'],
+        heading: ['"${googleFonts ? googleFonts.heading : 'sans-serif'}"', 'sans-serif'],
+        body: ['"${googleFonts ? googleFonts.body : 'sans-serif'}"', 'sans-serif'],
       },
+      colors: {
+        primary: "${colorPalette.primary}",
+        secondary: "${colorPalette.secondary}",
+        accent: "${colorPalette.accent}",
+        background: "${colorPalette.background}",
+        text: "${colorPalette.text}",
+        buttonBackground: "${colorPalette.buttonBackground}",
+        buttonText: "${colorPalette.buttonText}",
+      }
     },
   },
   plugins: [],
