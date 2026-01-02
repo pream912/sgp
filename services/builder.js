@@ -5,7 +5,7 @@ const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 10;
 
 async function buildSite(id, userContext) {
     const tempDir = path.join(__dirname, '../temp', id);

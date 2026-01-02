@@ -39,6 +39,12 @@ STRICT CONSTRAINTS:
 10. Make the design complete, beautiful and production-ready.
 11. TEXT ON IMAGES:
     - If placing text over a background image, YOU MUST use a dark overlay (e.g., 'bg-black/50') or a strong text shadow to ensure readability.
+12. DATA INTEGRATION:
+    - The 'USER CONTEXT' may contain specific sections like "Reviews", "Contact Details", "Opening Hours", and "Key Services".
+    - IF these sections are present, you MUST implement them in the design.
+    - Create a 'Testimonials' section using the real reviews/quotes provided.
+    - Create a 'Contact' section displaying the real address, phone, and email.
+    - Display 'Opening Hours' in the footer or contact section if available.
 
 DESIGN INTERPRETATION:
 - STRICTLY IMPLEMENT the 'heroStyle' defined in the Design System. This is critical for visual variety.

@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { buildSite } = require('./services/builder');
 const { deploySite } = require('./services/deploy');
+const { extractFromUrl } = require('./services/business-extractor');
 
 const app = express();
 app.use(express.json());
@@ -13,14 +14,23 @@ app.use('/sites', express.static(path.join(__dirname, 'public/sites')));
 const PORT = process.env.PORT || 3000;
 
 app.post('/build', async (req, res) => {
-    const { userContext } = req.body;
+    let { userContext, businessUrl, businessQuery } = req.body;
     const id = Date.now().toString();
     
-    if (!userContext) {
-        return res.status(400).json({ error: 'userContext is required' });
-    }
-    
+    // Allow businessUrl or businessQuery to drive the extraction
+    const query = businessQuery || businessUrl;
+
     try {
+        if (query) {
+            console.log(`Extracting info for query: "${query}"...`);
+            userContext = await extractFromUrl(query);
+            console.log('Extracted Context:', userContext);
+        }
+
+        if (!userContext) {
+            return res.status(400).json({ error: 'userContext or businessQuery is required' });
+        }
+
         console.log(`Starting build for ${id}...`);
         const distPath = await buildSite(id, userContext);
         
