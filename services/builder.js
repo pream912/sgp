@@ -91,23 +91,50 @@ async function buildSite(id, userContext, logoFile) {
 }
 
 async function setupConfig(dir, designSystem) {
-    const { googleFonts, colorPalette } = designSystem;
+    const { googleFonts, colorPalette, businessName, logoUrl } = designSystem;
 
     // 1. Construct Google Fonts URL (if exists)
+    let fontLink = '';
     if (googleFonts) {
         const heading = googleFonts.heading.replace(/\s+/g, '+');
         const body = googleFonts.body.replace(/\s+/g, '+');
         const fontUrl = `https://fonts.googleapis.com/css2?family=${heading}:wght@400;700&family=${body}:wght@300;400;600&display=swap`;
-        
-        // Inject into index.html
-        const indexHtmlPath = path.join(dir, 'index.html');
-        let html = await fs.readFile(indexHtmlPath, 'utf-8');
-        const linkTag = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
-        html = html.replace('</head>', `${linkTag}\n</head>`);
-        await fs.writeFile(indexHtmlPath, html);
+        fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
     }
 
-    // 2. Update tailwind.config.js
+    // 2. Prepare Title and Favicon
+    const safeTitle = businessName || 'Business Site';
+    let faviconLink = '';
+    if (logoUrl) {
+        // Use the logo as favicon
+        faviconLink = `<link rel="icon" type="image/png" href="${logoUrl}" />`;
+    }
+
+    // 3. Update index.html
+    const indexHtmlPath = path.join(dir, 'index.html');
+    let html = await fs.readFile(indexHtmlPath, 'utf-8');
+    
+    // Inject Fonts
+    if (fontLink) {
+        html = html.replace('</head>', `${fontLink}\n</head>`);
+    }
+    
+    // Update Title
+    html = html.replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>`);
+
+    // Inject Favicon (if applicable)
+    if (faviconLink) {
+        // If there's an existing icon link, replace it, otherwise append to head
+        if (html.includes('<link rel="icon"')) {
+            html = html.replace(/<link rel="icon".*?>/, faviconLink);
+        } else {
+            html = html.replace('</head>', `${faviconLink}\n</head>`);
+        }
+    }
+
+    await fs.writeFile(indexHtmlPath, html);
+
+    // 4. Update tailwind.config.js
     const configPath = path.join(dir, 'tailwind.config.js');
     const newConfig = `
 /** @type {import('tailwindcss').Config} */

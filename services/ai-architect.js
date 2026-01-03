@@ -15,6 +15,7 @@ const SYSTEM_PROMPT = `
 You are an AI Architect.
 Generate a Design System in JSON format based on the User Business Info.
 Include:
+- businessName (The name of the business extracted from the info)
 - colorPalette (primary, secondary, accent, background, text, buttonBackground, buttonText - as HEX codes).
   - STRICT ACCESSIBILITY RULE: Ensure WCAG AA compliance for contrast.
   - 'background' vs 'text' MUST have a contrast ratio of at least 4.5:1.
