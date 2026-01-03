@@ -2,19 +2,26 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs-extra');
 const path = require('path');
+const multer = require('multer');
 const { buildSite } = require('./services/builder');
 const { deploySite } = require('./services/deploy');
 const { extractFromUrl } = require('./services/business-extractor');
 
 const app = express();
 app.use(express.json());
+
+// Configure Multer for file uploads
+const upload = multer({ dest: path.join(__dirname, 'temp/uploads') });
+
 // Serve generated sites statically
 app.use('/sites', express.static(path.join(__dirname, 'public/sites')));
 
 const PORT = process.env.PORT || 3000;
 
-app.post('/build', async (req, res) => {
+app.post('/build', upload.single('logo'), async (req, res) => {
     let { userContext, businessUrl, businessQuery } = req.body;
+    const logoFile = req.file; // Get the uploaded logo file
+
     const id = Date.now().toString();
     
     // Allow businessUrl or businessQuery to drive the extraction
@@ -32,7 +39,7 @@ app.post('/build', async (req, res) => {
         }
 
         console.log(`Starting build for ${id}...`);
-        const distPath = await buildSite(id, userContext);
+        const distPath = await buildSite(id, userContext, logoFile);
         
         console.log(`Build success! Deploying...`);
         // deploySite currently returns a mock URL.

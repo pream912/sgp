@@ -45,6 +45,15 @@ STRICT CONSTRAINTS:
     - Create a 'Testimonials' section using the real reviews/quotes provided.
     - Create a 'Contact' section displaying the real address, phone, and email.
     - Display 'Opening Hours' in the footer or contact section if available.
+13. LOGO IMPLEMENTATION:
+    - CRITICAL: Check 'designSystem.logoUrl' in the provided JSON.
+    - IF 'designSystem.logoUrl' IS PRESENT (e.g., "./logo.png"): 
+      - YOU MUST USE THIS EXACT STRING as the 'src' for the logo image in both the Header and Footer.
+      - DO NOT generate a placeholder image URL.
+      - DO NOT render the Business Name as text alongside the logo image (unless part of a specific "Logo + Text" design pattern, but prefer Image Only for cleaner look).
+      - Example: <img src="./logo.png" alt="Company Logo" className="h-10 w-auto" />
+    - IF 'designSystem.logoUrl' IS MISSING: 
+      - Use the business name as styled text. Do not invent a logo image.
 
 DESIGN INTERPRETATION:
 - STRICTLY IMPLEMENT the 'heroStyle' defined in the Design System. This is critical for visual variety.

@@ -33,9 +33,21 @@ Include:
 Output JSON only.
 `;
 
-async function generateDesign(userInfo) {
+async function generateDesign(userInfo, logoBuffer, logoMimeType) {
+    const parts = [{ text: SYSTEM_PROMPT + "\n" + userInfo }];
+    
+    if (logoBuffer && logoMimeType) {
+        parts.push({
+            inline_data: {
+                mime_type: logoMimeType,
+                data: logoBuffer.toString('base64')
+            }
+        });
+        parts.push({ text: "\nIMPORTANT: The user has provided a logo (attached above). \n1. DERIVE a professional, web-ready color palette inspired by this logo. \n2. DO NOT just extract raw pixel colors if they are too neon/cartoonish. Adjust saturation/brightness to create a sophisticated look suitable for the business type. \n3. Ensure the 'primary' color matches the brand, but 'background' and 'text' remain readable and professional. \n4. The 'vibe' must harmonize with the logo style." });
+    }
+
      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SYSTEM_PROMPT + "\n" + userInfo }] }],
+        contents: [{ role: 'user', parts: parts }],
     });
     
     const response = await result.response;

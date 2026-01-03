@@ -7,7 +7,7 @@ const { fetchImages } = require('./images');
 
 const MAX_RETRIES = 10;
 
-async function buildSite(id, userContext) {
+async function buildSite(id, userContext, logoFile) {
     const tempDir = path.join(__dirname, '../temp', id);
     const skeletonDir = path.join(__dirname, '../templates/skeleton-project');
     
@@ -16,9 +16,17 @@ async function buildSite(id, userContext) {
     let success = false;
 
     try {
+        // Prepare logo data if uploaded
+        let logoBuffer = null;
+        let logoMimeType = null;
+        if (logoFile) {
+            logoBuffer = await fs.readFile(logoFile.path);
+            logoMimeType = logoFile.mimetype;
+        }
+
         // 1. Design Phase
         console.log(`[${id}] Generating Design...`);
-        const designSystem = await generateDesign(userContext);
+        const designSystem = await generateDesign(userContext, logoBuffer, logoMimeType);
 
         // 1.5 Fetch Images (Unsplash)
         console.log(`[${id}] Fetching Images...`);
@@ -27,11 +35,23 @@ async function buildSite(id, userContext) {
         
         // 2. Code Gen Phase
         console.log(`[${id}] Generating Code...`);
+        // If we have a logo, ensure the AI knows where to find it
+        if (logoFile) {
+            designSystem.logoUrl = './logo.png';
+        }
         let code = await generateCode(designSystem, userContext);
         
         // 3. Setup Temp Dir
         console.log(`[${id}] Copying skeleton...`);
         await fs.copy(skeletonDir, tempDir);
+        
+        // 3.1 Copy Logo if exists
+        if (logoFile) {
+            const logoDest = path.join(tempDir, 'public/logo.png');
+            await fs.copy(logoFile.path, logoDest);
+            // Cleanup the original upload
+            await fs.remove(logoFile.path).catch(console.error);
+        }
         
         // 3.5. Dynamic Skeleton Configuration (Fonts & Config)
         await setupConfig(tempDir, designSystem);
