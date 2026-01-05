@@ -55,4 +55,29 @@ async function generateDesign(userInfo, logoBuffer, logoMimeType) {
     return JSON.parse(response.candidates[0].content.parts[0].text);
 }
 
-module.exports = { generateDesign };
+async function generatePalette(userInfo) {
+    const prompt = `
+    Based on the following User Context, generate a new Color Palette.
+    USER CONTEXT: ${userInfo}
+    
+    Output JSON object with key 'colorPalette' containing:
+    - primary, secondary, accent (HEX)
+    - background (HEX)
+    - text (HEX, readable on background)
+    - buttonBackground (HEX)
+    - buttonText (HEX, readable on buttonBackground)
+    
+    Ensure WCAG AA contrast compliance.
+    Vary the style (e.g., Dark Mode, Pastel, High Contrast) to be distinct from a standard look, but appropriate for the business.
+    `;
+    
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    
+    const response = await result.response;
+    const json = JSON.parse(response.candidates[0].content.parts[0].text);
+    return json.colorPalette;
+}
+
+module.exports = { generateDesign, generatePalette };

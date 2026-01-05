@@ -1,0 +1,204 @@
+Error fetching projects: Error: 7 PERMISSION_DENIED: Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.
+    at callErrorFromStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/call.js:32:19)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:359:73)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:327:181)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeServerStreamRequest (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:342:32)
+    at ServiceClientImpl.<anonymous> (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/v1/firestore_client.js:242:33
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:38:28
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/normalCalls/timeout.js:44:16
+    at Object.request (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:234:40)
+    at makeRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:159:28)
+    at retryRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:119:5)
+    at StreamProxy.setStream (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:225:37)
+    at StreamingApiCaller.call (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:54:16)
+Caused by: Error
+    at QueryUtil._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:44:23)
+    at Query._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:784:32)
+    at Query._get (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:777:35)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:745:43
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:110:30
+    at NoopContextManager.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/context/NoopContextManager.js:25:19)
+    at ContextAPI.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/api/context.js:60:46)
+    at NoopTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:102:28) {
+  code: 7,
+  details: 'Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.',
+  metadata: Metadata {
+    internalRepr: Map(5) {
+      'google.rpc.errorinfo-bin' => [Array],
+      'google.rpc.help-bin' => [Array],
+      'google.rpc.localizedmessage-bin' => [Array],
+      'grpc-status-details-bin' => [Array],
+      'x-debug-tracking-id' => [Array]
+    },
+    opaqueData: Map(0) {},
+    options: {}
+  },
+  statusDetails: [
+    ErrorInfo {
+      metadata: [Object],
+      reason: 'SERVICE_DISABLED',
+      domain: 'googleapis.com'
+    },
+    LocalizedMessage {
+      locale: 'en-US',
+      message: 'Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.'
+    },
+    Help { links: [Array] }
+  ],
+  reason: 'SERVICE_DISABLED',
+  domain: 'googleapis.com',
+  errorInfoMetadata: {
+    containerInfo: 'sgp-1-a8b1a',
+    consumer: 'projects/sgp-1-a8b1a',
+    activationUrl: 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a',
+    serviceTitle: 'Cloud Firestore API',
+    service: 'firestore.googleapis.com'
+  }
+}
+Error fetching projects: Error: 7 PERMISSION_DENIED: Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.
+    at callErrorFromStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/call.js:32:19)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:359:73)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:327:181)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeServerStreamRequest (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:342:32)
+    at ServiceClientImpl.<anonymous> (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/v1/firestore_client.js:242:33
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:38:28
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/normalCalls/timeout.js:44:16
+    at Object.request (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:234:40)
+    at makeRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:159:28)
+    at retryRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:119:5)
+    at StreamProxy.setStream (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:225:37)
+    at StreamingApiCaller.call (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:54:16)
+Caused by: Error
+    at QueryUtil._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:44:23)
+    at Query._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:784:32)
+    at Query._get (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:777:35)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:745:43
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:110:30
+    at NoopContextManager.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/context/NoopContextManager.js:25:19)
+    at ContextAPI.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/api/context.js:60:46)
+    at NoopTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:102:28) {
+  code: 7,
+  details: 'Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.',
+  metadata: Metadata {
+    internalRepr: Map(5) {
+      'google.rpc.errorinfo-bin' => [Array],
+      'google.rpc.help-bin' => [Array],
+      'google.rpc.localizedmessage-bin' => [Array],
+      'grpc-status-details-bin' => [Array],
+      'x-debug-tracking-id' => [Array]
+    },
+    opaqueData: Map(0) {},
+    options: {}
+  },
+  statusDetails: [
+    ErrorInfo {
+      metadata: [Object],
+      reason: 'SERVICE_DISABLED',
+      domain: 'googleapis.com'
+    },
+    LocalizedMessage {
+      locale: 'en-US',
+      message: 'Cloud Firestore API has not been used in project sgp-1-a8b1a before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.'
+    },
+    Help { links: [Array] }
+  ],
+  reason: 'SERVICE_DISABLED',
+  domain: 'googleapis.com',
+  errorInfoMetadata: {
+    serviceTitle: 'Cloud Firestore API',
+    consumer: 'projects/sgp-1-a8b1a',
+    service: 'firestore.googleapis.com',
+    containerInfo: 'sgp-1-a8b1a',
+    activationUrl: 'https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=sgp-1-a8b1a'
+  }
+}
+^C
+pream@Preams-MacBook-Air sgp1 % node ./server.js
+[dotenv@17.2.3] injecting env (10) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+Firebase Admin Initialized successfully.
+Server running on port 3000
+Error fetching projects: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/sgp-1-a8b1a/firestore/indexes?create_composite=Ckxwcm9qZWN0cy9zZ3AtMS1hOGIxYS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvamVjdHMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at callErrorFromStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/call.js:32:19)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:359:73)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:327:181)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeServerStreamRequest (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:342:32)
+    at ServiceClientImpl.<anonymous> (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/v1/firestore_client.js:242:33
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:38:28
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/normalCalls/timeout.js:44:16
+    at Object.request (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:234:40)
+    at makeRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:159:28)
+    at retryRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:119:5)
+    at StreamProxy.setStream (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:225:37)
+    at StreamingApiCaller.call (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:54:16)
+Caused by: Error
+    at QueryUtil._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:44:23)
+    at Query._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:784:32)
+    at Query._get (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:777:35)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:745:43
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:110:30
+    at NoopContextManager.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/context/NoopContextManager.js:25:19)
+    at ContextAPI.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/api/context.js:60:46)
+    at NoopTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:102:28) {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/sgp-1-a8b1a/firestore/indexes?create_composite=Ckxwcm9qZWN0cy9zZ3AtMS1hOGIxYS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvamVjdHMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: Metadata {
+    internalRepr: Map(1) { 'x-debug-tracking-id' => [Array] },
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}
+Error fetching projects: Error: 9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/sgp-1-a8b1a/firestore/indexes?create_composite=Ckxwcm9qZWN0cy9zZ3AtMS1hOGIxYS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvamVjdHMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+    at callErrorFromStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/call.js:32:19)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:359:73)
+    at Object.onReceiveStatus (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client-interceptors.js:327:181)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+for call at
+    at ServiceClientImpl.makeServerStreamRequest (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/client.js:342:32)
+    at ServiceClientImpl.<anonymous> (/Users/pream/Documents/Projects/sgp1/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/v1/firestore_client.js:242:33
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:38:28
+    at /Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/normalCalls/timeout.js:44:16
+    at Object.request (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:234:40)
+    at makeRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:159:28)
+    at retryRequest (/Users/pream/Documents/Projects/sgp1/node_modules/retry-request/index.js:119:5)
+    at StreamProxy.setStream (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streaming.js:225:37)
+    at StreamingApiCaller.call (/Users/pream/Documents/Projects/sgp1/node_modules/google-gax/build/src/streamingCalls/streamingApiCaller.js:54:16)
+Caused by: Error
+    at QueryUtil._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:44:23)
+    at Query._getResponse (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:784:32)
+    at Query._get (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:777:35)
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/reference/query.js:745:43
+    at /Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:110:30
+    at NoopContextManager.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/context/NoopContextManager.js:25:19)
+    at ContextAPI.with (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/api/context.js:60:46)
+    at NoopTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/NoopTracer.js:65:31)
+    at ProxyTracer.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@opentelemetry/api/build/src/trace/ProxyTracer.js:36:24)
+    at EnabledTraceUtil.startActiveSpan (/Users/pream/Documents/Projects/sgp1/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js:102:28) {
+  code: 9,
+  details: 'The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/sgp-1-a8b1a/firestore/indexes?create_composite=Ckxwcm9qZWN0cy9zZ3AtMS1hOGIxYS9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcHJvamVjdHMvaW5kZXhlcy9fEAEaCgoGdXNlcklkEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg',
+  metadata: Metadata {
+    internalRepr: Map(1) { 'x-debug-tracking-id' => [Array] },
+    opaqueData: Map(0) {},
+    options: {}
+  }
+}

@@ -47,7 +47,9 @@ async function buildSite(id, userContext, logoFile) {
         
         // 3.1 Copy Logo if exists
         if (logoFile) {
-            const logoDest = path.join(tempDir, 'public/logo.png');
+            const publicDir = path.join(tempDir, 'public');
+            await fs.ensureDir(publicDir); // Ensure public directory exists
+            const logoDest = path.join(publicDir, 'logo.png');
             await fs.copy(logoFile.path, logoDest);
             // Cleanup the original upload
             await fs.remove(logoFile.path).catch(console.error);
@@ -166,6 +168,31 @@ export default {
     await fs.writeFile(configPath, newConfig);
 }
 
+async function rebuildSite(id) {
+    const sourceDir = path.join(__dirname, '../projects_source', id);
+    const publicSiteDir = path.join(__dirname, '../public/sites', id);
+
+    if (!await fs.pathExists(sourceDir)) {
+        throw new Error(`Project source not found: ${id}`);
+    }
+
+    console.log(`[${id}] Re-building site...`);
+    
+    try {
+        await runBuild(sourceDir);
+        
+        // Move dist to public
+        const distPath = path.join(sourceDir, 'dist');
+        await fs.emptyDir(publicSiteDir);
+        await fs.copy(distPath, publicSiteDir);
+        
+        return true;
+    } catch (error) {
+        console.error(`[${id}] Rebuild failed:`, error);
+        throw error;
+    }
+}
+
 function runBuild(dir) {
     return new Promise((resolve, reject) => {
         exec('npm run build', { cwd: dir }, (error, stdout, stderr) => {
@@ -180,4 +207,4 @@ function runBuild(dir) {
     });
 }
 
-module.exports = { buildSite };
+module.exports = { buildSite, rebuildSite };

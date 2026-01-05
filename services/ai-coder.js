@@ -32,7 +32,8 @@ STRICT CONSTRAINTS:
 6. IMAGES:
    - Use the 'imageUrls' array provided in the Design System.
    - Cycle through these URLs for your images (e.g., imageUrls[0], imageUrls[1], etc.).
-   - If 'imageUrls' is empty or you run out of unique URLs, use this fallback: 'https://pollinations.ai/p/{keyword}?width=800&height=600&nologo=true' (replacing {keyword} with a relevant term).
+   - STRICTLY use the provided URLs. DO NOT generate fake URLs or placeholders.
+   - If you run out of images, reuse them from the beginning of the list.
 7. Use 'lucide-react' for icons. Import example: import { Home } from 'lucide-react';
 8. Use 'framer-motion' for animations.
 9. COMPATIBILITY: React 18.2.0, Vite 5.2.0.
@@ -54,6 +55,11 @@ STRICT CONSTRAINTS:
       - Example: <img src="./logo.png" alt="Company Logo" className="h-10 w-auto" />
     - IF 'designSystem.logoUrl' IS MISSING: 
       - Use the business name as styled text. Do not invent a logo image.
+
+14. SECTION MARKERS:
+    - You MUST add a 'data-section="section-name"' attribute to the outer-most container of EVERY major section (e.g., Hero, Features, Testimonials, Footer).
+    - Use descriptive names (e.g., "hero", "about", "contact").
+    - This is CRITICAL for the site editor to work.
 
 DESIGN INTERPRETATION:
 - STRICTLY IMPLEMENT the 'heroStyle' defined in the Design System. This is critical for visual variety.
@@ -111,4 +117,68 @@ async function fixCode(badCode, errorLog) {
     return text;
 }
 
-module.exports = { generateCode, fixCode };
+async function regenerateSection(code, sectionId, instruction) {
+    const prompt = `
+    EXISTING CODE:
+    ${code}
+    
+    TASK:
+    Find the React Component or JSX Section with the attribute 'data-section="${sectionId}"'.
+    Rewrite ONLY the content of that section based on the following instruction:
+    "${instruction}"
+    
+    CRITICAL:
+    1. Keep all other sections EXACTLY the same.
+    2. Maintain the 'data-section="${sectionId}"' attribute on the container so it stays editable.
+    3. Use the same Tailwind theme and design system.
+    4. RETURN THE FULL UPDATED 'App.jsx' FILE.
+    
+    STRICT CONSTRAINTS:
+    - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
+    `;
+    
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    
+    const response = await result.response;
+    let text = response.candidates[0].content.parts[0].text;
+    
+    text = text.replace(/```jsx/g, '').replace(/```javascript/g, '').replace(/```/g, '');
+    return text;
+}
+
+async function updateSectionContent(code, sectionId, type, originalValue, newValue) {
+    const instruction = type === 'text' 
+        ? `Find the EXACT text "${originalValue}" within this section and replace it with "${newValue}". Do not change anything else.`
+        : `Find the image with src "${originalValue}" within this section and replace the src with "${newValue}". Do not change anything else.`;
+
+    const prompt = `
+    EXISTING CODE:
+    ${code}
+    
+    TASK:
+    Find the React Component or JSX Section with the attribute 'data-section="${sectionId}"'.
+    ${instruction}
+    
+    CRITICAL:
+    1. Only modify the specific target element.
+    2. Maintain the 'data-section="${sectionId}"' attribute.
+    3. RETURN THE FULL UPDATED 'App.jsx' FILE.
+    
+    STRICT CONSTRAINTS:
+    - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
+    `;
+    
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    
+    const response = await result.response;
+    let text = response.candidates[0].content.parts[0].text;
+    
+    text = text.replace(/```jsx/g, '').replace(/```javascript/g, '').replace(/```/g, '');
+    return text;
+}
+
+module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent };
