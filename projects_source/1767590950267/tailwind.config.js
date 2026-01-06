@@ -12,12 +12,12 @@ export default {
         body: ['"Open Sans"', 'sans-serif'],
       },
       colors: {
-        primary: "#ce2d38",
-        secondary: "#44A077",
-        accent: "#ced0c4",
-        background: "#F8FDFE",
-        text: "#223344",
-        buttonBackground: "#007788",
+        primary: "#A52A2A",
+        secondary: "#1A1A70",
+        accent: "#B8860B",
+        background: "#1A1A1A",
+        text: "#F0F0F0",
+        buttonBackground: "#A52A2A",
         buttonText: "#FFFFFF",
       }
     },
