@@ -5,14 +5,13 @@ const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
 
-const MAX_RETRIES = 10;
+const MAX_RETRIES = 3; // Lower retries for HTML as it's less prone to build errors
 
 async function buildSite(id, userContext, logoFile) {
     const tempDir = path.join(__dirname, '../temp', id);
-    const skeletonDir = path.join(__dirname, '../templates/skeleton-project');
+    const distDir = path.join(tempDir, 'dist');
+    const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
     
-    // Flag to track if we should clean up on error. 
-    // If we succeed, we return the path and let the caller handle cleanup after deployment.
     let success = false;
 
     try {
@@ -31,33 +30,65 @@ async function buildSite(id, userContext, logoFile) {
         // 1.5 Fetch Images (Unsplash)
         console.log(`[${id}] Fetching Images...`);
         const keywords = designSystem.imageKeywords || ['business', 'minimal'];
-        designSystem.imageUrls = await fetchImages(keywords, 12); // Fetch 12 images
+        designSystem.imageUrls = await fetchImages(keywords, 12);
         
-        // 2. Code Gen Phase
-        console.log(`[${id}] Generating Code...`);
-        // If we have a logo, ensure the AI knows where to find it
-        if (logoFile) {
-            designSystem.logoUrl = './logo.png';
-        }
-        let code = await generateCode(designSystem, userContext);
+                // 2. Code Gen Phase
+                console.log(`[${id}] Generating HTML...`);
+                if (logoFile) {
+                    designSystem.logoUrl = './logo.png';
+                }
         
-        // 3. Setup Temp Dir
-        console.log(`[${id}] Copying skeleton...`);
-        await fs.copy(skeletonDir, tempDir);
+                let code = '';
+                let genAttempts = 0;
+                const MAX_GEN_RETRIES = 3;
+        
+                while (genAttempts < MAX_GEN_RETRIES) {
+                    genAttempts++;
+                    try {
+                        code = await generateCode(designSystem, userContext);
+                        
+                        // Basic Validation & Cleanup
+                        if (code.includes('cdn.tailwindcss.com')) {
+                            console.warn(`[${id}] Removing accidental Tailwind CDN script...`);
+                            code = code.replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>/g, '');
+                            code = code.replace(/<script>\s*tailwind\.config\s*=\s*{[\s\S]*?}\s*<\/script>/g, '');
+                        }
+        
+                        if (!code.trim().endsWith('</html>')) {
+                            throw new Error("Incomplete HTML generated (Missing </html>)");
+                        }
+        
+                        // If we get here, code is valid
+                        break; 
+                    } catch (err) {
+                        console.warn(`[${id}] Generation Attempt ${genAttempts} failed: ${err.message}`);
+                        if (genAttempts >= MAX_GEN_RETRIES) {
+                            throw new Error(`Failed to generate valid HTML after ${MAX_GEN_RETRIES} attempts.`);
+                        }
+                    }
+                }
+                
+                // 3. Setup Temp Dir        console.log(`[${id}] Copying skeleton...`);
+        // Copy everything EXCEPT node_modules
+        await fs.copy(skeletonDir, tempDir, {
+            filter: (src) => !src.includes('node_modules')
+        });
+        
+        // Symlink node_modules to save time/space
+        await fs.ensureSymlink(
+            path.join(skeletonDir, 'node_modules'),
+            path.join(tempDir, 'node_modules')
+        );
+
+        await fs.ensureDir(distDir); // Ensure dist exists
         
         // 3.1 Copy Logo if exists
         if (logoFile) {
-            const publicDir = path.join(tempDir, 'public');
-            await fs.ensureDir(publicDir); // Ensure public directory exists
-            const logoDest = path.join(publicDir, 'logo.png');
+            const logoDest = path.join(distDir, 'logo.png');
             await fs.copy(logoFile.path, logoDest);
-            // Cleanup the original upload
             await fs.remove(logoFile.path).catch(console.error);
         }
         
-        // 3.5. Dynamic Skeleton Configuration (Fonts & Config)
-        await setupConfig(tempDir, designSystem);
-
         // 4. Build Loop
         let attempts = 0;
         
@@ -65,10 +96,13 @@ async function buildSite(id, userContext, logoFile) {
             attempts++;
             console.log(`[${id}] Build Attempt ${attempts}...`);
             
-            // Write App.jsx
-            await fs.writeFile(path.join(tempDir, 'src/App.jsx'), code);
+            // Write index.html to dist/
+            await fs.writeFile(path.join(distDir, 'index.html'), code);
             
-            // Try build
+            // 3.5. Dynamic Config & Injection (Must happen after index.html is written)
+            await setupConfig(tempDir, distDir, designSystem);
+            
+            // Try build (Tailwind CLI)
             try {
                 await runBuild(tempDir);
                 success = true;
@@ -83,50 +117,59 @@ async function buildSite(id, userContext, logoFile) {
             }
         }
         
-        return path.join(tempDir, 'dist');
+        return distDir;
         
     } catch (err) {
-        // Cleanup on failure
         await fs.remove(tempDir);
         throw err;
     }
 }
 
-async function setupConfig(dir, designSystem) {
+async function setupConfig(rootDir, distDir, designSystem) {
     const { googleFonts, colorPalette, businessName, logoUrl } = designSystem;
 
-    // 1. Construct Google Fonts URL (if exists)
+    // 1. Construct Google Fonts URL
     let fontLink = '';
     if (googleFonts) {
         const heading = googleFonts.heading.replace(/\s+/g, '+');
         const body = googleFonts.body.replace(/\s+/g, '+');
         const fontUrl = `https://fonts.googleapis.com/css2?family=${heading}:wght@400;700&family=${body}:wght@300;400;600&display=swap`;
-        fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
+        fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="${fontUrl}" rel="stylesheet">`;
     }
 
     // 2. Prepare Title and Favicon
     const safeTitle = businessName || 'Business Site';
     let faviconLink = '';
     if (logoUrl) {
-        // Use the logo as favicon
         faviconLink = `<link rel="icon" type="image/png" href="${logoUrl}" />`;
     }
 
     // 3. Update index.html
-    const indexHtmlPath = path.join(dir, 'index.html');
+    const indexHtmlPath = path.join(distDir, 'index.html');
     let html = await fs.readFile(indexHtmlPath, 'utf-8');
     
     // Inject Fonts
-    if (fontLink) {
+    if (fontLink && !html.includes(fontLink)) {
         html = html.replace('</head>', `${fontLink}\n</head>`);
     }
     
+    // Inject CSS Link (Crucial)
+    if (!html.includes('href="./style.css"') && !html.includes("href='./style.css'")) {
+         html = html.replace('</head>', `<link href="./style.css" rel="stylesheet">
+</head>`);
+    }
+    
     // Update Title
-    html = html.replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>`);
+    if (html.includes('<title>')) {
+        html = html.replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>`);
+    } else {
+        html = html.replace('</head>', `<title>${safeTitle}</title>\n</head>`);
+    }
 
-    // Inject Favicon (if applicable)
+    // Inject Favicon
     if (faviconLink) {
-        // If there's an existing icon link, replace it, otherwise append to head
         if (html.includes('<link rel="icon"')) {
             html = html.replace(/<link rel="icon".*?>/, faviconLink);
         } else {
@@ -137,19 +180,16 @@ async function setupConfig(dir, designSystem) {
     await fs.writeFile(indexHtmlPath, html);
 
     // 4. Update tailwind.config.js
-    const configPath = path.join(dir, 'tailwind.config.js');
+    const configPath = path.join(rootDir, 'tailwind.config.js');
     const newConfig = `
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+module.exports = {
+  content: ["./dist/*.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       fontFamily: {
-        heading: ['"${googleFonts ? googleFonts.heading : 'sans-serif'}"', 'sans-serif'],
-        body: ['"${googleFonts ? googleFonts.body : 'sans-serif'}"', 'sans-serif'],
+        heading: ['"${googleFonts ? googleFonts.heading : 'sans-serif'}"','sans-serif'],
+        body: ['"${googleFonts ? googleFonts.body : 'sans-serif'}"','sans-serif'],
       },
       colors: {
         primary: "${colorPalette.primary}",
@@ -176,12 +216,13 @@ async function rebuildSite(id) {
         throw new Error(`Project source not found: ${id}`);
     }
 
-    console.log(`[${id}] Re-building site...`);
+    console.log(`[${id}] Re-building site (Tailwind)...`);
     
     try {
         await runBuild(sourceDir);
         
-        // Move dist to public
+        // Move dist contents to public (Actually, dist IS the content now, but we need to ensure structure)
+        // sourceDir contains 'dist'.
         const distPath = path.join(sourceDir, 'dist');
         await fs.emptyDir(publicSiteDir);
         await fs.copy(distPath, publicSiteDir);
@@ -195,9 +236,14 @@ async function rebuildSite(id) {
 
 function runBuild(dir) {
     return new Promise((resolve, reject) => {
-        exec('npm run build', { cwd: dir }, (error, stdout, stderr) => {
+        // Run Tailwind CLI
+        // Input: src/input.css (relative to dir)
+        // Output: dist/style.css (relative to dir)
+        // Use local binary directly to avoid npx path issues with symlinks
+        const command = './node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify';
+        
+        exec(command, { cwd: dir }, (error, stdout, stderr) => {
             if (error) {
-                // Combine stdout and stderr for context, as sometimes error details are in stdout
                 const output = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
                 reject({ message: error.message, stderr: output }); 
             } else {

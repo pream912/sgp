@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surya Dental Care</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    
+    
+    <style type="text/tailwindcss">
+        .fade-in-element {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-element.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background font-body text-text text-[17px] leading-relaxed">
+
+    <!-- Header -->
+    <header id="main-header" data-section="header" class="bg-background/80 backdrop-blur-lg sticky top-0 z-50 transition-all duration-300 shadow-sm">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <a href="#" class="flex items-center space-x-3">
+                    <img src="./logo.png" alt="Surya Dental Care Logo" class="h-10 md:h-12">
+                    <span class="font-heading text-xl md:text-2xl font-bold text-primary">Surya Dental Care</span>
+                </a>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="#home" class="font-medium text-text hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="#about" class="font-medium text-text hover:text-primary transition-colors duration-300">About Us</a>
+                    <a href="#services" class="font-medium text-text hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="#testimonials" class="font-medium text-text hover:text-primary transition-colors duration-300">Testimonials</a>
+                    <a href="#contact" class="font-medium text-text hover:text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <a href="#contact" class="hidden lg:inline-block bg-buttonBackground text-buttonText font-bold py-2 px-6 rounded-full hover:bg-primary/90 transition-all duration-300 shadow-md">Book Appointment</a>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-button" class="lg:hidden text-primary text-2xl" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Navigation -->
+        <div id="mobile-menu" class="hidden lg:hidden absolute top-full left-0 w-full bg-background shadow-lg">
+            <nav class="flex flex-col items-center space-y-4 p-6">
+                <a href="#home" class="font-medium text-text hover:text-primary transition-colors duration-300">Home</a>
+                <a href="#about" class="font-medium text-text hover:text-primary transition-colors duration-300">About Us</a>
+                <a href="#services" class="font-medium text-text hover:text-primary transition-colors duration-300">Services</a>
+                <a href="#testimonials" class="font-medium text-text hover:text-primary transition-colors duration-300">Testimonials</a>
+                <a href="#contact" class="font-medium text-text hover:text-primary transition-colors duration-300">Contact</a>
+                <a href="#contact" class="mt-4 bg-buttonBackground text-buttonText font-bold py-3 px-8 rounded-full hover:bg-primary/90 transition-all duration-300 shadow-md">Book Appointment</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="home" data-section="hero" class="relative min-h-[80vh] flex items-center justify-center text-center text-white">
+            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1596740926849-2d473dee8d60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTY5MDh8&ixlib=rb-4.1.0&q=80&w=1080');"></div>
+            <div class="absolute inset-0 bg-black/50"></div>
+            <div class="relative z-10 px-6 py-20">
+                <h1 class="font-heading text-4xl md:text-6xl font-bold mb-4" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);">Exceptional Dental Care, Genuine Compassion</h1>
+                <p class="font-body text-lg md:text-xl max-w-3xl mx-auto mb-8" style="text-shadow: 1px 1px 4px rgba(0,0,0,0.7);">We expertly ease patient anxieties with every visit, providing a comfortable and welcoming experience for your entire family.</p>
+                <a href="#contact" class="bg-accent text-buttonText font-bold py-3 px-8 rounded-full text-lg hover:bg-accent/90 transition-all duration-300 shadow-lg transform hover:scale-105">Schedule Your Visit</a>
+            </div>
+        </section>
+
+        <!-- About Us Section -->
+        <section id="about" data-section="about" class="py-20 lg:py-32 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <div class="fade-in-element">
+                        <img src="https://images.unsplash.com/photo-1606811971618-4486d14f3f99?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTY5MDh8&ixlib=rb-4.1.0&q=80&w=1080" alt="Friendly dentist consulting a patient" class="rounded-lg shadow-2xl w-full h-auto object-cover aspect-square">
+                    </div>
+                    <div class="fade-in-element">
+                        <h2 class="font-heading text-3xl md:text-4xl font-bold text-primary mb-6">Your Comfort is Our Priority</h2>
+                        <p class="mb-4">At Surya Dental Care, we believe that a visit to the dentist should be a positive and stress-free experience. Led by the acclaimed Drs. Nehla and Senthil, our dedicated team combines professionalism with a genuinely compassionate approach to care.</p>
+                        <p class="mb-6">From the moment you walk in, you'll notice our immaculate and calm clinic environment, designed to put you at ease. We are committed to punctual appointments, clear communication, and personalized treatment plans, ensuring you are well-informed and comfortable throughout your journey with us.</p>
+                        <a href="#services" class="inline-block bg-buttonBackground text-buttonText font-bold py-3 px-7 rounded-full hover:bg-primary/90 transition-all duration-300 shadow-md">Explore Our Services</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section id="services" data-section="services" class="py-20 lg:py-32 bg-background">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto mb-16 fade-in-element">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-primary mb-4">Comprehensive Dental Solutions</h2>
+                    <p class="text-lg text-secondary">We offer a wide range of services to meet all your dental needs, using modern technology for meticulous and effective treatment.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Service Card 1 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-tooth"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Routine Cleanings & Exams</h3>
+                        <p class="font-body text-secondary">Preventive care to maintain your oral health and catch potential issues early.</p>
+                    </div>
+                    <!-- Service Card 2 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2" style="transition-delay: 100ms;">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-seedling"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Dental Implants</h3>
+                        <p class="font-body text-secondary">A permanent and natural-looking solution for replacing missing teeth.</p>
+                    </div>
+                    <!-- Service Card 3 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2" style="transition-delay: 200ms;">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Cosmetic Dentistry</h3>
+                        <p class="font-body text-secondary">Enhance your smile with services like teeth whitening, veneers, and bonding.</p>
+                    </div>
+                    <!-- Service Card 4 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2" style="transition-delay: 300ms;">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-user-doctor"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Personalized Consultations</h3>
+                        <p class="font-body text-secondary">We take the time to listen to your concerns and create a tailored treatment plan.</p>
+                    </div>
+                    <!-- Service Card 5 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2" style="transition-delay: 400ms;">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-children"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Family Dentistry</h3>
+                        <p class="font-body text-secondary">Gentle and friendly care for patients of all ages, from children to seniors.</p>
+                    </div>
+                    <!-- Service Card 6 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg text-center fade-in-element transition-transform duration-300 hover:-translate-y-2" style="transition-delay: 500ms;">
+                        <div class="text-accent text-5xl mb-4"><i class="fa-solid fa-kit-medical"></i></div>
+                        <h3 class="font-heading text-xl font-bold text-primary mb-2">Emergency Care</h3>
+                        <p class="font-body text-secondary">Prompt and compassionate care when you need it most.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" data-section="features" class="py-20 lg:py-32 bg-white">
+            <div class="container mx-auto px-6 space-y-20">
+                <!-- Feature 1 -->
+                <div class="grid lg:grid-cols-2 gap-12 items-center fade-in-element">
+                    <div class="lg:order-2">
+                        <img src="https://images.unsplash.com/photo-1631596630738-1cdd73a06164?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTY5MDh8&ixlib=rb-4.1.0&q=80&w=1080" alt="Calm dental clinic interior" class="rounded-lg shadow-xl w-full h-auto object-cover">
+                    </div>
+                    <div class="lg:order-1">
+                        <div class="text-accent text-4xl mb-3"><i class="fa-solid fa-heart-pulse"></i></div>
+                        <h3 class="font-heading text-2xl md:text-3xl font-bold text-primary mb-4">Easing Dental Anxiety</h3>
+                        <p class="text-secondary">We understand that dental visits can be stressful. Our team is dedicated to creating a comforting and attentive atmosphere, ensuring your experience is as relaxed and pain-free as possible.</p>
+                    </div>
+                </div>
+                <!-- Feature 2 -->
+                <div class="grid lg:grid-cols-2 gap-12 items-center fade-in-element">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1656623807884-a7ddff6065ca?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTY5MDh8&ixlib=rb-4.1.0&q=80&w=1080" alt="Smiling patient after a successful treatment" class="rounded-lg shadow-xl w-full h-auto object-cover">
+                    </div>
+                    <div>
+                        <div class="text-accent text-4xl mb-3"><i class="fa-solid fa-clock"></i></div>
+                        <h3 class="font-heading text-2xl md:text-3xl font-bold text-primary mb-4">Punctual & Professional</h3>
+                        <p class="text-secondary">Your time is valuable. We pride ourselves on punctual appointments and a smooth, well-organized patient journey. Our professional staff ensures you are always well-informed and cared for.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section id="testimonials" data-section="testimonials" class="py-20 lg:py-32 bg-background">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto mb-16 fade-in-element">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-primary mb-4">What Our Patients Say</h2>
+                    <p class="text-lg text-secondary">We are proud to have earned the trust of our community. Here’s what some of our patients have to share.</p>
+                </div>
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Testimonial 1 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col fade-in-element">
+                        <div class="text-accent text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                        <p class="text-secondary mb-6 flex-grow">"After my previous disappointing visit, I am happy to share that my last two appointments at the clinic were completely different—in the best way. Both appointments were handled with..."</p>
+                        <div class="flex items-center">
+                            <div class="font-bold font-heading text-primary">Ravi Vasudevan</div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col fade-in-element" style="transition-delay: 150ms;">
+                        <div class="text-accent text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                        <p class="text-secondary mb-6 flex-grow">"Highly recommend! I have LOTS of anxiety about going to the dentist. After this visit. (Dr. Nehla)(Dr.p.senthil kumar,MDS) was courteous friendly and professional(hygienist). were..."</p>
+                        <div class="flex items-center">
+                            <div class="font-bold font-heading text-primary">Usha S</div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col fade-in-element" style="transition-delay: 300ms;">
+                        <div class="text-accent text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                        <p class="text-secondary mb-6 flex-grow">"First of all, I would like to thank Dr. Senthil Sir & the entire team at Surya Dental Care. I first came here in February for a teeth cleaning. A few mo..."</p>
+                        <div class="flex items-center">
+                            <div class="font-bold font-heading text-primary">Mahalakshmi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" data-section="contact" class="py-20 lg:py-32 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center max-w-3xl mx-auto mb-16 fade-in-element">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-primary mb-4">Get In Touch</h2>
+                    <p class="text-lg text-secondary">Ready to schedule your next appointment? Contact us today or use the form below. We look forward to welcoming you.</p>
+                </div>
+                <div class="grid lg:grid-cols-5 gap-12">
+                    <div class="lg:col-span-3 bg-background p-8 rounded-lg shadow-lg fade-in-element">
+                        <h3 class="font-heading text-2xl font-bold text-primary mb-6">Appointment Request</h3>
+                        <form action="#" method="POST" class="space-y-6">
+                            <div>
+                                <label for="name" class="font-medium text-text block mb-2">Full Name</label>
+                                <input type="text" id="name" name="name" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
+                            </div>
+                            <div>
+                                <label for="email" class="font-medium text-text block mb-2">Email Address</label>
+                                <input type="email" id="email" name="email" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" required>
+                            </div>
+                            <div>
+                                <label for="message" class="font-medium text-text block mb-2">Message</label>
+                                <textarea id="message" name="message" rows="5" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-primary focus:border-primary" placeholder="Briefly describe your needs..."></textarea>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full bg-buttonBackground text-buttonText font-bold py-3 px-6 rounded-full hover:bg-primary/90 transition-all duration-300 shadow-md">Send Message</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 space-y-8 fade-in-element" style="transition-delay: 150ms;">
+                        <div class="bg-background p-8 rounded-lg shadow-lg">
+                            <h3 class="font-heading text-2xl font-bold text-primary mb-4">Contact Details</h3>
+                            <div class="space-y-4 text-secondary">
+                                <p class="flex items-start"><i class="fas fa-map-marker-alt text-primary w-5 mt-1 mr-3"></i><span>D-77, 8th Cross St, near Padma Pazhamudir Solai, Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018</span></p>
+                                <p class="flex items-center"><i class="fas fa-phone text-primary w-5 mr-3"></i><a href="tel:09943297779" class="hover:text-primary">099432 97779</a></p>
+                                <p class="flex items-center"><i class="fas fa-globe text-primary w-5 mr-3"></i><a href="https://www.suryadentalcare.com/" target="_blank" rel="noopener noreferrer" class="hover:text-primary">suryadentalcare.com</a></p>
+                            </div>
+                        </div>
+                        <div class="bg-background p-8 rounded-lg shadow-lg">
+                            <h3 class="font-heading text-2xl font-bold text-primary mb-4">Opening Hours</h3>
+                            <ul class="space-y-2 text-secondary">
+                                <li class="flex justify-between"><span>Monday - Saturday</span> <span class="font-medium text-text">9:30 AM – 9:00 PM</span></li>
+                                <li class="flex justify-between"><span>Sunday</span> <span class="font-medium text-text">9:30 AM – 6:00 PM</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-text text-background/80 pt-16 pb-8">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+                <!-- Column 1: About -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <a href="#" class="flex items-center space-x-3 mb-4">
+                        <img src="./logo.png" alt="Surya Dental Care Logo" class="h-10">
+                        <span class="font-heading text-xl font-bold text-white">Surya Dental Care</span>
+                    </a>
+                    <p class="text-sm">Providing professional, compassionate, and welcoming dental care for the whole family.</p>
+                </div>
+                
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold text-white mb-4">Quick Links</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#home" class="hover:text-accent transition-colors">Home</a></li>
+                        <li><a href="#about" class="hover:text-accent transition-colors">About Us</a></li>
+                        <li><a href="#services" class="hover:text-accent transition-colors">Services</a></li>
+                        <li><a href="#contact" class="hover:text-accent transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold text-white mb-4">Contact Us</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start"><i class="fas fa-map-marker-alt w-4 mt-1 mr-2 text-accent"></i><span>Thillai Nagar, Tiruchirappalli, TN</span></li>
+                        <li class="flex items-start"><i class="fas fa-phone w-4 mt-1 mr-2 text-accent"></i><a href="tel:09943297779" class="hover:text-accent">099432 97779</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Social -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold text-white mb-4">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-xl hover:text-accent transition-colors"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-xl hover:text-accent transition-colors"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-xl hover:text-accent transition-colors"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-secondary/30 pt-8 text-center text-sm text-secondary">
+                <p>&copy; <span id="current-year"></span> Surya Dental Care. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile Menu Toggle
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileMenuIcon = mobileMenuButton.querySelector('i');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                if (mobileMenu.classList.contains('hidden')) {
+                    mobileMenuIcon.classList.remove('fa-times');
+                    mobileMenuIcon.classList.add('fa-bars');
+                } else {
+                    mobileMenuIcon.classList.remove('fa-bars');
+                    mobileMenuIcon.classList.add('fa-times');
+                }
+            });
+
+            // Close mobile menu when a link is clicked
+            const mobileNavLinks = mobileMenu.querySelectorAll('a');
+            mobileNavLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuIcon.classList.remove('fa-times');
+                    mobileMenuIcon.classList.add('fa-bars');
+                });
+            });
+
+            // Set current year in footer
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+
+            // Fade-in on scroll animation
+            const fadeElements = document.querySelectorAll('.fade-in-element');
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            fadeElements.forEach(element => {
+                observer.observe(element);
+            });
+        });
+    </script>
+
+</body>
+</html>

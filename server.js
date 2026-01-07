@@ -97,7 +97,7 @@ app.post('/project/:id/section', verifyToken, async (req, res) => {
     const { sectionId, instruction } = req.body;
     
     try {
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'src/App.jsx');
+        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
         
         if (!await fs.pathExists(sourcePath)) {
             return res.status(404).json({ error: 'Project source not found' });
@@ -131,7 +131,7 @@ app.post('/project/:id/content', verifyToken, async (req, res) => {
     const { sectionId, type, originalValue, newValue } = req.body; // type: 'text' | 'image'
     
     try {
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'src/App.jsx');
+        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
         
         if (!await fs.pathExists(sourcePath)) {
             return res.status(404).json({ error: 'Project source not found' });
@@ -163,7 +163,7 @@ app.post('/project/:id/content', verifyToken, async (req, res) => {
 app.post('/project/:id/undo', verifyToken, async (req, res) => {
     const { id } = req.params;
     try {
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'src/App.jsx');
+        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
         const backupPath = sourcePath + '.bak';
         
         if (!await fs.pathExists(backupPath)) {
@@ -193,8 +193,8 @@ app.post('/project/:id/upload', verifyToken, upload.single('file'), async (req, 
     }
 
     try {
-        // Target: projects_source/<id>/public/assets/
-        const assetsDir = path.join(__dirname, 'projects_source', id, 'public/assets');
+        // Target: projects_source/<id>/dist/assets/
+        const assetsDir = path.join(__dirname, 'projects_source', id, 'dist/assets');
         await fs.ensureDir(assetsDir);
         
         const ext = path.extname(file.originalname);
@@ -204,14 +204,8 @@ app.post('/project/:id/upload', verifyToken, upload.single('file'), async (req, 
         // Move from temp upload to assets
         await fs.move(file.path, destPath);
         
-        // Cleanup
-        // await fs.remove(file.path); // fs.move already removes source
-        
         // Return URL relative to site root
-        // When built, 'public/assets' becomes 'dist/assets'. 
-        // Vite copies 'public/*' to root of dist. So 'public/assets/img.png' -> 'dist/assets/img.png'
-        // Access via '/assets/img.png'
-        res.json({ url: `/assets/${filename}` });
+        res.json({ url: `./assets/${filename}` });
         
     } catch (error) {
         console.error('Upload failed:', error);
@@ -278,16 +272,25 @@ app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
         const distPath = await buildSite(id, userContext, logoFile);
         
         console.log(`Build success! Deploying...`);
-        // deploySite currently returns a mock URL.
-        // We will enable local preview by moving the build to public/sites
+        
+        // 1. Move the entire project (source + dist) to projects_source
+        const sourcePath = path.join(__dirname, 'projects_source', id);
+        const tempPath = path.join(__dirname, 'temp', id);
+        
+        // We must remove the symlinked node_modules before moving/copying to avoid issues?
+        // Actually, moving a folder with symlinks works fine on same filesystem. 
+        // But if we want to archive it, we might want to unlink node_modules first to save space/time, 
+        // then re-symlink or just rely on the symlink being relative/absolute.
+        // builder.js created an absolute symlink. So moving the folder keeps the link valid.
+        
+        await fs.move(tempPath, sourcePath);
+        console.log(`Source code saved to ${sourcePath}`);
+
+        // 2. Copy the 'dist' folder to 'public/sites' for hosting
         const localSitePath = path.join(__dirname, 'public/sites', id);
-        await fs.move(distPath, localSitePath);
+        await fs.copy(path.join(sourcePath, 'dist'), localSitePath);
         
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
-        
-        // Optional: Still call deploySite if you want to keep that logic, 
-        // but for now we focus on the local preview.
-        // const url = await deploySite(distPath); 
         
         // Save to Firestore
         if (db) {
@@ -300,11 +303,6 @@ app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
                 status: 'completed'
             });
         }
-        
-        // Persist source code for editing
-        const sourcePath = path.join(__dirname, 'projects_source', id);
-        await fs.move(path.join(__dirname, 'temp', id), sourcePath);
-        console.log(`Source code saved to ${sourcePath}`);
         
         res.json({ success: true, url: localUrl, id });
         

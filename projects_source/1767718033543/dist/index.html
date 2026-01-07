@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPR STUDIO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* 
+        This style block is a placeholder for the Tailwind configuration.
+        The build environment is expected to process these custom properties.
+        */
+        :root {
+            --font-heading: 'Montserrat', sans-serif;
+            --font-body: 'Open Sans', sans-serif;
+        }
+        /* This is a minimal set of custom classes to make the theme colors work as per the prompt's constraints,
+           assuming a build tool isn't available but Tailwind-like class names are required.
+           In a real Tailwind project, this would be in tailwind.config.js.
+        */
+        .font-heading { font-family: var(--font-heading); }
+        .font-body { font-family: var(--font-body); }
+        .bg-primary { background-color: #C00000; }
+        .bg-secondary { background-color: #003399; }
+        .bg-accent { background-color: #F0F0F0; }
+        .bg-background { background-color: #121212; }
+        .bg-buttonBackground { background-color: #C00000; }
+        .text-primary { color: #C00000; }
+        .text-secondary { color: #003399; }
+        .text-accent { color: #F0F0F0; }
+        .text-background { color: #121212; }
+        .text-text { color: #F0F0F0; }
+        .text-buttonText { color: #F0F0F0; }
+        .border-primary { border-color: #C00000; }
+        .border-secondary { border-color: #003399; }
+        .hover\:bg-primary:hover { background-color: #C00000; }
+        .hover\:text-primary:hover { color: #C00000; }
+        .hover\:border-primary:hover { border-color: #C00000; }
+        .hover\:bg-secondary:hover { background-color: #003399; }
+    </style>
+    
+    
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body antialiased">
+
+    <!-- Header -->
+    <header data-section="header" id="header" class="sticky top-0 z-50 bg-background/90 backdrop-blur-sm transition-all duration-300">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center max-w-7xl">
+            <a href="#" class="flex items-center space-x-3">
+                <img src="./logo.png" alt="JPR STUDIO Logo" class="h-10 w-auto">
+                <span class="font-heading text-xl font-bold tracking-wider text-accent">JPR STUDIO</span>
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#services" class="font-body text-accent hover:text-primary transition-colors duration-300">Services</a>
+                <a href="#portfolio" class="font-body text-accent hover:text-primary transition-colors duration-300">Portfolio</a>
+                <a href="#testimonials" class="font-body text-accent hover:text-primary transition-colors duration-300">Testimonials</a>
+                <a href="#contact" class="font-body text-accent hover:text-primary transition-colors duration-300">Contact</a>
+            </div>
+            <a href="#contact" class="hidden md:inline-block bg-buttonBackground text-buttonText font-bold py-2 px-6 rounded-md hover:opacity-90 transition-opacity duration-300">Book Now</a>
+            <button id="menu-btn" class="md:hidden focus:outline-none">
+                <i id="menu-open-icon" class="fa-solid fa-bars text-accent text-2xl"></i>
+                <i id="menu-close-icon" class="fa-solid fa-times text-accent text-2xl hidden"></i>
+            </button>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-background/95">
+            <a href="#services" class="block py-3 px-6 text-center text-accent hover:bg-primary hover:text-buttonText transition-colors duration-300">Services</a>
+            <a href="#portfolio" class="block py-3 px-6 text-center text-accent hover:bg-primary hover:text-buttonText transition-colors duration-300">Portfolio</a>
+            <a href="#testimonials" class="block py-3 px-6 text-center text-accent hover:bg-primary hover:text-buttonText transition-colors duration-300">Testimonials</a>
+            <a href="#contact" class="block py-3 px-6 text-center text-accent hover:bg-primary hover:text-buttonText transition-colors duration-300">Contact</a>
+            <div class="p-6">
+                <a href="#contact" class="block w-full text-center bg-buttonBackground text-buttonText font-bold py-3 px-6 rounded-md hover:opacity-90 transition-opacity duration-300">Book Now</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section data-section="hero" class="relative min-h-screen flex items-center justify-center text-center text-white" style="background-image: url('https://images.unsplash.com/photo-1588374919040-99087d0e070b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080'); background-size: cover; background-position: center; background-attachment: fixed;">
+            <div class="absolute inset-0 bg-black/60"></div>
+            <div class="relative z-10 px-6">
+                <h1 class="font-heading text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);">Capture Your Moment</h1>
+                <p class="font-body mt-4 max-w-2xl mx-auto text-lg md:text-xl text-accent/90" style="text-shadow: 1px 1px 4px rgba(0,0,0,0.7);">Premier photography services delivering awesome results and a super studio experience.</p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <a href="#portfolio" class="bg-buttonBackground text-buttonText font-bold py-3 px-8 rounded-md hover:opacity-90 transition-all duration-300 transform hover:scale-105">View Work</a>
+                    <a href="#contact" class="bg-transparent border-2 border-accent text-accent font-bold py-3 px-8 rounded-md hover:bg-accent hover:text-background transition-colors duration-300">Get in Touch</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section data-section="services" id="services" class="py-20 lg:py-28 bg-background">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold text-accent">Why Choose JPR STUDIO?</h2>
+                    <p class="mt-4 text-lg text-text/70 max-w-3xl mx-auto">We combine quality, convenience, and value to provide an unparalleled photography experience.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                    <div class="text-center p-6 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-primary transition-all duration-300 transform hover:-translate-y-2">
+                        <i class="fa-solid fa-camera-retro text-primary text-4xl mb-4"></i>
+                        <h3 class="font-heading text-xl font-bold text-accent mb-2">Excellent Photography</h3>
+                        <p class="font-body text-text/70">Delivering consistently great work with a professional, creative touch for every shot.</p>
+                    </div>
+                    <div class="text-center p-6 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-primary transition-all duration-300 transform hover:-translate-y-2">
+                        <i class="fa-solid fa-star text-primary text-4xl mb-4"></i>
+                        <h3 class="font-heading text-xl font-bold text-accent mb-2">Super Studio Experience</h3>
+                        <p class="font-body text-text/70">Our clients praise our welcoming and professional studio environment.</p>
+                    </div>
+                    <div class="text-center p-6 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-primary transition-all duration-300 transform hover:-translate-y-2">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary text-4xl mb-4"></i>
+                        <h3 class="font-heading text-xl font-bold text-accent mb-2">Great Value for Money</h3>
+                        <p class="font-body text-text/70">High-quality results that are accessible and provide incredible value.</p>
+                    </div>
+                    <div class="text-center p-6 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-primary transition-all duration-300 transform hover:-translate-y-2">
+                        <i class="fa-solid fa-map-location-dot text-primary text-4xl mb-4"></i>
+                        <h3 class="font-heading text-xl font-bold text-accent mb-2">Convenient On-site Services</h3>
+                        <p class="font-body text-text/70">We bring our expertise to your location for ultimate convenience.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section data-section="portfolio" id="portfolio" class="py-20 lg:py-28">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold text-accent">Our Work</h2>
+                    <p class="mt-4 text-lg text-text/70 max-w-3xl mx-auto">A glimpse into the moments we've captured and the stories we've told.</p>
+                </div>
+                <div class="columns-2 md:columns-3 gap-4 space-y-4">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1611784728825-c9d6847b96ab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="Client Portrait Session">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1615458508880-ec0521ce754f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="Professional Photography Studio setup">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1642006030551-4e92bd4779d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="Photographer at work">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1659100947220-48b5d5738148?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="Creative studio lighting">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1703784323609-f477c461c54a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="High-quality photo shoot result">
+                    <img class="rounded-lg break-inside-avoid" src="https://images.unsplash.com/photo-1663319504906-658d1493a424?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTgwNTV8&ixlib=rb-4.1.0&q=80&w=1080" alt="Behind the scenes at a photoshoot">
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" id="testimonials" class="py-20 lg:py-28 bg-black">
+            <div class="container mx-auto px-6 max-w-6xl">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold text-accent">What Our Clients Say</h2>
+                    <p class="mt-4 text-lg text-text/70">Real feedback from our valued clients.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-gray-900 p-8 rounded-lg flex flex-col">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-text/90 flex-grow">"GREAT WORK THANKS TO JPR STUDIOS"</p>
+                        <div class="mt-6">
+                            <p class="font-bold text-accent">Kreative Space</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 p-8 rounded-lg flex flex-col transform md:scale-105 md:-translate-y-4 border-2 border-primary shadow-lg shadow-primary/20">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-text/90 flex-grow">"Super studio ❤️‍🔥🫂"</p>
+                        <div class="mt-6">
+                            <p class="font-bold text-accent">Ganesh Bala</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 p-8 rounded-lg flex flex-col">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-text/90 flex-grow">"Value of money, On site services, really awesome."</p>
+                        <div class="mt-6">
+                            <p class="font-bold text-accent">Sasi kumar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & Hours Section -->
+        <section data-section="contact" id="contact" class="py-20 lg:py-28 bg-background">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="grid lg:grid-cols-2 gap-16 items-start">
+                    <div>
+                        <h2 class="font-heading text-4xl md:text-5xl font-bold text-accent">Get In Touch</h2>
+                        <p class="mt-4 text-lg text-text/70">Ready to book your session or have a question? Contact us!</p>
+                        
+                        <div class="mt-10 space-y-6">
+                            <div class="flex items-start space-x-4">
+                                <i class="fa-solid fa-location-dot text-primary text-xl mt-1"></i>
+                                <div>
+                                    <h3 class="font-heading text-lg font-bold text-accent">Address</h3>
+                                    <p class="text-text/70">Karumandapam, Tiruchirappalli, Tamil Nadu 620001, India</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <i class="fa-solid fa-phone text-primary text-xl mt-1"></i>
+                                <div>
+                                    <h3 class="font-heading text-lg font-bold text-accent">Phone</h3>
+                                    <a href="tel:07373004242" class="text-text/70 hover:text-primary transition-colors">073730 04242</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900/50 p-8 rounded-lg border border-gray-800">
+                        <h3 class="font-heading text-2xl font-bold text-accent mb-6">Opening Hours</h3>
+                        <ul class="space-y-3 font-body text-text/80">
+                            <li class="flex justify-between"><span>Monday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between"><span>Tuesday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between"><span>Wednesday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between"><span>Thursday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between"><span>Friday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between"><span>Saturday</span> <span class="font-semibold text-accent">Open 24 hours</span></li>
+                            <li class="flex justify-between border-t border-gray-700 pt-3 mt-3"><span>Sunday</span> <span class="font-semibold text-accent">9:00 AM – 5:00 PM</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-black text-text/70">
+        <div class="container mx-auto px-6 py-16 max-w-7xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Column 1: Logo & About -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                    <a href="#" class="flex items-center space-x-3 mb-4">
+                        <img src="./logo.png" alt="JPR STUDIO Logo" class="h-10 w-auto">
+                        <span class="font-heading text-xl font-bold text-accent">JPR STUDIO</span>
+                    </a>
+                    <p class="max-w-xs">Your premier destination for exceptional photography services.</p>
+                </div>
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading text-lg font-bold text-accent mb-4">Quick Links</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#services" class="hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="#portfolio" class="hover:text-primary transition-colors">Portfolio</a></li>
+                        <li><a href="#testimonials" class="hover:text-primary transition-colors">Testimonials</a></li>
+                        <li><a href="#contact" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h4 class="font-heading text-lg font-bold text-accent mb-4">Contact Us</h4>
+                    <ul class="space-y-3">
+                        <li class="flex items-start space-x-2">
+                           <i class="fa-solid fa-map-marker-alt mt-1 text-primary"></i>
+                           <span>Karumandapam, Tiruchirappalli, Tamil Nadu 620001</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                           <i class="fa-solid fa-phone mt-1 text-primary"></i>
+                           <a href="tel:07373004242" class="hover:text-primary transition-colors">073730 04242</a>
+                        </li>
+                    </ul>
+                </div>
+                <!-- Column 4: Socials -->
+                <div>
+                    <h4 class="font-heading text-lg font-bold text-accent mb-4">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-accent/70 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="text-accent/70 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="text-accent/70 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-youtube"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-16 pt-8 border-t border-gray-800 text-center text-sm">
+                <p>&copy; <span id="current-year"></span> JPR STUDIO. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuOpenIcon = document.getElementById('menu-open-icon');
+        const menuCloseIcon = document.getElementById('menu-close-icon');
+
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            menuOpenIcon.classList.toggle('hidden');
+            menuCloseIcon.classList.toggle('hidden');
+        });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+                menuOpenIcon.classList.remove('hidden');
+                menuCloseIcon.classList.add('hidden');
+            });
+        });
+
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

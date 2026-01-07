@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile Dental Care</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --color-primary: #3C8D7D;
+            --color-secondary: #7DBCCB;
+            --color-accent: #F0A3A7;
+            --color-background: #F8F8F8;
+            --color-text: #1A1A1A;
+            --color-buttonBackground: #3C8D7D;
+            --color-buttonText: #FFFFFF;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--color-primary)',
+                        secondary: 'var(--color-secondary)',
+                        accent: 'var(--color-accent)',
+                        background: 'var(--color-background)',
+                        text: 'var(--color-text)',
+                        buttonBackground: 'var(--color-buttonBackground)',
+                        buttonText: 'var(--color-buttonText)',
+                    },
+                    fontFamily: {
+                        heading: ['Montserrat', 'sans-serif'],
+                        body: ['Roboto', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="font-body text-text bg-background antialiased">
+    <div id="root" class="overflow-x-hidden">
+        <!-- Header Section -->
+        <header data-section="header" class="bg-background shadow-sm sticky top-0 z-50">
+            <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <a href="#" class="flex items-center space-x-2">
+                    <img src="./logo.png" alt="Smile Dental Care Logo" class="h-10">
+                    <span class="font-heading text-2xl font-bold text-primary">Smile Dental Care</span>
+                </a>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#hero" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="#services" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="#about" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">About Us</a>
+                    <a href="#reviews" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Reviews</a>
+                    <a href="#contact" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Contact</a>
+                </div>
+                <button id="mobile-menu-button" class="md:hidden text-text focus:outline-none">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
+            </nav>
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="hidden md:hidden bg-background absolute top-full left-0 w-full shadow-lg pb-4">
+                <nav class="flex flex-col items-center space-y-4">
+                    <a href="#hero" class="font-body text-lg text-text hover:text-primary transition-colors duration-300 w-full text-center py-2">Home</a>
+                    <a href="#services" class="font-body text-lg text-text hover:text-primary transition-colors duration-300 w-full text-center py-2">Services</a>
+                    <a href="#about" class="font-body text-lg text-text hover:text-primary transition-colors duration-300 w-full text-center py-2">About Us</a>
+                    <a href="#reviews" class="font-body text-lg text-text hover:text-primary transition-colors duration-300 w-full text-center py-2">Reviews</a>
+                    <a href="#contact" class="font-body text-lg text-text hover:text-primary transition-colors duration-300 w-full text-center py-2">Contact</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section data-section="hero" id="hero" class="relative bg-background py-16 md:py-24 overflow-hidden">
+            <div class="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+                <div class="text-center md:text-left">
+                    <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-text leading-tight mb-6">
+                        Your Brightest Smile Starts Here at <span class="text-primary">Smile Dental Care</span>
+                    </h1>
+                    <p class="font-body text-lg md:text-xl text-text mb-8 max-w-xl mx-auto md:mx-0">
+                        Experience exceptional, state-of-the-art dental care with advanced low-level laser technology for smooth and remarkably painless procedures.
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-center md:justify-start space-y-4 sm:space-y-0 sm:space-x-4">
+                        <a href="#contact" class="bg-buttonBackground text-buttonText font-heading font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 text-lg">
+                            Book an Appointment
+                        </a>
+                        <a href="#services" class="bg-transparent border-2 border-primary text-primary font-heading font-semibold py-3 px-8 rounded-full hover:bg-primary hover:text-buttonText transition-all duration-300 text-lg">
+                            Our Services
+                        </a>
+                    </div>
+                </div>
+                <div class="relative h-96 md:h-[500px] lg:h-[600px] rounded-xl shadow-2xl overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1580821810660-5486b8e980a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTI3MDR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Dentist smiling with patient" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/20"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Us Section -->
+        <section data-section="about" id="about" class="bg-secondary/10 py-16 md:py-24">
+            <div class="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+                <div class="relative h-96 md:h-[500px] rounded-xl shadow-2xl overflow-hidden order-2 md:order-1">
+                    <img src="https://images.unsplash.com/photo-1584434081454-2a898b8e33d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc3MTI3MDR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Modern dental office interior" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/20"></div>
+                </div>
+                <div class="text-center md:text-left order-1 md:order-2">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-6">
+                        A Patient-Focused Approach to Dental Care
+                    </h2>
+                    <p class="font-body text-lg text-text mb-4">
+                        At Smile Dental Care, we combine advanced technology with a deeply caring approach. Our highly skilled doctor meticulously explains every step of your treatment, ensuring you're comfortable and fully informed.
+                    </p>
+                    <p class="font-body text-lg text-text mb-6">
+                        Our friendly and supportive staff are dedicated to creating a clean, peaceful, and welcoming atmosphere where your comfort is our top priority. We believe in delivering not just smiles, but confidence.
+                    </p>
+                    <ul class="list-none space-y-3 text-lg text-text mb-8">
+                        <li class="flex items-center justify-center md:justify-start">
+                            <i class="fa-solid fa-check-circle text-primary mr-3"></i>
+                            <span class="font-body">Advanced Low-Level Laser Technology</span>
+                        </li>
+                        <li class="flex items-center justify-center md:justify-start">
+                            <i class="fa-solid fa-check-circle text-primary mr-3"></i>
+                            <span class="font-body">Highly Skilled & Caring Doctor</span>
+                        </li>
+                        <li class="flex items-center justify-center md:justify-start">
+                            <i class="fa-solid fa-check-circle text-primary mr-3"></i>
+                            <span class="font-body">Detailed Patient Education</span>
+                        </li>
+                    </ul>
+                    <a href="#contact" class="bg-primary text-buttonText font-heading font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-300 text-lg">
+                        Learn More
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section data-section="services" id="services" class="bg-background py-16 md:py-24">
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">
+                    Our Advanced Dental Services
+                </h2>
+                <p class="font-body text-lg text-text max-w-2xl mx-auto mb-12">
+                    Utilizing cutting-edge technology and a gentle touch, we offer a comprehensive range of dental services designed for your optimal oral health and comfort.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Service 1 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-primary">
+                        <i class="fa-solid fa-tooth text-5xl text-primary mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Painless Laser Dentistry</h3>
+                        <p class="font-body text-text">
+                            Experience comfortable procedures with our advanced low-level laser technology, minimizing discomfort and recovery time.
+                        </p>
+                    </div>
+                    <!-- Service 2 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-secondary">
+                        <i class="fa-solid fa-hand-holding-medical text-5xl text-secondary mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Comprehensive Check-ups</h3>
+                        <p class="font-body text-text">
+                            Regular examinations and cleanings to maintain your oral hygiene and detect issues early.
+                        </p>
+                    </div>
+                    <!-- Service 3 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-accent">
+                        <i class="fa-solid fa-star text-5xl text-accent mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Cosmetic Dentistry</h3>
+                        <p class="font-body text-text">
+                            Achieve your dream smile with our range of cosmetic treatments, including whitening and veneers.
+                        </p>
+                    </div>
+                    <!-- Service 4 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-primary">
+                        <i class="fa-solid fa-fill-drip text-5xl text-primary mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Restorative Procedures</h3>
+                        <p class="font-body text-text">
+                            From fillings to crowns, we restore the function and aesthetics of your teeth with precision.
+                        </p>
+                    </div>
+                    <!-- Service 5 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-secondary">
+                        <i class="fa-solid fa-x-ray text-5xl text-secondary mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Digital X-rays</h3>
+                        <p class="font-body text-text">
+                            Advanced diagnostic imaging for accurate and safe assessment of your dental health.
+                        </p>
+                    </div>
+                    <!-- Service 6 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-t-4 border-accent">
+                        <i class="fa-solid fa-child-reaching text-5xl text-accent mb-6"></i>
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4">Pediatric Dentistry</h3>
+                        <p class="font-body text-text">
+                            Gentle and friendly dental care for our youngest patients, ensuring a positive experience.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section data-section="reviews" id="reviews" class="bg-primary/10 py-16 md:py-24">
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">
+                    What Our Patients Say
+                </h2>
+                <p class="font-body text-lg text-text max-w-2xl mx-auto mb-12">
+                    Hear directly from those who've experienced the Smile Dental Care difference.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Review 1 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center text-center">
+                        <div class="text-accent text-2xl mb-4">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="font-body text-text italic mb-4">
+                            "🤩 Exceptional Dental Care & Smooth Procedure! We had a truly excellent dental experience at this clinic recently for a cavity - low level laser. We were initially quite nervous, b..."
+                        </p>
+                        <p class="font-heading font-semibold text-primary">- Umer Sharief</p>
+                    </div>
+                    <!-- Review 2 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center text-center">
+                        <div class="text-accent text-2xl mb-4">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="font-body text-text italic mb-4">
+                            "The treatment was really good, and the doctor explained everything patiently Also staffs are so friendly"
+                        </p>
+                        <p class="font-heading font-semibold text-primary">- Daya Anandhi Jayaraman</p>
+                    </div>
+                    <!-- Review 3 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center text-center">
+                        <div class="text-accent text-2xl mb-4">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="font-body text-text italic mb-4">
+                            "I chose this clinic after reading the reviews and because I was in a hurry, as my tooth was aching badly. I had considered going to Apollo, but since it was too far, I decided to c..."
+                        </p>
+                        <p class="font-heading font-semibold text-primary">- UNNATI KISHOR</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section data-section="contact" id="contact" class="bg-background py-16 md:py-24">
+            <div class="container mx-auto px-4 text-center">
+                <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">
+                    Get in Touch with Smile Dental Care
+                </h2>
+                <p class="font-body text-lg text-text max-w-2xl mx-auto mb-12">
+                    We're here to help you achieve and maintain a healthy, beautiful smile. Contact us today!
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+                    <!-- Contact Info -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg text-left border-t-4 border-primary">
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4 flex items-center">
+                            <i class="fa-solid fa-info-circle text-primary mr-3"></i> Contact Information
+                        </h3>
+                        <p class="font-body text-text mb-3">
+                            <i class="fa-solid fa-map-marker-alt text-secondary mr-2"></i>
+                            Basement, Joshi & Joshi Complex, 3rd St, opp. Kailash Nagar, opp. Zudio showroom, AVM Jyothi Nagar, Sakthi Nagar, Pappakurichi Kattur, Thanjavur, Tiruchirappalli, Tamil Nadu 620019, India
+                        </p>
+                        <p class="font-body text-text mb-3">
+                            <i class="fa-solid fa-phone text-secondary mr-2"></i>
+                            Phone: <a href="tel:+919791765077" class="text-primary hover:underline">097917 65077</a>
+                        </p>
+                        <p class="font-body text-text mb-3">
+                            <i class="fa-solid fa-globe text-secondary mr-2"></i>
+                            Website: <a href="http://www.smiledentalcaretrichy.com/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">smiledentalcaretrichy.com</a>
+                        </p>
+                    </div>
+
+                    <!-- Opening Hours -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg text-left border-t-4 border-secondary">
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4 flex items-center">
+                            <i class="fa-solid fa-clock text-secondary mr-3"></i> Opening Hours
+                        </h3>
+                        <ul class="font-body text-text space-y-2">
+                            <li><span class="font-semibold">Monday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Tuesday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Wednesday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Thursday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Friday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Saturday:</span> 11:00 AM – 2:30 PM, 6:00 – 9:00 PM</li>
+                            <li><span class="font-semibold">Sunday:</span> 6:00 – 8:30 PM</li>
+                        </ul>
+                    </div>
+
+                    <!-- Google Map -->
+                    <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-accent">
+                        <h3 class="font-heading text-xl font-semibold text-text mb-4 flex items-center justify-center md:justify-start">
+                            <i class="fa-solid fa-location-dot text-accent mr-3"></i> Find Us
+                        </h3>
+                        <div class="aspect-video w-full rounded-lg overflow-hidden">
+                            <iframe
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.789104033355!2d78.67568867494532!3d10.75168938940845!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba8f41e0a29f8f5%3A0x868153401c40212!2sSmile%20Dental%20Care!5e0!3m2!1sen!2sin!4v1701977770000!5m2!1sen!2sin"
+                                width="100%"
+                                height="100%"
+                                style="border:0;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer Section -->
+        <footer data-section="footer" class="bg-text text-buttonText py-12">
+            <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Column 1: Business Info -->
+                <div>
+                    <a href="#" class="flex items-center space-x-2 mb-4">
+                        <img src="./logo.png" alt="Smile Dental Care Logo" class="h-8 filter invert">
+                        <span class="font-heading text-xl font-bold text-buttonText">Smile Dental Care</span>
+                    </a>
+                    <p class="font-body text-buttonText/80 text-sm mb-4">
+                        Advanced, patient-focused dental care for your brightest smile.
+                    </p>
+                    <div class="flex space-x-4 text-lg">
+                        <a href="#" class="hover:text-primary transition-colors duration-300"><i class="fa-brands fa-facebook"></i></a>
+                        <a href="#" class="hover:text-primary transition-colors duration-300"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="hover:text-primary transition-colors duration-300"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="hover:text-primary transition-colors duration-300"><i class="fa-brands fa-linkedin"></i></a>
+                    </div>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h3 class="font-heading text-lg font-semibold text-primary mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#hero" class="font-body text-buttonText/80 hover:text-primary transition-colors duration-300">Home</a></li>
+                        <li><a href="#services" class="font-body text-buttonText/80 hover:text-primary transition-colors duration-300">Services</a></li>
+                        <li><a href="#about" class="font-body text-buttonText/80 hover:text-primary transition-colors duration-300">About Us</a></li>
+                        <li><a href="#reviews" class="font-body text-buttonText/80 hover:text-primary transition-colors duration-300">Reviews</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h3 class="font-heading text-lg font-semibold text-primary mb-4">Contact Us</h3>
+                    <ul class="space-y-2 font-body text-buttonText/80">
+                        <li><i class="fa-solid fa-map-marker-alt mr-2 text-secondary"></i> Basement, Joshi & Joshi Complex...</li>
+                        <li><i class="fa-solid fa-phone mr-2 text-secondary"></i> 097917 65077</li>
+                        <li><i class="fa-solid fa-envelope mr-2 text-secondary"></i> info@smiledentalcare.com</li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Newsletter/Call to Action -->
+                <div>
+                    <h3 class="font-heading text-lg font-semibold text-primary mb-4">Stay Connected</h3>
+                    <p class="font-body text-buttonText/80 text-sm mb-4">
+                        Subscribe to our newsletter for the latest updates and offers.
+                    </p>
+                    <form class="flex">
+                        <input type="email" placeholder="Your Email" class="p-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary text-text w-full">
+                        <button type="submit" class="bg-primary text-buttonText p-2 rounded-r-md hover:bg-primary/90 transition-colors duration-300">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="container mx-auto px-4 text-center border-t border-buttonText/20 mt-8 pt-8">
+                <p class="font-body text-buttonText/70 text-sm">
+                    &copy; 2023 Smile Dental Care. All rights reserved.
+                </p>

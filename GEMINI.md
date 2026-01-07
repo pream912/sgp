@@ -2,8 +2,8 @@
 
 ## Project Overview
 **Name:** AI Static Site Generator (The "Headless Builder")
-**Goal:** A Node.js backend that generates unique, production-grade static websites (React + Tailwind) based on user prompts, builds them using Vite, and deploys them to Vercel.
-**Core Mechanic:** "Just-in-Time" generation with a Self-Healing Build Loop (Build -> Error -> AI Fix -> Retry).
+**Goal:** A Node.js backend that generates unique, production-grade static websites (HTML + Tailwind) based on user prompts, builds them using the Tailwind CLI, and deploys them.
+**Core Mechanic:** "Just-in-Time" generation with a Robust Build Loop (Design -> HTML Gen -> Validation -> CSS Compile).
 
 ---
 
@@ -12,20 +12,20 @@
 ### A. The Backend (Our Infrastructure)
 *   **Runtime:** Node.js 20.x (LTS)
 *   **Framework:** Express.js
-*   **AI Provider:** Google Vertex AI (Gemini 1.5 Pro/Flash) via `@google-cloud/vertexai`
+*   **AI Provider:** Google Vertex AI via `@google-cloud/vertexai`
+    *   **Model:** `gemini-2.0-flash-exp` (High performance, large context)
+    *   **Region:** `us-central1` (Hardcoded for availability)
+    *   **Settings:** `maxOutputTokens: 16384` (To prevent truncation)
 *   **File Ops:** `fs-extra`
-*   **Deployment:** Vercel API (REST)
+*   **Deployment:** Local Preview / Vercel API
 
 ### B. The Generated Sites (The Output)
-*All generated code must be compatible with these EXACT versions defined in `skeleton-project/package.json`.*
+*Lightweight, high-performance static sites.*
 
-| Dependency | Version | Constraint |
-| :--- | :--- | :--- |
-| **React** | `18.2.0` | Functional components + Hooks only. |
-| **Vite** | `5.2.0` | Used for the build process. |
-| **Tailwind CSS** | `3.4.1` | Use arbitrary values (`bg-[#x]`) and `size-*`. |
-| **Framer Motion** | `11.0.8` | `import { motion } from 'framer-motion'` |
-| **Lucide React** | `0.363.0` | `import { Icon } from 'lucide-react'` |
+*   **Structure:** Single File HTML5 (`index.html`) + Vanilla JS
+*   **Styling:** Tailwind CSS 3.4.1 (Built via CLI)
+*   **Icons:** FontAwesome 6.5.1 (CDN)
+*   **Fonts:** Google Fonts (Injected dynamically)
 
 ---
 
@@ -34,22 +34,20 @@
 ```text
 /
 ├── server.js                 # Express entry point
-├── .env                      # GCP_PROJECT, VERCEL_TOKEN, GODADDY_KEY
+├── .env                      # GCP_PROJECT, GOOGLE_CLOUD_LOCATION
 ├── services/
 │   ├── ai-architect.js       # Gemini: Generates JSON Design System
-│   ├── ai-coder.js           # Gemini: Writes React Code & Fixes Errors
-│   ├── builder.js            # Orchestrates Copy -> Write -> Build -> Retry
-│   ├── deploy.js             # Uploads 'dist' folder to Vercel
-│   └── domains.js            # GoDaddy API wrappers
+│   ├── ai-coder.js           # Gemini: Writes HTML5 Code (HTML generation & validation)
+│   ├── builder.js            # Orchestrates: Copy Skeleton -> AI Code -> Tailwind CLI
+│   └── ...
 ├── templates/
-│   └── skeleton-project/     # THE SOURCE OF TRUTH
-│       ├── node_modules/     # Pre-installed dependencies (Speed optimization)
+│   └── html-skeleton/        # THE SOURCE OF TRUTH
+│       ├── node_modules/     # Pre-installed Tailwind CSS v3
 │       ├── package.json      # Locked versions
-│       ├── vite.config.js    # Standard build config
-│       ├── index.html        # HTML shell
+│       ├── tailwind.config.js# Standard config
 │       └── src/
-│           └── index.css     # Tailwind directives
-└── temp/                     # Ephemeral build artifacts (Deleted after deploy)
+│           └── input.css     # Tailwind directives
+└── temp/                     # Ephemeral build artifacts
 ```
 
 ---
@@ -61,49 +59,45 @@
 *   **Process**: AI generates a `DesignSystem` JSON (Colors, Fonts, Layout Vibe).
 *   **Rule**: Ensure colors are Tailwind-friendly hex codes and **STRICTLY adhere to WCAG AA contrast standards**.
 
-### Phase 2: Code Generation (JSX)
+### Phase 2: Code Generation (HTML)
 *   **Input**: `DesignSystem` + `User Context`.
-*   **Process**: AI writes a **Single File** `App.jsx`.
-*   **Strict constraints for the AI Model**:
-    1.  No Markdown blocks in output.
-    2.  No external CSS imports (except standard library).
-    3.  Images must use the `imageUrls` array provided by the backend (fetched from Unsplash). Fallback to `pollinations.ai` if empty.
-    4.  Use defined Tailwind theme colors (e.g., `bg-primary`, `text-secondary`) as configured in `tailwind.config.js`.
-    5.  **Text Visibility**: When placing text over background images, use a dark overlay (e.g., `bg-black/50`) or text shadow.
+*   **Process**: AI writes a **Single File** `index.html`.
+*   **Constraints**:
+    1.  Semantic HTML5 (Complete document with `</html>`).
+    2.  Vanilla JavaScript for interactivity (no frameworks).
+    3.  Tailwind Utility Classes for all styling.
+    4.  **No External CSS/Config:** Do NOT use Tailwind CDN or inline config.
+    5.  **Output Size:** Ensure `maxOutputTokens` is high (16k+) to avoid truncation.
 
-### Phase 3: The Self-Healing Build Loop
-1.  Copy `skeleton-project` to `temp/{id}`.
-2.  Inject generated `App.jsx` and `main.jsx`.
-3.  Inject dynamic `tailwind.config.js` with fonts and color palette.
-4.  Run `npm run build` (Vite).
-5.  **IF FAIL**:
-    *   Capture `stderr`.
-    *   Send Code + Error Log back to Gemini (`services/ai-coder.js`).
-    *   Overwrite `App.jsx` with the "Fixed" code.
-    *   Retry (Max 3 attempts).
-6.  **IF SUCCESS**: Return path to `dist/`.
+### Phase 3: The Instant Build Loop
+1.  **Setup:** Copy `html-skeleton` to `temp/{id}`.
+    *   **Optimization:** Symlink `node_modules` from template to temp (saves copy time).
+2.  **Injection:** Write `index.html` and dynamic `tailwind.config.js`.
+3.  **Validation:** Check if `index.html` ends with `</html>`. If not, retry generation.
+4.  **Compilation:** Run `./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify`.
+5.  **Output:** `dist/` folder ready for deployment.
 
 ---
 
 ## 4. Coding Standards (Backend)
 
 *   **Async/Await**: Use for all File I/O and API calls.
-*   **Error Handling**: Wrap all builder logic in `try/catch`. Ensure `temp/` folders are cleaned up in `finally` blocks.
-*   **Prompts**: Store long system prompts as constants (`const SYSTEM_PROMPT = ...`) to keep code readable.
+*   **Error Handling**: Wrap all builder logic in `try/catch`. 
+*   **Model Config**: Use `us-central1` and `gemini-2.0-flash-exp` for reliability.
 *   **Security**: Never log raw API keys.
 
 ---
 
-## 5. Implementation Tasks (Copy-Paste for CLI)
+## 5. Implementation Tasks (Updated)
 
 **Task: Initialize Project**
-> "Scaffold the Node.js project structure defined in GEMINI.md, creating the folders and installing backend dependencies (express, fs-extra, @google-cloud/vertexai, dotenv)."
+> "Scaffold the Node.js project structure, installing backend dependencies (express, fs-extra, @google-cloud/vertexai, dotenv)."
 
-**Task: Create Skeleton**
-> "Create the `templates/skeleton-project` folder. Generate the `package.json` with the STRICT VERSIONS listed in GEMINI.md. Create the `vite.config.js` and `src/index.css` with Tailwind directives."
+**Task: Create HTML Skeleton**
+> "Create `templates/html-skeleton`. Install `tailwindcss` locally. Create `tailwind.config.js` and `src/input.css`."
 
 **Task: Implement AI Service**
-> "Write `services/ai-coder.js`. It needs two functions: `generateCode(context)` and `fixCode(badCode, errorLog)`. Use the Vertex AI SDK. Ensure strict system prompts that forbid markdown formatting."
+> "Write `services/ai-coder.js` using `gemini-2.0-flash-exp`. Implement `generateCode` with a strict system prompt for HTML/Tailwind and a validation check for truncated output."
 
 **Task: Implement Builder**
-> "Write `services/builder.js`. Implement the 'Self-Healing Loop'. It should copy the skeleton, write the AI code, spawn a child process to run `npm run build`, and handle retries if the exit code is not 0."
+> "Write `services/builder.js`. Implement the symlink optimization for `node_modules`. Execute the local Tailwind binary directly (`./node_modules/.bin/tailwindcss`) to avoid npx issues."
