@@ -100,7 +100,7 @@ async function buildSite(id, userContext, logoFile) {
             await fs.writeFile(path.join(distDir, 'index.html'), code);
             
             // 3.5. Dynamic Config & Injection (Must happen after index.html is written)
-            await setupConfig(tempDir, distDir, designSystem);
+            await setupConfig(tempDir, distDir, designSystem, id);
             
             // Try build (Tailwind CLI)
             try {
@@ -125,7 +125,7 @@ async function buildSite(id, userContext, logoFile) {
     }
 }
 
-async function setupConfig(rootDir, distDir, designSystem) {
+async function setupConfig(rootDir, distDir, designSystem, id) {
     const { googleFonts, colorPalette, businessName, logoUrl } = designSystem;
 
     // 1. Construct Google Fonts URL
@@ -160,6 +160,11 @@ async function setupConfig(rootDir, distDir, designSystem) {
          html = html.replace('</head>', `<link href="./style.css" rel="stylesheet">
 </head>`);
     }
+
+    // Inject AOS CSS (Animation Library)
+    if (!html.includes('aos.css')) {
+        html = html.replace('</head>', `<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">\n</head>`);
+    }
     
     // Update Title
     if (html.includes('<title>')) {
@@ -175,6 +180,68 @@ async function setupConfig(rootDir, distDir, designSystem) {
         } else {
             html = html.replace('</head>', `${faviconLink}\n</head>`);
         }
+    }
+
+    // Inject Lead Submission Script AND AOS Init
+    const script = `
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+    // Initialize Animations
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+
+    async function handleLeadSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Find submit button to show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Sending...';
+        }
+
+        try {
+            const response = await fetch('/api/submit-lead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    projectId: '${id}',
+                    formData: data
+                })
+            });
+            
+            if (response.ok) {
+                alert('Thank you! Your message has been sent.');
+                form.reset();
+            } else {
+                alert('Something went wrong. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Error submitting form. Please check your connection.');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            }
+        }
+    }
+    </script>
+    `;
+    
+    if (html.includes('</body>')) {
+        html = html.replace('</body>', `${script}\n</body>`);
+    } else {
+        html += script;
     }
 
     await fs.writeFile(indexHtmlPath, html);

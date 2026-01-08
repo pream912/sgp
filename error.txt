@@ -1,4 +1,98 @@
-[1767717125015] Generating HTML...
-[AI Coder] Finish Reason: MAX_TOKENS
-[AI Coder] Warning: Generation stopped due to MAX_TOKENS
-[1767717125015] Generation Attempt 1 failed: Incomplete HTML generated (Missing </html>)
+LeadsModal.jsx:21  GET http://localhost:5173/api/project/1767859408848/leads 500 (Internal Server Error)
+dispatchXhrRequest @ axios.js?v=e21d53e5:1696
+xhr @ axios.js?v=e21d53e5:1573
+dispatchRequest @ axios.js?v=e21d53e5:2107
+_request @ axios.js?v=e21d53e5:2327
+request @ axios.js?v=e21d53e5:2219
+Axios.<computed> @ axios.js?v=e21d53e5:2346
+wrap @ axios.js?v=e21d53e5:8
+fetchLeads @ LeadsModal.jsx:21
+await in fetchLeads
+(anonymous) @ LeadsModal.jsx:12
+react_stack_bottom_frame @ react-dom_client.js?v=e21d53e5:18567
+runWithFiberInDEV @ react-dom_client.js?v=e21d53e5:997
+commitHookEffectListMount @ react-dom_client.js?v=e21d53e5:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=e21d53e5:9465
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11040
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=e21d53e5:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=e21d53e5:11066
+flushPassiveEffects @ react-dom_client.js?v=e21d53e5:13150
+flushPendingEffects @ react-dom_client.js?v=e21d53e5:13088
+flushSpawnedWork @ react-dom_client.js?v=e21d53e5:13062
+commitRoot @ react-dom_client.js?v=e21d53e5:12804
+commitRootWhenReady @ react-dom_client.js?v=e21d53e5:12016
+performWorkOnRoot @ react-dom_client.js?v=e21d53e5:11950
+performSyncWorkOnRoot @ react-dom_client.js?v=e21d53e5:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=e21d53e5:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=e21d53e5:13437
+(anonymous) @ react-dom_client.js?v=e21d53e5:13531
+<LeadsModal>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=e21d53e5:247
+Dashboard @ Dashboard.jsx:129
+react_stack_bottom_frame @ react-dom_client.js?v=e21d53e5:18509
+renderWithHooksAgain @ react-dom_client.js?v=e21d53e5:5729
+renderWithHooks @ react-dom_client.js?v=e21d53e5:5665
+updateFunctionComponent @ react-dom_client.js?v=e21d53e5:7475
+beginWork @ react-dom_client.js?v=e21d53e5:8525
+runWithFiberInDEV @ react-dom_client.js?v=e21d53e5:997
+performUnitOfWork @ react-dom_client.js?v=e21d53e5:12561
+workLoopSync @ react-dom_client.js?v=e21d53e5:12424
+renderRootSync @ react-dom_client.js?v=e21d53e5:12408
+performWorkOnRoot @ react-dom_client.js?v=e21d53e5:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=e21d53e5:13505
+performWorkUntilDeadline @ react-dom_client.js?v=e21d53e5:36
+<Dashboard>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=e21d53e5:247
+App @ App.jsx:19
+react_stack_bottom_frame @ react-dom_client.js?v=e21d53e5:18509
+renderWithHooksAgain @ react-dom_client.js?v=e21d53e5:5729
+renderWithHooks @ react-dom_client.js?v=e21d53e5:5665
+updateFunctionComponent @ react-dom_client.js?v=e21d53e5:7475
+beginWork @ react-dom_client.js?v=e21d53e5:8525
+runWithFiberInDEV @ react-dom_client.js?v=e21d53e5:997
+performUnitOfWork @ react-dom_client.js?v=e21d53e5:12561
+workLoopSync @ react-dom_client.js?v=e21d53e5:12424
+renderRootSync @ react-dom_client.js?v=e21d53e5:12408
+performWorkOnRoot @ react-dom_client.js?v=e21d53e5:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=e21d53e5:13505
+performWorkUntilDeadline @ react-dom_client.js?v=e21d53e5:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=e21d53e5:247
+(anonymous) @ main.jsx:8Understand this error
+LeadsModal.jsx:27 Error fetching leads: AxiosError {message: 'Request failed with status code 500', name: 'AxiosError', code: 'ERR_BAD_RESPONSE', config: {…}, request: XMLHttpRequest, …}

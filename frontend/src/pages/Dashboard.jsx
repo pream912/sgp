@@ -3,12 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import axios from 'axios';
-import { Plus, ExternalLink, LogOut, Edit } from 'lucide-react';
+import { Plus, ExternalLink, LogOut, Edit, Inbox } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
+import LeadsModal from '../components/LeadsModal';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isLeadsModalOpen, setIsLeadsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,6 +36,11 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/login');
+  };
+
+  const openLeads = (projectId) => {
+    setSelectedProjectId(projectId);
+    setIsLeadsModalOpen(true);
   };
 
   return (
@@ -87,12 +95,20 @@ const Dashboard = () => {
                       Created: {new Date(project.createdAt?._seconds * 1000).toLocaleDateString()}
                     </p>
                     <div className="mt-4 flex items-center justify-between">
-                      <Link
-                        to={`/editor/${project.projectId}`}
-                        className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-                      >
-                        <Edit className="mr-1 h-4 w-4" /> Edit
-                      </Link>
+                      <div className="flex space-x-2">
+                        <Link
+                          to={`/editor/${project.projectId}`}
+                          className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                        >
+                          <Edit className="mr-1 h-4 w-4" /> Edit
+                        </Link>
+                        <button
+                          onClick={() => openLeads(project.projectId)}
+                          className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                        >
+                          <Inbox className="mr-1 h-4 w-4" /> Leads
+                        </button>
+                      </div>
                       <a 
                         href={project.url} 
                         target="_blank" 
@@ -109,6 +125,12 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+      
+      <LeadsModal 
+        isOpen={isLeadsModalOpen} 
+        onClose={() => setIsLeadsModalOpen(false)} 
+        projectId={selectedProjectId} 
+      />
     </div>
   );
 };

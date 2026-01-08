@@ -3,12 +3,13 @@ const express = require('express');
 const fs = require('fs-extra');
 const path = require('path');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 const { buildSite, rebuildSite } = require('./services/builder');
 const { deploySite } = require('./services/deploy');
 const { extractFromUrl } = require('./services/business-extractor');
 const { generateCode, fixCode, regenerateSection, updateSectionContent } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
-const { db, admin } = require('./services/firebase');
+const { db, admin, auth } = require('./services/firebase');
 const verifyToken = require('./middleware/auth');
 
 const app = express();
@@ -21,6 +22,132 @@ const upload = multer({ dest: path.join(__dirname, 'temp/uploads') });
 app.use('/sites', express.static(path.join(__dirname, 'public/sites')));
 
 const PORT = process.env.PORT || 3000;
+
+// Email Transporter (Configure with your SMTP settings)
+const transporter = nodemailer.createTransport({
+    service: 'gmail', // Example: Use Gmail or configure generic SMTP
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
+// Submit Lead (Public Endpoint for Generated Sites)
+app.post('/api/submit-lead', async (req, res) => {
+    const { projectId, formData } = req.body;
+    
+    try {
+        if (!projectId || !formData) {
+            return res.status(400).json({ error: 'Missing projectId or formData' });
+        }
+
+        // 1. Get Project Owner
+        let userId = null;
+        let userEmail = null;
+        
+        if (db) {
+            const projectsRef = db.collection('projects');
+            const snapshot = await projectsRef.where('projectId', '==', projectId).get();
+            
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'Project not found' });
+            }
+            
+            const projectData = snapshot.docs[0].data();
+            userId = projectData.userId;
+            
+            // Get User Email from Auth
+            try {
+                const userRecord = await admin.auth().getUser(userId);
+                userEmail = userRecord.email;
+            } catch (err) {
+                console.error('Error fetching user for email:', err);
+            }
+            
+            // 2. Save Lead to Firestore
+            await db.collection('leads').add({
+                projectId,
+                userId,
+                formData,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                status: 'new'
+            });
+        }
+
+        // 3. Send Email Notification
+        if (userEmail && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            const mailOptions = {
+                from: process.env.SMTP_USER,
+                to: userEmail,
+                subject: `New Lead for Project ${projectId}`,
+                text: `You have a new submission on your website!\n\nDetails:\n${JSON.stringify(formData, null, 2)}`,
+                html: `<h3>New Lead Received</h3><p>You have a new submission on your website.</p><pre>${JSON.stringify(formData, null, 2)}</pre>`
+            };
+            
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.log('Error sending email:', error);
+                } else {
+                    console.log('Email sent:', info.response);
+                }
+            });
+        } else {
+            console.log(`[Mock Email] To: ${userEmail}, Body:`, formData);
+        }
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('Submit lead failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Leads for a Project
+app.get('/project/:id/leads', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        if (!db) {
+            return res.json([]);
+        }
+
+        // Verify ownership
+        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
+        const projectSnap = await projectRef.get();
+        
+        if (projectSnap.empty) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        let snapshot;
+        try {
+            snapshot = await db.collection('leads')
+                .where('projectId', '==', id)
+                .orderBy('createdAt', 'desc')
+                .get();
+        } catch (queryError) {
+            console.warn('Sorted query failed, falling back to unsorted:', queryError.message);
+            // Fallback to unsorted if index is missing
+            snapshot = await db.collection('leads')
+                .where('projectId', '==', id)
+                .get();
+        }
+            
+        const leads = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
+        }));
+        
+        res.json(leads);
+        
+    } catch (error) {
+        console.error('Fetch leads failed:', error);
+        await fs.appendFile('backend-error.log', `${new Date().toISOString()} - Fetch leads error: ${error.message}\n${error.stack}\n`);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Get User's Projects
 app.get('/projects', verifyToken, async (req, res) => {
