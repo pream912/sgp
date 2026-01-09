@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Tune</title>
+    <meta name="description" content="Bike Tune offers expert motorcycle and bicycle repair and servicing. Quality service at reasonable costs by friendly, experienced staff.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    
+    
+    <style type="text/tailwindcss">
+        body {
+            @apply bg-background text-text font-body;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            @apply font-heading text-text;
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-radial from-background to-indigo-50">
+
+    <!-- Header -->
+    <header data-section="header" class="bg-background/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-heading font-bold text-secondary">
+                Bike Tune
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#services" class="text-text hover:text-primary transition-colors duration-300">Services</a>
+                <a href="#about" class="text-text hover:text-primary transition-colors duration-300">About Us</a>
+                <a href="#reviews" class="text-text hover:text-primary transition-colors duration-300">Reviews</a>
+                <a href="#contact" class="bg-buttonBackground text-buttonText px-4 py-2 rounded-md hover:bg-primary transition-colors duration-300 text-sm font-medium">Book Service</a>
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-text focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden px-6 pb-4">
+            <a href="#services" class="block py-2 text-text hover:text-primary">Services</a>
+            <a href="#about" class="block py-2 text-text hover:text-primary">About Us</a>
+            <a href="#reviews" class="block py-2 text-text hover:text-primary">Reviews</a>
+            <a href="#contact" class="block mt-2 bg-buttonBackground text-buttonText text-center px-4 py-2 rounded-md hover:bg-primary transition-colors duration-300">Book Service</a>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section data-section="hero" class="relative h-[80vh] min-h-[500px] flex items-center justify-center text-center text-white">
+            <div class="absolute inset-0 bg-black/50 z-10"></div>
+            <img src="https://images.unsplash.com/photo-1452980904795-dc36a4d90da4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc4Nzc0MzN8&ixlib=rb-4.1.0&q=80&w=1080" alt="Mechanic working on a motorcycle" class="absolute inset-0 w-full h-full object-cover">
+            <div class="relative z-20 px-6" data-aos="fade-up">
+                <h1 class="text-4xl md:text-6xl font-bold font-heading mb-4">Expert Bike Servicing & Repair</h1>
+                <p class="text-lg md:text-xl font-body max-w-3xl mx-auto mb-8 text-indigo-200">Quality service at reasonable costs. Keeping your ride smooth, safe, and reliable.</p>
+                <a href="#contact" class="bg-buttonBackground text-buttonText px-8 py-3 rounded-md text-lg font-medium hover:bg-primary transition-transform duration-300 transform hover:scale-105">Get a Quote</a>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section data-section="services" id="services" class="py-20 md:py-28">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12" data-aos="fade-up">
+                    <h2 class="text-3xl md:text-4xl font-bold font-heading">Our Key Services</h2>
+                    <p class="mt-4 text-lg text-text/80 max-w-2xl mx-auto">From routine check-ups to major repairs, we've got you covered.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Service Card 1 -->
+                    <div class="bg-white p-8 rounded-lg border border-indigo-100 shadow-sm text-center" data-aos="fade-up" data-aos-delay="100">
+                        <div class="text-primary text-4xl mb-4">
+                            <i class="fa-solid fa-gears"></i>
+                        </div>
+                        <h3 class="text-xl font-bold font-heading mb-2">Bike Servicing</h3>
+                        <p class="text-text/80 text-sm">Comprehensive servicing to ensure your bike runs like new. We check everything from engine oil to brake pads.</p>
+                    </div>
+                    <!-- Service Card 2 -->
+                    <div class="bg-white p-8 rounded-lg border border-indigo-100 shadow-sm text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-primary text-4xl mb-4">
+                            <i class="fa-solid fa-wrench"></i>
+                        </div>
+                        <h3 class="text-xl font-bold font-heading mb-2">Bike Repair</h3>
+                        <p class="text-text/80 text-sm">Expert diagnosis and repair for all types of issues. We use quality parts to get you back on the road safely.</p>
+                    </div>
+                    <!-- Service Card 3 -->
+                    <div class="bg-white p-8 rounded-lg border border-indigo-100 shadow-sm text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-primary text-4xl mb-4">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="text-xl font-bold font-heading mb-2">Bike Maintenance</h3>
+                        <p class="text-text/80 text-sm">Preventative maintenance and helpful tips to prolong the life of your bike and ensure peak performance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About / Selling Points Section -->
+        <section data-section="about" id="about" class="py-20 md:py-28 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <img src="https://images.unsplash.com/photo-1568236700632-c0cfc08f486a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc4Nzc0MzN8&ixlib=rb-4.1.0&q=80&w=1080" alt="Professional bike workshop" class="rounded-lg shadow-md w-full h-auto object-cover">
+                    </div>
+                    <div data-aos="fade-left">
+                        <h2 class="text-3xl md:text-4xl font-bold font-heading mb-6">Why Choose Bike Tune?</h2>
+                        <p class="text-lg text-text/80 mb-8">We are passionate about bikes and dedicated to providing the best service for our customers. Your satisfaction is our top priority.</p>
+                        <ul class="space-y-4 text-sm">
+                            <li class="flex items-start" data-aos="fade-left" data-aos-delay="100">
+                                <i class="fas fa-user-tie text-accent text-xl mt-1 mr-4"></i>
+                                <div>
+                                    <h4 class="font-bold text-base">Experienced & Expert Staff</h4>
+                                    <p class="text-text/80">Our mechanics are highly trained and have years of hands-on experience with all makes and models.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start" data-aos="fade-left" data-aos-delay="200">
+                                <i class="fas fa-hand-holding-dollar text-accent text-xl mt-1 mr-4"></i>
+                                <div>
+                                    <h4 class="font-bold text-base">Reasonable & Affordable Pricing</h4>
+                                    <p class="text-text/80">We believe in transparent, fair pricing without compromising on the quality of our work.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start" data-aos="fade-left" data-aos-delay="300">
+                                <i class="fas fa-headset text-accent text-xl mt-1 mr-4"></i>
+                                <div>
+                                    <h4 class="font-bold text-base">Friendly & Knowledgeable Service</h4>
+                                    <p class="text-text/80">We're here to answer your questions and provide helpful advice to keep your bike in top condition.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="reviews" id="reviews" class="py-20 md:py-28">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12" data-aos="fade-up">
+                    <h2 class="text-3xl md:text-4xl font-bold font-heading">What Our Customers Say</h2>
+                    <p class="mt-4 text-lg text-text/80 max-w-2xl mx-auto">We're proud of our reputation for efficient, friendly, and reliable service.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Testimonial 1 -->
+                    <div class="bg-white p-6 rounded-lg border border-indigo-100 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg mr-4">A</div>
+                            <div>
+                                <p class="font-bold text-text">Satisfied Customer</p>
+                                <div class="text-yellow-400">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-text/80 text-sm italic">"I’ve been getting my bike serviced here for the past three months, and I’m really impressed. The team is made up of truly experienced experts, and the service comes at a very reasonable cost."</p>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="bg-white p-6 rounded-lg border border-indigo-100 shadow-sm" data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg mr-4">B</div>
+                            <div>
+                                <p class="font-bold text-text">Happy Rider</p>
+                                <div class="text-yellow-400">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-text/80 text-sm italic">"The staff was friendly, knowledgeable, and completed the service on time. My bike now runs smoothly, and they even gave me a few helpful maintenance tips. Highly recommend!"</p>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div class="bg-white p-6 rounded-lg border border-indigo-100 shadow-sm" data-aos="fade-up" data-aos-delay="300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg mr-4">C</div>
+                            <div>
+                                <p class="font-bold text-text">Regular Client</p>
+                                <div class="text-yellow-400">
+                                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-text/80 text-sm italic">"Impressed with the bike service. They offer best service at an affordable price. The staff is customer friendly. Go-to place for bike maintenance."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & CTA Section -->
+        <section data-section="contact" id="contact" class="py-20 md:py-28 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12" data-aos="fade-up">
+                    <h2 class="text-3xl md:text-4xl font-bold font-heading">Book Your Service Today</h2>
+                    <p class="mt-4 text-lg text-text/80 max-w-2xl mx-auto">Ready for a smooth ride? Fill out the form below or give us a call.</p>
+                </div>
+                <div class="grid md:grid-cols-5 gap-12">
+                    <form onsubmit="handleLeadSubmit(event)" class="md:col-span-3 space-y-4" data-aos="fade-right">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-text/80 mb-1">Full Name</label>
+                            <input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-indigo-200 rounded-md focus:ring-primary focus:border-primary transition-colors duration-300 bg-background/50">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-text/80 mb-1">Email Address</label>
+                            <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-indigo-200 rounded-md focus:ring-primary focus:border-primary transition-colors duration-300 bg-background/50">
+                        </div>
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-text/80 mb-1">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required class="w-full px-4 py-2 border border-indigo-200 rounded-md focus:ring-primary focus:border-primary transition-colors duration-300 bg-background/50">
+                        </div>
+                        <div>
+                            <label for="service" class="block text-sm font-medium text-text/80 mb-1">Service Requested</label>
+                            <select id="service" name="service" required class="w-full px-4 py-2 border border-indigo-200 rounded-md focus:ring-primary focus:border-primary transition-colors duration-300 bg-background/50">
+                                <option>General Bike Servicing</option>
+                                <option>Specific Bike Repair</option>
+                                <option>Routine Maintenance Check</option>
+                                <option>Other Inquiry</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="message" class="block text-sm font-medium text-text/80 mb-1">Message</label>
+                            <textarea id="message" name="message" rows="4" class="w-full px-4 py-2 border border-indigo-200 rounded-md focus:ring-primary focus:border-primary transition-colors duration-300 bg-background/50"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-buttonBackground text-buttonText px-6 py-3 rounded-md font-bold hover:bg-primary transition-colors duration-300">Submit Request</button>
+                    </form>
+                    <div class="md:col-span-2" data-aos="fade-left" data-aos-delay="200">
+                        <div class="bg-background p-8 rounded-lg border border-indigo-100 h-full">
+                            <h3 class="text-2xl font-bold font-heading mb-6">Contact Information</h3>
+                            <div class="space-y-4 text-sm">
+                                <div class="flex items-start">
+                                    <i class="fas fa-location-dot text-primary text-lg mt-1 mr-4 w-5 text-center"></i>
+                                    <div>
+                                        <h4 class="font-bold text-base">Address</h4>
+                                        <p class="text-text/80">1/418, Cavery Nagar, Pappakurichi Kattur, Tiruchirappalli, Tamil Nadu 620019, India</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <i class="fas fa-phone text-primary text-lg mt-1 mr-4 w-5 text-center"></i>
+                                    <div>
+                                        <h4 class="font-bold text-base">Phone</h4>
+                                        <a href="tel:07550043366" class="text-text/80 hover:text-primary">075500 43366</a>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <i class="fas fa-clock text-primary text-lg mt-1 mr-4 w-5 text-center"></i>
+                                    <div>
+                                        <h4 class="font-bold text-base">Opening Hours</h4>
+                                        <p class="text-text/80">Mon - Sat: 9:30 AM – 7:00 PM</p>
+                                        <p class="text-text/80">Sunday: Closed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-text text-background/80">
+        <div class="container mx-auto px-6 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="md:col-span-2">
+                    <h4 class="text-xl font-bold font-heading text-white mb-2">Bike Tune</h4>
+                    <p class="text-sm max-w-sm">Your trusted partner for expert motorcycle and bicycle repair. We're committed to quality, affordability, and customer satisfaction.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold font-heading text-white mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#services" class="hover:text-white">Services</a></li>
+                        <li><a href="#about" class="hover:text-white">About Us</a></li>
+                        <li><a href="#reviews" class="hover:text-white">Reviews</a></li>
+                        <li><a href="#contact" class="hover:text-white">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold font-heading text-white mb-4">Contact</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="tel:07550043366" class="hover:text-white"><i class="fas fa-phone mr-2"></i> 075500 43366</a></li>
+                        <li class="flex items-start"><i class="fas fa-location-dot mr-2 mt-1"></i> <span>Tiruchirappalli, TN</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-indigo-200/20 text-center text-sm text-background/60">
+                <p>&copy; 2024 Bike Tune. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+
+        // Handle Form Submission
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const name = formData.get('name');
+            
+            // In a real application, you would send this data to a server.
+            // For this example, we'll just show an alert.
+            console.log('Form Submitted:', {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                service: formData.get('service'),
+                message: formData.get('message'),
+            });
+
+            alert(`Thank you, ${name}! Your service request has been submitted. We will contact you shortly.`);
+            form.reset();
+        }
+    </script>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+    // Initialize Animations
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+
+    async function handleLeadSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Find submit button to show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Sending...';
+        }
+
+        try {
+            const response = await fetch('/api/submit-lead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    projectId: '1767877423238',
+                    formData: data
+                })
+            });
+            
+            if (response.ok) {
+                alert('Thank you! Your message has been sent.');
+                form.reset();
+            } else {
+                alert('Something went wrong. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Error submitting form. Please check your connection.');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            }
+        }
+    }
+    </script>
+    
+</body>
+</html>

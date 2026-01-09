@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 
-const PrivateRoute = () => {
+const PrivateRoute = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,7 +18,7 @@ const PrivateRoute = () => {
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
-  return user ? <Outlet /> : <Navigate to="/login" />;
+  return user ? children : <Navigate to="/login" />;
 };
 
 export default PrivateRoute;

@@ -15,7 +15,7 @@ const model = vertex_ai.preview.getGenerativeModel({
 
 const SYSTEM_PROMPT = `
 You are an expert Frontend Developer specializing in Tailwind CSS and semantic HTML5.
-Your task is to write a SINGLE FILE 'index.html' based on the provided Design System and User Context.
+Your task is to write a SINGLE FILE HTML document based on the provided Design System, User Context, and specific Page Requirement.
 
 STRICT CONSTRAINTS:
 1. OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS (e.g., '''html ... ''').
@@ -66,7 +66,8 @@ STRICT CONSTRAINTS:
    - Implement "Reviews", "Contact", "Services" if provided in User Context.
    - LOGO: Check 'designSystem.logoUrl'. 
      - If exists: <img src="./logo.png" alt="Logo" class="h-10">
-     - If missing: Use text.
+       - **CRITICAL:** IF A LOGO IS PRESENT, DO NOT DISPLAY THE BUSINESS NAME TEXT IN THE HEADER OR FOOTER. ONLY SHOW THE LOGO IMAGE.
+     - If missing: Use the Business Name as text (typography 'font-heading').
    - **CTA / FORMS:** 
      - ALL CTA (Call to Action) sections MUST BE A FORM, not just a button.
      - The form MUST have an 'onsubmit' attribute: <form onsubmit="handleLeadSubmit(event)">.
@@ -75,9 +76,34 @@ STRICT CONSTRAINTS:
      - The submit button should be prominent ('bg-buttonBackground', 'text-buttonText').
 10. SECTION MARKERS:
     - You MUST add a 'data-section="section-name"' attribute to the outer-most container of EVERY major section.
-    - Example: <section data-section="hero" class="...">
-    - This is CRITICAL for the site editor.
-11. COMPLETENESS:
+    - **MANDATORY:** The Header MUST have 'data-section="header"'.
+    - **MANDATORY:** The Footer MUST have 'data-section="footer"'.
+    - Example: <header data-section="header">...</header>
+    - This is CRITICAL for the site editor and consistency checks.
+11. NAVIGATION & MULTI-PAGE SUPPORT:
+    - You will be provided with a list of 'ALL_PAGES' and the 'CURRENT_PAGE' you are generating.
+    - **Header/Navigation:**
+      - Generate a Navigation Menu that includes links to ALL pages in 'ALL_PAGES'.
+      - Link format:
+        - Home -> 'index.html'
+        - About -> 'about.html'
+        - Services -> 'services.html'
+        - Contact -> 'contact.html'
+        - (Convert page names to lowercase + .html).
+      - Highlight the link for 'CURRENT_PAGE' (e.g., add 'font-bold text-primary' or an underline).
+    - **CONSISTENCY (CRITICAL):**
+      - If 'LAYOUT_REFERENCE' is provided, you **MUST** use the provided Header and Footer HTML structure EXACTLY.
+      - **DO NOT CHANGE THE DESIGN, CLASSES, OR LAYOUT OF THE HEADER/FOOTER.**
+      - **ONLY** update the "active state" class on the navigation links to reflect the 'CURRENT_PAGE'.
+    - **Content Focus:**
+      - Generate content SPECIFIC to 'CURRENT_PAGE'.
+      - If 'Home': Full landing page with Hero, Features, Testimonials, CTA.
+      - If 'About': Focus on company history, team, mission.
+      - If 'Services': Detailed list of services.
+      - If 'Contact': Contact form, map placeholder, address.
+      - If 'Gallery': Grid of images.
+
+12. COMPLETENESS:
     - You must generate the FULL file. Do not stop in the middle.
     - If the file is long, ensure you close all tags properly.
 
@@ -89,12 +115,16 @@ DESIGN INTERPRETATION:
 RETURN ONLY THE HTML CODE.
 `;
 
-async function generateCode(designSystem, userContext) {
+async function generateCode(designSystem, userContext, pageName = 'Home', allPages = ['Home'], layoutReference = null) {
     const prompt = `
     DESIGN SYSTEM: ${JSON.stringify(designSystem)}
     USER CONTEXT: ${userContext}
     
-    Generate the index.html file.
+    CURRENT_PAGE: ${pageName}
+    ALL_PAGES: ${JSON.stringify(allPages)}
+    ${layoutReference ? `LAYOUT_REFERENCE: ${JSON.stringify(layoutReference)}` : ''}
+    
+    Generate the HTML file for ${pageName}.
     `;
     
     const result = await model.generateContent({
@@ -177,7 +207,7 @@ async function updateSectionContent(code, sectionId, type, originalValue, newVal
         ? 
 `Find the EXACT text "${originalValue}" within this section and replace it with "${newValue}". Do not change anything else.`
         : 
-`Find the image with src "${originalValue}" within this section and replace the src with "${newValue}". Do not change anything else.`;
+`Find the image with src "${originalValue}" OR the element with background-image containing "${originalValue}" within this section. Replace the image source or background url with "${newValue}". Do not change anything else.`;
 
     const prompt = `
     EXISTING HTML CODE:

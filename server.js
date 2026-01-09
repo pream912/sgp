@@ -32,6 +32,21 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Extract Business Info (Pre-build step)
+app.post('/extract-info', verifyToken, async (req, res) => {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: 'Query is required' });
+
+    try {
+        console.log(`Extracting info for query: "${query}"...`);
+        const userContext = await extractFromUrl(query);
+        res.json({ userContext });
+    } catch (error) {
+        console.error('Extraction failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Submit Lead (Public Endpoint for Generated Sites)
 app.post('/api/submit-lead', async (req, res) => {
     const { projectId, formData } = req.body;
@@ -376,8 +391,18 @@ app.post('/project/:id/theme', verifyToken, async (req, res) => {
 });
 
 app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
-    let { userContext, businessUrl, businessQuery } = req.body;
+    let { userContext, businessUrl, businessQuery, pages } = req.body;
     const logoFile = req.file; // Get the uploaded logo file
+
+    // Parse pages if it comes as a string (from FormData)
+    let parsedPages = ['Home'];
+    if (pages) {
+        try {
+            parsedPages = typeof pages === 'string' ? JSON.parse(pages) : pages;
+        } catch (e) {
+            console.error('Error parsing pages:', e);
+        }
+    }
 
     const id = Date.now().toString();
     
@@ -385,7 +410,8 @@ app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
     const query = businessQuery || businessUrl;
 
     try {
-        if (query) {
+        // Only extract if userContext is not provided
+        if (!userContext && query) {
             console.log(`Extracting info for query: "${query}"...`);
             userContext = await extractFromUrl(query);
             console.log('Extracted Context:', userContext);
@@ -395,8 +421,8 @@ app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
             return res.status(400).json({ error: 'userContext or businessQuery is required' });
         }
 
-        console.log(`Starting build for ${id}...`);
-        const distPath = await buildSite(id, userContext, logoFile);
+        console.log(`Starting build for ${id} (Pages: ${parsedPages.join(', ')})...`);
+        const distPath = await buildSite(id, userContext, logoFile, parsedPages);
         
         console.log(`Build success! Deploying...`);
         

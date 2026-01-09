@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMILE DENTAL CARE- SRIRANGAM BRANCH</title>
+    <meta name="description" content="SMILE DENTAL CARE - SRIRANGAM BRANCH is a highly-regarded dental clinic offering comprehensive dental solutions. Known for its patient-centric approach and expert care.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    
+    
+    <style type="text/tailwindcss">
+        body {
+            @apply font-body text-text bg-background;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            @apply font-heading text-text;
+        }
+        .subtle-radial-gradient {
+            background-image: radial-gradient(ellipse at center, theme('colors.secondary / 5%'), theme('colors.background') 70%);
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header data-section="header" class="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-gray-200/80 transition-shadow duration-300">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center max-w-7xl">
+            <a href="index.html" class="flex items-center" data-aos="fade-right">
+                <img src="./logo.png" alt="SMILE DENTAL CARE Logo" class="h-12 w-auto">
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="index.html" class="font-bold text-primary text-sm tracking-wide hover:text-primary transition-colors duration-300">Home</a>
+                <a href="about.html" class="text-text text-sm tracking-wide hover:text-primary transition-colors duration-300">About</a>
+                <a href="services.html" class="text-text text-sm tracking-wide hover:text-primary transition-colors duration-300">Services</a>
+                <a href="gallery.html" class="text-text text-sm tracking-wide hover:text-primary transition-colors duration-300">Gallery</a>
+                <a href="contact.html" class="text-text text-sm tracking-wide hover:text-primary transition-colors duration-300">Contact</a>
+            </div>
+            <a href="#contact-form" class="hidden md:inline-block bg-buttonBackground text-buttonText text-sm font-bold py-2 px-5 rounded-full hover:bg-primary/90 transition-transform duration-300 hover:scale-105">
+                Book Appointment
+            </a>
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-text focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-background border-t border-gray-200">
+            <a href="index.html" class="block py-3 px-6 text-sm font-bold text-primary">Home</a>
+            <a href="about.html" class="block py-3 px-6 text-sm text-text hover:bg-gray-100">About</a>
+            <a href="services.html" class="block py-3 px-6 text-sm text-text hover:bg-gray-100">Services</a>
+            <a href="gallery.html" class="block py-3 px-6 text-sm text-text hover:bg-gray-100">Gallery</a>
+            <a href="contact.html" class="block py-3 px-6 text-sm text-text hover:bg-gray-100">Contact</a>
+            <a href="#contact-form" class="block py-3 px-6 text-sm text-text bg-gray-50 hover:bg-gray-100">Book Appointment</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section data-section="hero" class="container mx-auto px-6 py-16 md:py-24 max-w-7xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div data-aos="fade-right">
+                    <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4">Expert Dental Care in Srirangam, For Your Healthiest Smile</h1>
+                    <p class="text-lg text-text/80 mb-8 font-body">
+                        At SMILE DENTAL CARE, we combine a patient-centric approach with expert solutions in a clean, professional, and caring environment. Your comfort and dental health are our top priorities.
+                    </p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <a href="#contact-form" class="w-full sm:w-auto text-center bg-buttonBackground text-buttonText font-bold py-3 px-8 rounded-full hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-primary/20">
+                            Book an Appointment
+                        </a>
+                        <a href="services.html" class="w-full sm:w-auto text-center bg-transparent border-2 border-primary text-primary font-bold py-3 px-8 rounded-full hover:bg-primary hover:text-white transition-all duration-300">
+                            Our Services
+                        </a>
+                    </div>
+                </div>
+                <div data-aos="fade-left" data-aos-delay="200">
+                    <img src="https://images.unsplash.com/photo-1581584731241-c134a1afe9a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Smiling patient at a dental clinic" class="rounded-lg shadow-xl w-full h-auto object-cover">
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section data-section="features" class="bg-white py-16 md:py-24">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold" data-aos="fade-up">Why Choose Smile Dental Care?</h2>
+                    <p class="mt-4 text-lg text-text/70 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">We are dedicated to providing you with the highest standard of dental care.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="text-center p-6" data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary mx-auto mb-4">
+                            <i class="fas fa-hand-holding-heart text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-semibold mb-2">Patient-Centric Approach</h3>
+                        <p class="text-text/70 text-sm">We listen attentively to your concerns and tailor treatments to your specific needs, ensuring your comfort.</p>
+                    </div>
+                    <div class="text-center p-6" data-aos="fade-up" data-aos-delay="300">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary mx-auto mb-4">
+                            <i class="fas fa-user-doctor text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-semibold mb-2">Expert Advice & Solutions</h3>
+                        <p class="text-text/70 text-sm">Our experienced team provides effective, evidence-based dental solutions for lasting oral health.</p>
+                    </div>
+                    <div class="text-center p-6" data-aos="fade-up" data-aos-delay="400">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary mx-auto mb-4">
+                            <i class="fas fa-pump-soap text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-semibold mb-2">Hygienic Environment</h3>
+                        <p class="text-text/70 text-sm">We maintain a neat, clean, and sterile clinic, adhering to the highest standards of safety and hygiene.</p>
+                    </div>
+                    <div class="text-center p-6" data-aos="fade-up" data-aos-delay="500">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary mx-auto mb-4">
+                            <i class="fas fa-star text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-semibold mb-2">Highly Recommended</h3>
+                        <p class="text-text/70 text-sm">Our commitment to quality care has earned us the trust and recommendation of our valued patients.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Overview Section -->
+        <section data-section="services-overview" class="py-16 md:py-24 subtle-radial-gradient">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold" data-aos="fade-up">Our Comprehensive Services</h2>
+                    <p class="mt-4 text-lg text-text/70 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">From routine check-ups to advanced treatments, we've got you covered.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Service Card 1 -->
+                    <div class="bg-white p-8 rounded-lg border border-gray-200/80 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-aos="fade-up" data-aos-delay="200">
+                        <i class="fas fa-tooth text-3xl text-secondary mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">General Dentistry</h3>
+                        <p class="text-text/70 mb-4 text-sm">Comprehensive care for your overall oral health, including exams, cleanings, and preventative treatments.</p>
+                    </div>
+                    <!-- Service Card 2 -->
+                    <div class="bg-white p-8 rounded-lg border border-gray-200/80 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-aos="fade-up" data-aos-delay="300">
+                        <i class="fas fa-stethoscope text-3xl text-secondary mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Dental Consultations</h3>
+                        <p class="text-text/70 mb-4 text-sm">Personalized consultations to discuss your dental concerns and create a tailored treatment plan.</p>
+                    </div>
+                    <!-- Service Card 3 -->
+                    <div class="bg-white p-8 rounded-lg border border-gray-200/80 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-aos="fade-up" data-aos-delay="400">
+                        <i class="fas fa-clipboard-check text-3xl text-secondary mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Dental Check-ups</h3>
+                        <p class="text-text/70 mb-4 text-sm">Regular check-ups to monitor your oral health and catch potential issues before they become problems.</p>
+                    </div>
+                </div>
+                <div class="text-center mt-12" data-aos="fade-up">
+                    <a href="services.html" class="text-primary font-semibold hover:underline">
+                        View All Services <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" class="bg-white py-16 md:py-24">
+            <div class="container mx-auto px-6 max-w-7xl">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold" data-aos="fade-up">What Our Patients Say</h2>
+                    <p class="mt-4 text-lg text-text/70" data-aos="fade-up" data-aos-delay="100">We are proud of the smiles we create and the trust we've built.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-background p-8 rounded-lg border border-gray-200/60" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-accent mb-2">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-text/80 italic mb-4">"The Dentist Suganya was really calm in listening to all my dental problems, she gave the right advice and solution... will strongly recommend this clinic to others."</p>
+                        <p class="font-bold text-sm text-text">- Sudharshan S</p>
+                    </div>
+                    <div class="bg-background p-8 rounded-lg border border-gray-200/60" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-accent mb-2">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-text/80 italic mb-4">"Neat and very care about patients"</p>
+                        <p class="font-bold text-sm text-text">- M.P. SHANTHI SHANTHI</p>
+                    </div>
+                    <div class="bg-background p-8 rounded-lg border border-gray-200/60" data-aos="fade-up" data-aos-delay="400">
+                        <div class="text-accent mb-2">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="text-text/80 italic mb-4">"Good"</p>
+                        <p class="font-bold text-sm text-text">- Sagaya Francis</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Form Section -->
+        <section data-section="cta-form" id="contact-form" class="py-16 md:py-24 subtle-radial-gradient">
+            <div class="container mx-auto px-6 max-w-4xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Schedule Your Visit</h2>
+                        <p class="text-text/80 mb-6">Ready to take the next step towards a healthier smile? Fill out the form and our team will get in touch with you shortly to confirm your appointment.</p>
+                        <div class="space-y-4 text-sm">
+                            <p class="flex items-start"><i class="fas fa-map-marker-alt text-primary w-5 mt-1"></i><span class="ml-3">Gandhi Rd, Srirangam, Tiruchirappalli, Tamil Nadu 620006</span></p>
+                            <p class="flex items-center"><i class="fas fa-phone text-primary w-5"></i><span class="ml-3">094893 64226</span></p>
+                            <p class="flex items-center"><i class="fas fa-clock text-primary w-5"></i><span class="ml-3">Mon - Sat: 10:00 AM – 9:00 PM</span></p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-lg shadow-lg border border-gray-200/80" data-aos="fade-left" data-aos-delay="200">
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-4">
+                            <div>
+                                <label for="name" class="sr-only">Name</label>
+                                <input type="text" id="name" name="name" placeholder="Your Name" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-300 text-sm">
+                            </div>
+                            <div>
+                                <label for="email" class="sr-only">Email</label>
+                                <input type="email" id="email" name="email" placeholder="Your Email" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-300 text-sm">
+                            </div>
+                            <div>
+                                <label for="phone" class="sr-only">Phone</label>
+                                <input type="tel" id="phone" name="phone" placeholder="Your Phone Number" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-300 text-sm">
+                            </div>
+                            <div>
+                                <label for="service" class="sr-only">Service</label>
+                                <select id="service" name="service" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-300 text-sm text-gray-500">
+                                    <option value="" disabled selected>Select a Service</option>
+                                    <option value="General Dentistry">General Dentistry</option>
+                                    <option value="Dental Consultations">Dental Consultations</option>
+                                    <option value="Dental Check-ups">Dental Check-ups</option>
+                                    <option value="Oral Hygiene">Oral Hygiene</option>
+                                    <option value="Fillings">Fillings</option>
+                                    <option value="Extractions">Extractions</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-buttonBackground text-buttonText font-bold py-3 px-6 rounded-md hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">Request Appointment</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-text text-background/80 pt-16 pb-8">
+        <div class="container mx-auto px-6 max-w-7xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-8">
+                <!-- Column 1: Logo & About -->
+                <div class="space-y-4">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="SMILE DENTAL CARE Logo" class="h-12 w-auto bg-white p-1 rounded">
+                    </a>
+                    <p class="text-sm font-body">Your trusted partner for comprehensive dental care in Srirangam. We are committed to your healthy smile.</p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white mb-4 tracking-wider">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="index.html" class="hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="gallery.html" class="hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white mb-4 tracking-wider">Contact Us</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 w-4 text-primary"></i>
+                            <span class="ml-3">Gandhi Rd, opposite Ashwin s Sweets, Srirangam, Tiruchirappalli, Tamil Nadu 620006, India</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone w-4 text-primary"></i>
+                            <a href="tel:09489364226" class="ml-3 hover:text-primary transition-colors">094893 64226</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-globe w-4 text-primary"></i>
+                            <a href="https://www.smiledentalcaretrichy.com/" target="_blank" rel="noopener noreferrer" class="ml-3 hover:text-primary transition-colors">Official Website</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white mb-4 tracking-wider">Opening Hours</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><span class="font-semibold text-white/90">Mon - Sat:</span> 10:00 AM – 9:00 PM</li>
+                        <li><span class="font-semibold text-white/90">Sunday:</span> Closed</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 pt-6 mt-8 text-center text-xs text-background/60">
+                <p>&copy; 2024 SMILE DENTAL CARE- SRIRANGAM BRANCH. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+
+        menuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            const isExpanded = menuBtn.querySelector('i').classList.contains('fa-bars');
+            if (isExpanded) {
+                menuBtn.querySelector('i').classList.remove('fa-bars');
+                menuBtn.querySelector('i').classList.add('fa-times');
+            } else {
+                menuBtn.querySelector('i').classList.remove('fa-times');
+                menuBtn.querySelector('i').classList.add('fa-bars');
+            }
+        });
+        
+        // Close mobile menu when a link is clicked
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+                menuBtn.querySelector('i').classList.remove('fa-times');
+                menuBtn.querySelector('i').classList.add('fa-bars');
+            });
+        });
+
+        // Handle Form Submission
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const name = formData.get('name');
+            
+            // In a real application, you would send this data to a server.
+            // For this example, we'll just show an alert.
+            console.log({
+                name: name,
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                service: formData.get('service'),
+            });
+
+            alert(`Thank you, ${name}! Your appointment request has been sent. We will contact you shortly to confirm.`);
+            form.reset();
+        }
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1767933537323',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

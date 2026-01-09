@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPR STUDIO - about</title>
+    <meta name="description" content="Learn about JPR STUDIO, a professional photography business known for its excellent services, high-quality work, and great value for money.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #A82020;
+            --secondary: #1E3A8A;
+            --accent: #E0E0E0;
+            --background: #1A1A1A;
+            --text: #F0F0F0;
+            --buttonBackground: #A82020;
+            --buttonText: #F0F0F0;
+        }
+        .font-heading { font-family: 'Oswald', sans-serif; }
+        .font-body { font-family: 'Lato', sans-serif; }
+        body { background-color: var(--background); color: var(--text); }
+        .bg-primary { background-color: var(--primary); }
+        .bg-secondary { background-color: var(--secondary); }
+        .bg-accent { background-color: var(--accent); }
+        .bg-background { background-color: var(--background); }
+        .bg-buttonBackground { background-color: var(--buttonBackground); }
+        .text-primary { color: var(--primary); }
+        .text-secondary { color: var(--secondary); }
+        .text-accent { color: var(--accent); }
+        .text-text { color: var(--text); }
+        .text-buttonText { color: var(--buttonText); }
+        .border-primary { border-color: var(--primary); }
+        .border-secondary { border-color: var(--secondary); }
+        .border-accent { border-color: var(--accent); }
+        .ring-primary { ring-color: var(--primary); }
+        .hover\:bg-primary:hover { background-color: var(--primary); }
+        .hover\:text-primary:hover { color: var(--primary); }
+        .focus\:ring-primary:focus { --tw-ring-color: var(--primary); }
+        .header-scrolled { background-color: rgba(26, 26, 26, 0.9); backdrop-filter: blur(8px); }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="font-body bg-background text-text">
+
+    <!-- Header -->
+    <header data-section="header" id="main-header" class="fixed top-0 left-0 w-full z-50 transition-all duration-300 py-4 px-4 sm:px-6 lg:px-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="flex-shrink-0" data-aos="fade-right">
+                <img src="./logo.png" alt="JPR STUDIO Logo" class="h-10 md:h-12">
+            </a>
+            <nav class="hidden lg:flex items-center space-x-8" data-aos="fade-in" data-aos-delay="200">
+                <a href="index.html" class="text-sm uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Home</a>
+                <a href="about.html" class="text-sm uppercase tracking-wider font-bold text-primary border-b-2 border-primary pb-1">About</a>
+                <a href="gallery.html" class="text-sm uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Gallery</a>
+                <a href="services.html" class="text-sm uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Services</a>
+                <a href="contact.html" class="text-sm uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Contact</a>
+            </nav>
+            <button id="mobile-menu-button" class="lg:hidden text-accent text-2xl z-50">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden absolute top-0 left-0 w-full h-screen bg-background/95 backdrop-blur-lg">
+            <div class="flex flex-col items-center justify-center h-full space-y-8">
+                <a href="index.html" class="text-lg uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Home</a>
+                <a href="about.html" class="text-lg uppercase tracking-wider font-bold text-primary">About</a>
+                <a href="gallery.html" class="text-lg uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Gallery</a>
+                <a href="services.html" class="text-lg uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Services</a>
+                <a href="contact.html" class="text-lg uppercase tracking-wider text-accent hover:text-primary transition-colors duration-300">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- About Hero Section -->
+        <section data-section="about-hero" class="relative h-[60vh] min-h-[400px] flex items-center justify-center text-center bg-black">
+            <div class="absolute inset-0">
+                <img src="https://images.unsplash.com/photo-1525101479959-c3e73fd498ab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5NDE5NTN8&ixlib=rb-4.1.0&q=80&w=1080" alt="Photography studio background" class="w-full h-full object-cover opacity-30">
+                <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+            </div>
+            <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8" data-aos="fade-up">
+                <h1 class="font-heading text-5xl md:text-7xl lg:text-8xl uppercase font-bold tracking-wider">About <span class="text-primary">JPR Studio</span></h1>
+                <p class="mt-4 max-w-2xl mx-auto text-lg text-accent font-body">Capturing moments, creating memories. Discover the story behind our lens.</p>
+            </div>
+        </section>
+
+        <!-- Our Story Section -->
+        <section data-section="our-story" class="py-20 lg:py-32 bg-background">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <div data-aos="fade-right">
+                        <h2 class="font-heading text-4xl md:text-5xl font-bold uppercase tracking-wide">Our <span class="text-primary">Story</span></h2>
+                        <div class="w-24 h-1 bg-primary my-6"></div>
+                        <p class="font-body text-accent/80 leading-relaxed mb-4">
+                            Founded with a passion for visual storytelling, JPR STUDIO began its journey in Tiruchirappalli to provide exceptional photography services that are both high-quality and accessible. We believe that everyone deserves to have their special moments captured beautifully.
+                        </p>
+                        <p class="font-body text-accent/80 leading-relaxed">
+                            From a small, ambitious venture, we have grown into a trusted name in the local photography scene, known for our professional approach, creative vision, and unwavering commitment to client satisfaction. Our studio is more than just a business; it's a place where art and memory converge.
+                        </p>
+                    </div>
+                    <div data-aos="fade-left" class="relative h-80 lg:h-full min-h-[400px]">
+                        <img src="https://images.unsplash.com/photo-1582636583387-d240ab2099fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5NDE5NTN8&ixlib=rb-4.1.0&q=80&w=1080" alt="Photographer setting up a shot" class="w-full h-full object-cover border-4 border-accent/10">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bento Grid - Our Vibe & Values -->
+        <section data-section="our-vibe" class="py-20 lg:py-32 bg-black/20" style="background-image: radial-gradient(circle at top right, var(--primary) -40%, transparent 30%);">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold uppercase tracking-wide" data-aos="fade-up">The JPR <span class="text-primary">Difference</span></h2>
+                    <p class="mt-4 max-w-2xl mx-auto text-accent/80 font-body" data-aos="fade-up" data-aos-delay="100">Our work is guided by a core set of principles that ensure excellence in every shot.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-4">
+                    <div class="p-8 border border-accent/10 bg-background/50 backdrop-blur-sm md:col-span-2 flex flex-col justify-center" data-aos="fade-up">
+                        <i class="fa-solid fa-star text-primary text-3xl mb-4"></i>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">Uncompromising Quality</h3>
+                        <p class="font-body text-accent/70 text-sm">We use top-tier equipment and refined techniques to deliver photos that are sharp, vibrant, and timeless. Excellence is not an option; it's a guarantee.</p>
+                    </div>
+                    <div class="p-8 border border-accent/10 bg-background/50 backdrop-blur-sm row-span-2 flex flex-col justify-center" data-aos="fade-left" data-aos-delay="100">
+                        <i class="fa-solid fa-handshake text-primary text-3xl mb-4"></i>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">Professional & Reliable</h3>
+                        <p class="font-body text-accent/70 text-sm mb-6">Punctuality, clear communication, and a friendly demeanor are the cornerstones of our service. You can count on us to be there, ready to capture your moments perfectly.</p>
+                        <img src="https://images.unsplash.com/photo-1583159980574-f514d37c1744?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5NDE5NTN8&ixlib=rb-4.1.0&q=80&w=1080" alt="Professional camera" class="w-full h-40 object-cover mt-auto border border-accent/10">
+                    </div>
+                    <div class="p-8 border border-accent/10 bg-background/50 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="200">
+                        <i class="fa-solid fa-indian-rupee-sign text-primary text-3xl mb-4"></i>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">Great Value</h3>
+                        <p class="font-body text-accent/70 text-sm">High-quality photography shouldn't break the bank. We offer competitive pricing and packages that provide incredible value for your investment.</p>
+                    </div>
+                    <div class="p-8 border border-accent/10 bg-background/50 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="300">
+                        <i class="fa-solid fa-camera-retro text-primary text-3xl mb-4"></i>
+                        <h3 class="font-heading text-2xl font-semibold mb-2">On-Site Service</h3>
+                        <p class="font-body text-accent/70 text-sm">Whether it's a wedding, a corporate event, or a family gathering, we bring our studio to you, ensuring professional results at any location.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section data-section="testimonials" class="py-20 lg:py-32 bg-background">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold uppercase tracking-wide" data-aos="fade-up">What Our <span class="text-primary">Clients Say</span></h2>
+                    <p class="mt-4 max-w-2xl mx-auto text-accent/80 font-body" data-aos="fade-up" data-aos-delay="100">Our clients' satisfaction speaks for itself.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="border border-accent/10 p-8 text-center" data-aos="fade-up" data-aos-delay="100">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-accent/90 italic">GREAT WORK THANKS TO JPR STUDIOS</p>
+                        <div class="w-12 h-px bg-primary/50 mx-auto my-4"></div>
+                        <p class="font-heading font-semibold text-sm uppercase tracking-widest">- Satisfied Client</p>
+                    </div>
+                    <div class="border border-accent/10 p-8 text-center" data-aos="fade-up" data-aos-delay="200">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-accent/90 italic">Super studio ❤️‍🔥🫂</p>
+                        <div class="w-12 h-px bg-primary/50 mx-auto my-4"></div>
+                        <p class="font-heading font-semibold text-sm uppercase tracking-widest">- Happy Customer</p>
+                    </div>
+                    <div class="border border-accent/10 p-8 text-center" data-aos="fade-up" data-aos-delay="300">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-accent/90 italic">Value of money, On site services, really awesome.</p>
+                        <div class="w-12 h-px bg-primary/50 mx-auto my-4"></div>
+                        <p class="font-heading font-semibold text-sm uppercase tracking-widest">- Valued Partner</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section data-section="cta" class="py-20 lg:py-32 bg-black/20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto text-center" data-aos="zoom-in">
+                    <h2 class="font-heading text-4xl md:text-5xl font-bold uppercase tracking-wide">Let's Create <span class="text-primary">Together</span></h2>
+                    <p class="mt-4 text-lg text-accent/80 font-body">Have a project in mind or questions for us? Fill out the form below and we'll get back to you as soon as possible.</p>
+                </div>
+                <form onsubmit="handleLeadSubmit(event)" class="mt-12 max-w-2xl mx-auto space-y-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="name" placeholder="Your Name" required class="w-full bg-background border border-accent/20 px-4 py-3 text-text placeholder-accent/50 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-300">
+                        <input type="email" name="email" placeholder="Your Email" required class="w-full bg-background border border-accent/20 px-4 py-3 text-text placeholder-accent/50 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-300">
+                    </div>
+                    <textarea name="message" placeholder="Your Message" rows="5" required class="w-full bg-background border border-accent/20 px-4 py-3 text-text placeholder-accent/50 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-300"></textarea>
+                    <div class="text-center">
+                        <button type="submit" class="bg-buttonBackground text-buttonText font-heading uppercase tracking-wider font-bold px-10 py-4 hover:opacity-90 transition-opacity duration-300">Send Message</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-black py-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Column 1: Logo & About -->
+                <div class="space-y-4">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="JPR STUDIO Logo" class="h-12">
+                    </a>
+                    <p class="text-accent/70 text-sm">Professional photography studio in Tiruchirappalli, capturing life's best moments with quality and value.</p>
+                    <div class="flex space-x-4 text-accent">
+                        <a href="#" class="hover:text-primary transition-colors"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="hover:text-primary transition-colors"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="hover:text-primary transition-colors"><i class="fa-brands fa-twitter"></i></a>
+                    </div>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold uppercase tracking-wider mb-4">Quick Links</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li><a href="index.html" class="text-accent/70 hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="text-accent/70 hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="gallery.html" class="text-accent/70 hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="services.html" class="text-accent/70 hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="contact.html" class="text-accent/70 hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Services -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold uppercase tracking-wider mb-4">Our Services</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="text-accent/70">Studio Photography</li>
+                        <li class="text-accent/70">On-site Photography</li>
+                        <li class="text-accent/70">Event Coverage</li>
+                        <li class="text-accent/70">Portrait Sessions</li>
+                        <li class="text-accent/70">Product Photography</li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Contact -->
+                <div>
+                    <h4 class="font-heading text-lg font-semibold uppercase tracking-wider mb-4">Contact Info</h4>
+                    <ul class="space-y-3 text-sm text-accent/70">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-location-dot mt-1 mr-3 text-primary"></i>
+                            <span>Karumandapam, Tiruchirappalli, Tamil Nadu 620001, India</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-phone mt-1 mr-3 text-primary"></i>
+                            <span>073730 04242</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12 pt-8 border-t border-accent/10 text-center text-sm text-accent/50">
+                <p>&copy; 2024 JPR STUDIO. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS (Animate on Scroll)
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIcon = mobileMenuButton.querySelector('i');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            if (mobileMenu.classList.contains('hidden')) {
+                menuIcon.classList.remove('fa-xmark');
+                menuIcon.classList.add('fa-bars');
+            } else {
+                menuIcon.classList.remove('fa-bars');
+                menuIcon.classList.add('fa-xmark');
+            }
+        });
+
+        // Header scroll effect
+        const header = document.getElementById('main-header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.classList.add('header-scrolled');
+            } else {
+                header.classList.remove('header-scrolled');
+            }
+        });
+
+        // Handle form submission
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            // In a real application, you would send this data to a server.
+            // For this example, we'll just show an alert.
+            const form = event.target;
+            const name = form.elements.name.value;
+            alert(`Thank you for your message, ${name}! We will get back to you shortly.`);
+            form.reset();
+        }
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1767941935659',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

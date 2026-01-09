@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMILE DENTAL CARE- SRIRANGAM BRANCH - gallery</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- AOS CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Tailwind CSS (assumed to be pre-configured) -->
+    
+    
+    
+    <style>
+        /* Applying custom fonts to base elements */
+        body {
+            font-family: 'Lato', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif;
+        }
+    </style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body">
+
+    <!-- Header -->
+    <header data-section="header" class="sticky top-0 z-50 bg-background/90 backdrop-blur-sm border-b border-gray-200/80 transition-shadow duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a href="index.html" class="flex items-center">
+                        <img class="h-12 w-auto" src="./logo.png" alt="SMILE DENTAL CARE- SRIRANGAM BRANCH Logo">
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex md:space-x-8">
+                    <a href="index.html" class="font-body text-sm font-medium text-text hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="about.html" class="font-body text-sm font-medium text-text hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-body text-sm font-medium text-text hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-body text-sm font-bold text-primary border-b-2 border-primary">Gallery</a>
+                    <a href="contact.html" class="font-body text-sm font-medium text-text hover:text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-text hover:text-primary focus:outline-none">
+                        <span class="sr-only">Open main menu</span>
+                        <i class="fa-solid fa-bars fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="block px-3 py-2 rounded-md text-base font-medium text-text hover:bg-gray-200 hover:text-primary">Home</a>
+                <a href="about.html" class="block px-3 py-2 rounded-md text-base font-medium text-text hover:bg-gray-200 hover:text-primary">About</a>
+                <a href="services.html" class="block px-3 py-2 rounded-md text-base font-medium text-text hover:bg-gray-200 hover:text-primary">Services</a>
+                <a href="gallery.html" class="block px-3 py-2 rounded-md text-base font-bold bg-primary/10 text-primary">Gallery</a>
+                <a href="contact.html" class="block px-3 py-2 rounded-md text-base font-medium text-text hover:bg-gray-200 hover:text-primary">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Page Header -->
+        <section data-section="page-header" class="py-20 sm:py-24" style="background-image: radial-gradient(circle, #F8F8F8, #EFEFEF);">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <p class="text-sm font-bold text-primary uppercase tracking-wider" data-aos="fade-up">Our Clinic</p>
+                <h1 class="mt-2 text-4xl font-heading font-bold text-text sm:text-5xl" data-aos="fade-up" data-aos-delay="100">
+                    A Glimpse Into Our World
+                </h1>
+                <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-600 font-body" data-aos="fade-up" data-aos-delay="200">
+                    Explore our modern, clean, and welcoming environment. We take pride in our state-of-the-art facility designed for your comfort and safety.
+                </p>
+            </div>
+        </section>
+
+        <!-- Gallery Grid -->
+        <section data-section="gallery-grid" class="py-20 sm:py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up">
+                        <img src="https://images.unsplash.com/photo-1581584731241-c134a1afe9a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Clean dental clinic interior" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="100">
+                        <img src="https://images.unsplash.com/photo-1630074734301-5d0c4e345dd1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Modern dental equipment" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="200">
+                        <img src="https://images.unsplash.com/photo-1643386281892-f8417a49130e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Patient smiling after treatment" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up">
+                        <img src="https://images.unsplash.com/photo-1656623807884-f6c9b7f389e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Sterilized dental instruments" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="100">
+                        <img src="https://images.unsplash.com/photo-1670250492416-570b5b7343b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Friendly dentist with a patient" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="200">
+                        <img src="https://images.unsplash.com/photo-1677728401315-afb604c2186d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Clinic reception area" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                     <div class="group overflow-hidden rounded-lg" data-aos="fade-up">
+                        <img src="https://images.unsplash.com/photo-1681939278218-a755fb2bf2d3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Close-up of dental tools" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="100">
+                        <img src="https://images.unsplash.com/photo-1681939282741-9ace0a227977?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Comfortable patient chair" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="group overflow-hidden rounded-lg" data-aos="fade-up" data-aos-delay="200">
+                        <img src="https://images.unsplash.com/photo-1682663947103-1b3d25d95d8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njc5MzM1NjR8&ixlib=rb-4.1.0&q=80&w=1080" alt="Hygienic clinic environment" class="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section data-section="cta" class="bg-background">
+            <div class="max-w-4xl mx-auto py-20 sm:py-24 px-4 sm:px-6 lg:px-8">
+                <div class="text-center" data-aos="fade-up">
+                    <h2 class="text-3xl font-heading font-bold text-text sm:text-4xl">Ready for a Healthier Smile?</h2>
+                    <p class="mt-4 text-lg text-gray-600">
+                        Schedule your appointment today and experience the best dental care in Srirangam.
+                    </p>
+                </div>
+                <form onsubmit="handleLeadSubmit(event)" class="mt-10 max-w-xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                        <div>
+                            <label for="name" class="sr-only">Name</label>
+                            <input type="text" name="name" id="name" required class="block w-full px-4 py-3 font-body text-text bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Your Name">
+                        </div>
+                        <div>
+                            <label for="phone" class="sr-only">Phone</label>
+                            <input type="tel" name="phone" id="phone" required class="block w-full px-4 py-3 font-body text-text bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Your Phone">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="email" class="sr-only">Email</label>
+                            <input type="email" name="email" id="email" required class="block w-full px-4 py-3 font-body text-text bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Your Email">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="message" class="sr-only">Message</label>
+                            <textarea name="message" id="message" rows="4" class="block w-full px-4 py-3 font-body text-text bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Your Message (Optional)"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-buttonText bg-buttonBackground hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-300">
+                            Book an Appointment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-gray-100 text-text font-body">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Column 1: Logo & Info -->
+                <div class="space-y-4">
+                    <a href="index.html">
+                        <img class="h-12 w-auto" src="./logo.png" alt="SMILE DENTAL CARE- SRIRANGAM BRANCH Logo">
+                    </a>
+                    <p class="text-sm text-gray-600">
+                        Gandhi Rd, opposite Ashwin s Sweets, Srirangam, Tiruchirappalli, Tamil Nadu 620006, India
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <a href="tel:09489364226" class="hover:text-primary">Phone: 094893 64226</a>
+                    </p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h3 class="text-sm font-heading font-semibold tracking-wider uppercase">Quick Links</h3>
+                    <ul class="mt-4 space-y-2">
+                        <li><a href="index.html" class="text-sm text-gray-600 hover:text-primary">Home</a></li>
+                        <li><a href="about.html" class="text-sm text-gray-600 hover:text-primary">About Us</a></li>
+                        <li><a href="services.html" class="text-sm text-gray-600 hover:text-primary">Services</a></li>
+                        <li><a href="gallery.html" class="text-sm text-gray-600 hover:text-primary">Gallery</a></li>
+                        <li><a href="contact.html" class="text-sm text-gray-600 hover:text-primary">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Our Services -->
+                <div>
+                    <h3 class="text-sm font-heading font-semibold tracking-wider uppercase">Our Services</h3>
+                    <ul class="mt-4 space-y-2">
+                        <li><p class="text-sm text-gray-600">General Dentistry</p></li>
+                        <li><p class="text-sm text-gray-600">Dental Consultations</p></li>
+                        <li><p class="text-sm text-gray-600">Oral Hygiene</p></li>
+                        <li><p class="text-sm text-gray-600">Fillings & Extractions</p></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div>
+                    <h3 class="text-sm font-heading font-semibold tracking-wider uppercase">Opening Hours</h3>
+                    <ul class="mt-4 space-y-2 text-sm text-gray-600">
+                        <li>Mon - Sat: 10:00 AM – 9:00 PM</li>
+                        <li>Sunday: Closed</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-8 border-t border-gray-200 pt-8 flex flex-col sm:flex-row justify-between items-center">
+                <p class="text-sm text-gray-500">&copy; 2024 SMILE DENTAL CARE- SRIRANGAM BRANCH. All Rights Reserved.</p>
+                <div class="flex space-x-6 mt-4 sm:mt-0">
+                    <!-- Social media links would go here if available -->
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- Custom Scripts -->
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            const icon = mobileMenuButton.querySelector('i');
+            if (mobileMenu.classList.contains('hidden')) {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            } else {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            }
+        });
+
+        // Form Submission Handler
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            console.log('Form Submitted:', data);
+
+            // Simple confirmation message
+            alert('Thank you for your message! We will get back to you shortly.');
+            form.reset();
+        }
+    </script>
+
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1767933537323',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

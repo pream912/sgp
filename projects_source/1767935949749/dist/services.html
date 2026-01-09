@@ -1,0 +1,401 @@
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surya Dental Care - services</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@400;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* This is a placeholder for your Tailwind CSS build process. */
+        /* In a real project, this would be a separate CSS file. */
+        /* For this exercise, we assume Tailwind classes work out-of-the-box. */
+        /* DO NOT add a Tailwind CDN script here. */
+    </style>
+    <script>
+        // This script block is intentionally left empty in the head.
+        // The main script is at the end of the body.
+        // Tailwind config would not be here.
+    </script>
+    
+    
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body">
+
+    <header data-section="header" id="header" class="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-md border-b border-secondary/30 transition-shadow duration-300">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0">
+                    <a href="index.html" aria-label="Surya Dental Care Home">
+                        <img src="./logo.png" alt="Surya Dental Care Logo" class="h-12 w-auto">
+                    </a>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-sm tracking-wide">Home</a>
+                    <a href="about.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-sm tracking-wide">About</a>
+                    <a href="services.html" class="font-bold text-primary border-b-2 border-primary pb-1 text-sm tracking-wide">Services</a>
+                    <a href="contact.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-sm tracking-wide">Contact</a>
+                </nav>
+                <div class="hidden md:block">
+                    <a href="#contact-form" class="bg-buttonBackground text-buttonText px-5 py-2.5 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors duration-300 shadow-sm">Book Appointment</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-text text-2xl" aria-label="Open menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden absolute top-0 left-0 w-full h-screen bg-background">
+            <div class="flex justify-between items-center p-4 border-b border-secondary/30">
+                 <a href="index.html" aria-label="Surya Dental Care Home">
+                    <img src="./logo.png" alt="Surya Dental Care Logo" class="h-10 w-auto">
+                </a>
+                <button id="mobile-menu-close-button" class="text-text text-2xl" aria-label="Close menu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="flex flex-col items-center justify-center space-y-8 mt-16">
+                <a href="index.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-xl">Home</a>
+                <a href="about.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-xl">About</a>
+                <a href="services.html" class="font-bold text-primary text-xl">Services</a>
+                <a href="contact.html" class="text-text/80 hover:text-primary transition-colors duration-200 text-xl">Contact</a>
+                <a href="#contact-form" class="bg-buttonBackground text-buttonText px-6 py-3 rounded-md text-lg font-semibold hover:bg-primary/90 transition-colors duration-300 mt-8">Book Appointment</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section data-section="services-hero" class="py-20 md:py-28 text-center bg-background">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <h1 class="text-4xl md:text-6xl font-heading font-extrabold text-text" data-aos="fade-up">Our Dental Services</h1>
+                <p class="mt-4 max-w-2xl mx-auto text-lg text-text/70" data-aos="fade-up" data-aos-delay="100">
+                    Dedicated to your oral health with professional, patient-focused care. Explore our range of services designed for your comfort and confidence.
+                </p>
+            </div>
+        </section>
+
+        <!-- Bento Grid Services Section -->
+        <section data-section="services-grid" class="py-16 md:py-24 bg-primary/5">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    <!-- Service 1: Dental Cleaning -->
+                    <div class="bg-background p-8 rounded-lg border border-secondary/20 transition-shadow hover:shadow-xl" data-aos="fade-up">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+                            <i class="fas fa-tooth text-3xl text-primary"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold mb-3">Dental Cleaning</h3>
+                        <p class="text-text/70 text-sm leading-relaxed">
+                            Professional prophylaxis to remove plaque and tartar, promoting gum health and preventing cavities. Our gentle hygienists ensure a comfortable and refreshing experience.
+                        </p>
+                    </div>
+
+                    <!-- Service 2: Dental Implants -->
+                    <div class="bg-background p-8 rounded-lg border border-secondary/20 transition-shadow hover:shadow-xl lg:col-span-2" data-aos="fade-up" data-aos-delay="100">
+                         <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+                            <i class="fas fa-bone text-3xl text-primary"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold mb-3">Dental Implants</h3>
+                        <p class="text-text/70 text-sm leading-relaxed">
+                            A permanent, state-of-the-art solution for missing teeth. Our specialists restore your smile's function and appearance with durable, natural-looking implants, giving you the confidence to smile again.
+                        </p>
+                    </div>
+
+                    <!-- Service 3: General Treatments -->
+                    <div class="bg-background p-8 rounded-lg border border-secondary/20 transition-shadow hover:shadow-xl lg:col-span-2" data-aos="fade-up" data-aos-delay="200">
+                         <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+                            <i class="fas fa-stethoscope text-3xl text-primary"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold mb-3">General Dental Treatments</h3>
+                        <p class="text-text/70 text-sm leading-relaxed">
+                            From fillings to root canals, we cover all aspects of general dentistry. We focus on preserving your natural teeth and ensuring your long-term oral health through meticulous and caring treatment.
+                        </p>
+                    </div>
+
+                    <!-- Service 4: Comprehensive Planning -->
+                    <div class="bg-background p-8 rounded-lg border border-secondary/20 transition-shadow hover:shadow-xl" data-aos="fade-up" data-aos-delay="300">
+                         <div class="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+                            <i class="fas fa-clipboard-list text-3xl text-primary"></i>
+                        </div>
+                        <h3 class="font-heading text-2xl font-bold mb-3">Comprehensive Planning</h3>
+                        <p class="text-text/70 text-sm leading-relaxed">
+                            We take the time to understand your needs. Our team develops a personalized, step-by-step treatment plan, explaining all options clearly to empower your decisions.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Choose Us Section -->
+        <section data-section="why-choose-us" class="py-16 md:py-24">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-heading font-bold" data-aos="fade-up">The Surya Dental Care Difference</h2>
+                    <p class="mt-3 max-w-xl mx-auto text-text/70" data-aos="fade-up" data-aos-delay="100">Experience dentistry that puts you first.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+                    <!-- Feature 1 -->
+                    <div data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex items-center justify-center h-20 w-20 mx-auto rounded-full bg-primary/10 mb-4">
+                            <i class="fas fa-heart-pulse text-4xl text-primary"></i>
+                        </div>
+                        <h4 class="font-heading font-bold text-lg">Anxiety-Free Visits</h4>
+                        <p class="text-sm text-text/60 mt-1">We specialize in easing dental anxiety, ensuring a calm and comfortable experience for every patient.</p>
+                    </div>
+                    <!-- Feature 2 -->
+                    <div data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex items-center justify-center h-20 w-20 mx-auto rounded-full bg-primary/10 mb-4">
+                            <i class="fas fa-user-doctor text-4xl text-primary"></i>
+                        </div>
+                        <h4 class="font-heading font-bold text-lg">Professional Staff</h4>
+                        <p class="text-sm text-text/60 mt-1">Our highly trained team of doctors, hygienists, and assistants provide exceptional, attentive care.</p>
+                    </div>
+                    <!-- Feature 3 -->
+                    <div data-aos="fade-up" data-aos-delay="300">
+                        <div class="flex items-center justify-center h-20 w-20 mx-auto rounded-full bg-primary/10 mb-4">
+                            <i class="fas fa-clock text-4xl text-primary"></i>
+                        </div>
+                        <h4 class="font-heading font-bold text-lg">Punctual & Smooth</h4>
+                        <p class="text-sm text-text/60 mt-1">We respect your time with on-schedule appointments and efficient treatment processes.</p>
+                    </div>
+                    <!-- Feature 4 -->
+                    <div data-aos="fade-up" data-aos-delay="400">
+                        <div class="flex items-center justify-center h-20 w-20 mx-auto rounded-full bg-primary/10 mb-4">
+                            <i class="fas fa-clinic-medical text-4xl text-primary"></i>
+                        </div>
+                        <h4 class="font-heading font-bold text-lg">Clean & Welcoming</h4>
+                        <p class="text-sm text-text/60 mt-1">Our clinic offers a pristine, modern, and calming atmosphere for your peace of mind.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Form Section -->
+        <section data-section="cta-form" id="contact-form" class="py-16 md:py-24 bg-primary/5">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto">
+                    <div class="text-center mb-12" data-aos="fade-up">
+                        <h2 class="text-3xl md:text-4xl font-heading font-bold text-text">Book Your Appointment</h2>
+                        <p class="mt-3 text-text/70">Take the first step towards a healthier, brighter smile. Fill out the form below to request an appointment.</p>
+                    </div>
+                    <form onsubmit="handleLeadSubmit(event)" class="space-y-6" data-aos="fade-up" data-aos-delay="100">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-text/80 mb-1">Full Name</label>
+                                <input type="text" id="name" name="name" required class="w-full px-4 py-2.5 bg-background border border-secondary/40 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200">
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-text/80 mb-1">Phone Number</label>
+                                <input type="tel" id="phone" name="phone" required class="w-full px-4 py-2.5 bg-background border border-secondary/40 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-text/80 mb-1">Email Address</label>
+                            <input type="email" id="email" name="email" required class="w-full px-4 py-2.5 bg-background border border-secondary/40 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200">
+                        </div>
+                        <div>
+                            <label for="service" class="block text-sm font-medium text-text/80 mb-1">Service of Interest</label>
+                            <select id="service" name="service" class="w-full px-4 py-2.5 bg-background border border-secondary/40 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200">
+                                <option>Select a service</option>
+                                <option>Dental Cleaning</option>
+                                <option>Dental Implants</option>
+                                <option>General Dental Treatments</option>
+                                <option>Comprehensive Treatment Planning</option>
+                                <option>Other Inquiry</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="message" class="block text-sm font-medium text-text/80 mb-1">Message (Optional)</label>
+                            <textarea id="message" name="message" rows="4" class="w-full px-4 py-2.5 bg-background border border-secondary/40 rounded-md focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all duration-200"></textarea>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="bg-buttonBackground text-buttonText px-10 py-3 rounded-md text-base font-semibold hover:bg-primary/90 transition-colors duration-300 shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5">
+                                Request Appointment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-text text-background/80 pt-16 pb-8">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Column 1: Logo & Contact -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                    <a href="index.html" class="mb-4 inline-block">
+                        <img src="./logo.png" alt="Surya Dental Care Logo" class="h-12 w-auto brightness-0 invert">
+                    </a>
+                    <p class="text-sm text-background/60 mb-4 max-w-xs">Professional, calm, and welcoming dental care for your entire family.</p>
+                    <div class="space-y-2 text-sm">
+                        <p><i class="fas fa-phone fa-fw mr-2 text-primary"></i> 099432 97779</p>
+                        <p><i class="fas fa-map-marker-alt fa-fw mr-2 text-primary"></i> Thillai Nagar, Tiruchirappalli</p>
+                    </div>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading font-bold text-base text-background mb-4">Quick Links</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li><a href="index.html" class="hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Our Services</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Services -->
+                <div>
+                    <h4 class="font-heading font-bold text-base text-background mb-4">Our Services</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Dental Cleaning</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Dental Implants</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">General Treatments</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Treatment Planning</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div>
+                    <h4 class="font-heading font-bold text-base text-background mb-4">Opening Hours</h4>
+                    <ul class="space-y-2 text-sm text-background/70">
+                        <li>Mon - Sat: 9:30 AM – 9:00 PM</li>
+                        <li>Sunday: 9:30 AM – 6:00 PM</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-12 pt-8 border-t border-background/20 text-center text-sm text-background/60">
+                <p>&copy; 2024 Surya Dental Care. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenuCloseButton = document.getElementById('mobile-menu-close-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+
+        mobileMenuCloseButton.addEventListener('click', () => {
+            mobileMenu.classList.add('hidden');
+            document.body.style.overflow = '';
+        });
+        
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+        });
+
+        // Header shadow on scroll
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-md');
+            } else {
+                header.classList.remove('shadow-md');
+            }
+        });
+
+        // Handle Form Submission
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            console.log("Form Submitted!", data);
+            
+            // In a real application, you would send this data to a server.
+            // For now, we can just show a success message.
+            alert('Thank you for your request! We will be in touch shortly.');
+            form.reset();
+        }
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1767935949749',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

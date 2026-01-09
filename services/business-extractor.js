@@ -14,32 +14,69 @@ const customsearch = google.customsearch('v1');
 // --- PROMPTS ---
 
 const SUMMARY_PROMPT = `
-You are an expert copywriter.
-Based on the provided structured business data (from Google Places), generate a catchy "Business Summary" and identify the "Vibe".
+You are an expert data analyst.
+Based on the provided structured business data (from Google Places), extract and refine the following fields into a valid JSON object.
 
 Input Data:
 {DATA}
 
-Output Format (Markdown):
-**Business Summary**: [A compelling 2-3 sentence description]
-**Industry**: [Best guess]
-**Vibe**: [Adjectives]
-**Selling Points**: [Bullet points based on reviews/summary]
+Output JSON Format:
+{
+  "name": "Business Name",
+  "industry": "Industry Type",
+  "description": "A compelling 2-3 sentence business summary",
+  "vibe": "Adjectives describing the atmosphere",
+  "sellingPoints": ["Point 1", "Point 2"],
+  "services": ["Service 1", "Service 2"],
+  "address": "Full Address",
+  "phone": "Phone Number",
+  "website": "Website URL",
+  "email": "Email Address (if found, else empty)",
+  "socials": {
+    "facebook": "",
+    "instagram": "",
+    "twitter": "",
+    "linkedin": "",
+    "youtube": ""
+  },
+  "openingHours": "Monday: ...",
+  "reviews": ["Review 1", "Review 2"]
+}
+
+Ensure valid JSON. Do not include markdown code blocks.
 `;
 
 const SEARCH_PROMPT = `
 You are an expert data extractor.
-Analyze the provided search results about a business, including snippets and structured data.
-Synthesize the information into a comprehensive Business Profile.
+Analyze the provided search results about a business and synthesize the information into a strict JSON object.
 
-Structure:
-1. **Business Summary**: Name, Industry, Vibe, Selling Points.
-2. **Contact Details**: Address, Phone, Email.
-3. **Opening Hours**: (if found).
-4. **Reviews/Testimonials**: Extract quotes/ratings.
-5. **Key Services**: Bullet points.
+Search Results:
+{SEARCH_RESULTS}
 
-Output plain text (Markdown).
+Output JSON Format:
+{
+  "name": "Business Name",
+  "industry": "Industry Type",
+  "description": "Business Summary",
+  "vibe": "Vibe/Atmosphere",
+  "sellingPoints": ["Point 1", "Point 2"],
+  "services": ["Service 1", "Service 2"],
+  "address": "Address",
+  "phone": "Phone",
+  "website": "Website",
+  "email": "Email",
+  "socials": {
+    "facebook": "",
+    "instagram": "",
+    "twitter": "",
+    "linkedin": "",
+    "youtube": ""
+  },
+  "openingHours": "Formatted opening hours",
+  "reviews": ["Review 1", "Review 2"]
+}
+
+Ensure valid JSON. Do not include markdown code blocks.
 `;
 
 // --- MAIN FUNCTION ---
@@ -81,10 +118,12 @@ async function fetchPlacesData(query) {
         'places.formattedAddress',
         'places.nationalPhoneNumber',
         'places.regularOpeningHours',
-        'places.reviews',
+        'places.reviews.rating', // Explicitly request rating
+        'places.reviews.text',
+        'places.reviews.authorAttribution',
         'places.editorialSummary',
         'places.websiteUri',
-        'places.primaryType' // e.g. "dental_clinic"
+        'places.primaryType' 
     ].join(',');
 
     const response = await fetch(url, {
@@ -111,53 +150,49 @@ async function fetchPlacesData(query) {
 }
 
 async function formatPlacesData(place) {
-    // We use AI to generate the "Creative" parts (Summary, Vibe) from the raw data
+    // 1. Prepare raw data for AI to refine
+    // Explicitly format reviews with author names here, filtering for positive ones (4+ stars)
+    const reviews = place.reviews
+        ?.filter(r => r.rating >= 4) // Only positive reviews
+        .slice(0, 5)
+        .map(r => {
+            const text = r.text?.text || r.originalText?.text || "Great service!";
+            const author = r.authorAttribution?.displayName || "Happy Customer";
+            return `"${text}" - ${author}`;
+        }) || [];
+
     const rawDataSummary = JSON.stringify({
         name: place.displayName?.text,
         summary: place.editorialSummary?.text,
         type: place.primaryType,
-        reviews: place.reviews?.slice(0, 5).map(r => r.text?.text).join(' | ')
+        reviews: reviews,
+        address: place.formattedAddress,
+        phone: place.nationalPhoneNumber,
+        website: place.websiteUri,
+        hours: place.regularOpeningHours?.weekdayDescriptions
     });
 
     const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT.replace('{DATA}', rawDataSummary) }] }],
     });
-    const aiSummary = await result.response.candidates[0].content.parts[0].text;
-
-    // --- CLEANUP LOGIC ---
     
-    // 1. Truncate Reviews (Max 180 chars)
-    const MAX_REVIEW_LEN = 180;
-    const reviews = place.reviews?.slice(0, 3).map(r => {
-        let text = r.text?.text || r.originalText?.text || "";
-        if (text.length > MAX_REVIEW_LEN) {
-            text = text.substring(0, MAX_REVIEW_LEN) + "...";
-        }
-        const author = r.authorAttribution?.displayName || 'Customer';
-        return `"${text}" - ${author}`;
-    }).join('\n\n') || "No reviews found.";
-    
-    // 2. Format Hours (Simplify if possible, otherwise list)
-    // The API returns "Monday: 9AM-5PM". We leave this but ensure no extra junk.
-    const hours = place.regularOpeningHours?.weekdayDescriptions?.join('\n') || "Hours not available.";
+    let textResponse = result.response.candidates[0].content.parts[0].text;
+    textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // 3. Address (Clean up if needed, currently using formattedAddress)
-    const address = place.formattedAddress || 'N/A';
-
-    return `
-${aiSummary}
-
-**Contact Details**
-*   **Address**: ${address}
-*   **Phone**: ${place.nationalPhoneNumber || 'N/A'}
-*   **Website**: ${place.websiteUri || 'N/A'}
-
-**Opening Hours**
-${hours}
-
-**Reviews/Testimonials**
-${reviews}
-    `;
+    try {
+        return JSON.parse(textResponse);
+    } catch (e) {
+        console.error("Failed to parse AI JSON response", textResponse);
+        // Fallback object
+        return {
+            name: place.displayName?.text || '',
+            address: place.formattedAddress || '',
+            phone: place.nationalPhoneNumber || '',
+            website: place.websiteUri || '',
+            description: place.editorialSummary?.text || '',
+            reviews: reviews // Return the array directly
+        };
+    }
 }
 
 // --- CUSTOM SEARCH STRATEGY ---
@@ -189,10 +224,21 @@ SchemaData: ${schema}
     }).join('\n---\n');
 
     const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SEARCH_PROMPT + "\n\nSEARCH RESULTS:\n" + searchContext }] }],
+        contents: [{ role: 'user', parts: [{ text: SEARCH_PROMPT.replace('{SEARCH_RESULTS}', searchContext) }] }],
     });
 
-    return result.response.candidates[0].content.parts[0].text;
+    let textResponse = result.response.candidates[0].content.parts[0].text;
+    textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    try {
+        return JSON.parse(textResponse);
+    } catch (e) {
+        console.error("Failed to parse AI JSON response (Search)", textResponse);
+         return {
+            name: query,
+            description: "Could not automatically extract details."
+        };
+    }
 }
 
 module.exports = { extractFromUrl };
