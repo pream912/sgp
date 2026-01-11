@@ -130,10 +130,10 @@ const Editor = () => {
                        if (style.backgroundImage && style.backgroundImage !== 'none') {
                            const match = style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
                            if (match && match[1]) {
-                               // Use filename for matching to be safe with relative paths
+                               // Use fullUrl for matching to be safe and allow exact replacement
                                const fullUrl = match[1];
-                               const filename = fullUrl.split('/').pop();
-                               images.push({ type: 'bg', src: fullUrl, originalValue: filename });
+                               // const filename = fullUrl.split('/').pop(); 
+                               images.push({ type: 'bg', src: fullUrl, originalValue: fullUrl });
                            }
                        }
                    });

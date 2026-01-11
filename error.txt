@@ -1,55 +1,6 @@
-App.jsx:37  GET http://localhost:5173/sites/undefined/index.html 404 (Not Found)
-insertOrAppendPlacementNodeIntoContainer @ react-dom_client.js?v=e21d53e5:9706
-insertOrAppendPlacementNodeIntoContainer @ react-dom_client.js?v=e21d53e5:9708
-commitPlacement @ react-dom_client.js?v=e21d53e5:9755
-runWithFiberInDEV @ react-dom_client.js?v=e21d53e5:997
-commitReconciliationEffects @ react-dom_client.js?v=e21d53e5:10772
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10406
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10746
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10746
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10746
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10746
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10405
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10746
-recursivelyTraverseMutationEffects @ react-dom_client.js?v=e21d53e5:10396
-commitMutationEffectsOnFiber @ react-dom_client.js?v=e21d53e5:10600
-flushMutationEffects @ react-dom_client.js?v=e21d53e5:12822
-commitRoot @ react-dom_client.js?v=e21d53e5:12802
-commitRootWhenReady @ react-dom_client.js?v=e21d53e5:12016
-performWorkOnRoot @ react-dom_client.js?v=e21d53e5:11950
-performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=e21d53e5:13505
-performWorkUntilDeadline @ react-dom_client.js?v=e21d53e5:36
-<Editor>
-exports.jsxDEV @ react_jsx-dev-runtime.js?v=e21d53e5:247
-App @ App.jsx:37
-react_stack_bottom_frame @ react-dom_client.js?v=e21d53e5:18509
-renderWithHooksAgain @ react-dom_client.js?v=e21d53e5:5729
-renderWithHooks @ react-dom_client.js?v=e21d53e5:5665
-updateFunctionComponent @ react-dom_client.js?v=e21d53e5:7475
-beginWork @ react-dom_client.js?v=e21d53e5:8525
-runWithFiberInDEV @ react-dom_client.js?v=e21d53e5:997
-performUnitOfWork @ react-dom_client.js?v=e21d53e5:12561
-workLoopSync @ react-dom_client.js?v=e21d53e5:12424
-renderRootSync @ react-dom_client.js?v=e21d53e5:12408
-performWorkOnRoot @ react-dom_client.js?v=e21d53e5:11766
-performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=e21d53e5:13505
-performWorkUntilDeadline @ react-dom_client.js?v=e21d53e5:36Understand this error
-Editor.jsx:155 Executing inline script violates the following Content Security Policy directive 'default-src 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-SF8VA3GLC3+00kaRiNgVRsGPlDHj5iJw87/jsya3MZc='), or a nonce ('nonce-...') is required to enable inline execution. Note also that 'script-src' was not explicitly set, so 'default-src' is used as a fallback. The action has been blocked.
+api/domains/check?domain=dosa.com:1 
+ Failed to load resource: the server responded with a status of 404 (Not Found)
+
+Domains.jsx:42 
+AxiosError
+checkAvailability	@	Domains.jsx:42

@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const { buildSite, rebuildSite } = require('./services/builder');
 const { deploySite } = require('./services/deploy');
 const { extractFromUrl } = require('./services/business-extractor');
+const { checkAvailability, purchaseDomain, getSuggestions } = require('./services/domains');
 const { generateCode, fixCode, regenerateSection, updateSectionContent } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
 const { db, admin, auth } = require('./services/firebase');
@@ -462,6 +463,97 @@ app.post('/build', verifyToken, upload.single('logo'), async (req, res) => {
     } catch (error) {
         console.error('Process failed:', error);
         res.status(500).json({ error: error.message, details: error.stderr });
+    }
+});
+
+// --- Domain Management Endpoints ---
+
+// Check Domain Availability
+app.get('/domains/check', verifyToken, async (req, res) => {
+    const { domain } = req.query;
+    if (!domain) {
+        return res.status(400).json({ error: 'Domain is required' });
+    }
+
+    try {
+        const result = await checkAvailability(domain);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get Domain Suggestions
+app.get('/domains/suggest', verifyToken, async (req, res) => {
+    const { query } = req.query;
+    if (!query) {
+        return res.status(400).json({ error: 'Query is required' });
+    }
+
+    try {
+        const result = await getSuggestions(query);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get User's Domains
+app.get('/domains', verifyToken, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json([]);
+        }
+        
+        const snapshot = await db.collection('domains')
+            .where('userId', '==', req.user.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+            
+        const domains = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(domains);
+    } catch (error) {
+        console.error('Fetch domains failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Purchase Domain
+app.post('/domains/buy', verifyToken, async (req, res) => {
+    const { domain, contactInfo } = req.body;
+
+    if (!domain || !contactInfo) {
+        return res.status(400).json({ error: 'Domain and contactInfo are required' });
+    }
+
+    // Capture IP for 'agreedBy' field
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    try {
+        // Prepare details object
+        const details = {
+            ip,
+            contact: contactInfo // Assuming contactInfo has the required fields (nameFirst, nameLast, etc.)
+        };
+
+        const result = await purchaseDomain(domain, details);
+        
+        // Save to Firestore
+        if (db) {
+            await db.collection('domains').add({
+                domain,
+                userId: req.user.uid,
+                orderId: result.orderId || 'unknown', // GoDaddy might return purchaseId or similar
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                provider: 'godaddy',
+                status: 'active',
+                autoRenew: true
+            });
+        }
+
+        res.json({ success: true, order: result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 // import Builder from './pages/Builder'; // Old Builder
 import NewBuilder from './pages/NewBuilder'; // New Builder
 import Editor from './pages/Editor';
+import Domains from './pages/Domains';
 import PrivateRoute from './components/PrivateRoute';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -27,6 +28,14 @@ function App() {
             element={
               <PrivateRoute>
                 <NewBuilder />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/domains"
+            element={
+              <PrivateRoute>
+                <Domains />
               </PrivateRoute>
             }
           />

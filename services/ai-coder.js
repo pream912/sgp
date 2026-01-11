@@ -1,4 +1,5 @@
 const { VertexAI } = require('@google-cloud/vertexai');
+const cheerio = require('cheerio');
 
 const vertex_ai = new VertexAI({
   project: process.env.GCP_PROJECT, 
@@ -203,38 +204,107 @@ async function regenerateSection(code, sectionId, instruction) {
 }
 
 async function updateSectionContent(code, sectionId, type, originalValue, newValue) {
-    const instruction = type === 'text' 
-        ? 
-`Find the EXACT text "${originalValue}" within this section and replace it with "${newValue}". Do not change anything else.`
-        : 
-`Find the image with src "${originalValue}" OR the element with background-image containing "${originalValue}" within this section. Replace the image source or background url with "${newValue}". Do not change anything else.`;
+    const $ = cheerio.load(code);
+    const $section = $(`[data-section="${sectionId}"]`);
+    
+    if ($section.length === 0) {
+        throw new Error(`Section ${sectionId} not found`);
+    }
 
-    const prompt = `
-    EXISTING HTML CODE:
-    ${code}
-    
-    TASK:
-    Find the HTML Element/Section with the attribute 'data-section="${sectionId}"'.
-    ${instruction}
-    
-    CRITICAL:
-    1. Only modify the specific target element.
-    2. Maintain the 'data-section="${sectionId}"' attribute.
-    3. RETURN THE FULL UPDATED 'index.html' FILE.
-    
-    STRICT CONSTRAINTS:
-    - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
-    `;
-    
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
-    
-    const response = await result.response;
-    let text = response.candidates[0].content.parts[0].text;
-    
-    text = text.replace(/```html/g, '').replace(/```/g, '');
-    return text;
+    if (type === 'text') {
+        const normalize = (str) => str.replace(/\s+/g, ' ').trim();
+        const normalizeLower = (str) => normalize(str).toLowerCase();
+        
+        const targetText = normalizeLower(originalValue);
+        
+        console.log(`[Update] Searching for text: "${targetText}" (original: "${originalValue}") in section: ${sectionId}`);
+
+        // Find all elements that contain the target text (Case Insensitive)
+        const candidates = [];
+        $section.find('*').each((i, el) => {
+            const $el = $(el);
+            const text = normalizeLower($el.text());
+            if (text.includes(targetText)) {
+                candidates.push({ el: $el, length: text.length, text });
+            }
+        });
+
+        // Sort by length ascending (shortest text means closest match/deepest node)
+        candidates.sort((a, b) => a.length - b.length);
+
+        if (candidates.length > 0) {
+            const best = candidates[0];
+            const $el = best.el;
+            console.log(`[Update] Best match: <${$el.prop('tagName')}> containing "${best.text}"`);
+
+            // Try to find and update the specific text node to preserve siblings (icons, etc.)
+            let updated = false;
+            
+            const updateTextNode = (node) => {
+                if (updated) return;
+                if (node.type === 'text') {
+                    const nodeText = normalizeLower(node.data || '');
+                    // Check if this text node is the one holding our target
+                    if (nodeText.includes(targetText)) {
+                        node.data = newValue;
+                        updated = true;
+                    }
+                } else if (node.children) {
+                    node.children.forEach(updateTextNode);
+                }
+            };
+
+            // Search children of the best match
+            if ($el[0].children) {
+                $el[0].children.forEach(updateTextNode);
+            }
+
+            if (!updated) {
+                // Fallback: If no specific text node matched (maybe text is split across nodes?),
+                // and the element has no other tag children, safe to replace all text.
+                if ($el.children().length === 0) {
+                     console.log(`[Update] No text node match, replacing full text of leaf element.`);
+                     $el.text(newValue);
+                } else {
+                     console.warn(`[Update] Could not safely update text in <${$el.prop('tagName')}> (Complex structure).`);
+                     // Forced update: If the text length is very close, just do it.
+                     const originalLen = normalizeLower($el.text()).length;
+                     const targetLen = targetText.length;
+                     if (Math.abs(originalLen - targetLen) < 5) {
+                         console.log(`[Update] Forced update on complex element (length match close).`);
+                         $el.text(newValue);
+                     }
+                }
+            }
+            
+        } else {
+             console.warn(`[Update] Text match not found for: "${targetText}"`);
+             // Debug: Print first few chars of section text
+             console.log(`[Update] Section text snippet: ${normalize($section.text()).substring(0, 100)}...`);
+        }
+
+    } else if (type === 'image') {
+        // 1. IMG Tags
+        $section.find('img').each((i, el) => {
+            const src = $(el).attr('src');
+            if (src === originalValue || (src && src.endsWith(originalValue))) {
+                $(el).attr('src', newValue);
+            }
+        });
+
+        // 2. Background Images
+        $section.find('*').each((i, el) => {
+            const style = $(el).attr('style');
+            if (style && style.includes('background-image')) {
+                if (style.includes(originalValue)) {
+                    const newStyle = style.replace(originalValue, newValue);
+                    $(el).attr('style', newStyle);
+                }
+            }
+        });
+    }
+
+    return $.html();
 }
 
 module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent };
