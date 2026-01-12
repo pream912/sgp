@@ -75,6 +75,19 @@ STRICT CONSTRAINTS:
      - Include fields relevant to the user context (e.g., Name, Email, Phone, Service Requested, Message).
      - Style the form beautifully using the defined theme (inputs with proper padding, borders, focus states).
      - The submit button should be prominent ('bg-buttonBackground', 'text-buttonText').
+     - **SUCCESS MODAL (CRITICAL):**
+       - DO NOT use 'alert()' for success messages.
+       - You MUST generate a HIDDEN success modal/dialog at the bottom of the <body>.
+       - Structure: <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">...</div>
+       - Content: A beautiful card (using theme colors 'bg-background', 'text-text') with a success icon, a "Thank You" message, and a "Close" button.
+       - Javascript: 
+         - Function 'handleLeadSubmit(event)' must:
+           1. event.preventDefault();
+           2. document.getElementById('successModal').classList.remove('hidden');
+           3. event.target.reset();
+         - Function 'closeModal()' must:
+           1. document.getElementById('successModal').classList.add('hidden');
+         - Attach 'closeModal()' to the modal's close button and background overlay.
 10. SECTION MARKERS:
     - You MUST add a 'data-section="section-name"' attribute to the outer-most container of EVERY major section.
     - **MANDATORY:** The Header MUST have 'data-section="header"'.
