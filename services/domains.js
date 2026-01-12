@@ -1,171 +1,189 @@
 const axios = require('axios');
 require('dotenv').config();
 
-const GODADDY_API_KEY = process.env.GODADDY_KEY;
-const GODADDY_API_SECRET = process.env.GODADDY_SECRET;
-const ENV = process.env.GODADDY_ENV || 'OTE'; // 'PROD' or 'OTE'
+const NAMESILO_API_KEY = process.env.NAMESILO_KEY;
+const ENV = process.env.NAMESILO_ENV || 'PROD'; // Default to PROD as Sandbox is unreliable
 
+// NameSilo API URLs
 const BASE_URL = ENV === 'PROD' 
-    ? 'https://api.godaddy.com' 
-    : 'https://api.ote-godaddy.com';
+    ? 'https://www.namesilo.com/api' 
+    : 'https://sandbox.namesilo.com/api';
 
-const HEADERS = {
-    'Authorization': `sso-key ${GODADDY_API_KEY}:${GODADDY_API_SECRET}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-};
-
-// Helper to convert price (Micro-units)
-// If currency is USD, convert to INR (Approx 1 USD = 85 INR)
-function formatPrice(price, currency) {
-    if (!price) return null;
-    
-    // Price is in micro-units (1/1,000,000)
-    let value = price / 1000000;
-    
-    if (currency === 'USD') {
-        value = value * 85; // Approx conversion
-        currency = 'INR';
-    }
+// Helper to format price (NameSilo returns standard USD)
+function formatPrice(priceUSD) {
+    if (!priceUSD) return null;
+    const rate = 85; // Approx 1 USD = 85 INR
+    const priceINR = Math.round(parseFloat(priceUSD) * rate);
     
     return {
-        amount: Math.round(value),
-        currency: currency,
-        display: `₹${Math.round(value).toLocaleString('en-IN')}`
+        amount: priceINR,
+        currency: 'INR',
+        display: `₹${priceINR.toLocaleString('en-IN')}`
     };
+}
+
+// Helper to make NameSilo Request
+async function callNameSilo(operation, params = {}) {
+    if (!NAMESILO_API_KEY) {
+        throw new Error("NameSilo API credentials missing.");
+    }
+
+    try {
+        console.log(`[NameSilo] Request: ${BASE_URL}/${operation} (Key: ...${NAMESILO_API_KEY.slice(-4)})`);
+        const response = await axios.get(`${BASE_URL}/${operation}`, {
+            params: {
+                version: 1,
+                type: 'json',
+                key: NAMESILO_API_KEY,
+                ...params
+            }
+        });
+
+        const data = response.data.reply;
+        const code = String(data.code); // Convert to string to be safe
+        
+        if (code !== '300' && code !== '301' && code !== '250') {
+             // 300=Success, 301=Successful(some details), 250=Domain Available
+             console.error(`NameSilo Error [${operation}]:`, data);
+             throw new Error(data.detail || `NameSilo API Error: ${code}`);
+        }
+
+        return data;
+    } catch (error) {
+        console.error(`NameSilo Request Failed [${operation}]:`, error.message);
+        throw error;
+    }
 }
 
 async function checkAvailability(domain) {
-    if (!GODADDY_API_KEY || !GODADDY_API_SECRET) {
-        throw new Error("GoDaddy API credentials missing.");
-    }
-
-    try {
-        console.log(`Checking availability for: ${domain} in ${ENV}...`);
-        const response = await axios.get(`${BASE_URL}/v1/domains/available`, {
-            params: { domain },
-            headers: HEADERS
-        });
-        
-        const data = response.data;
-        if (data.price) {
-            data.priceDisplay = formatPrice(data.price, data.currency);
-        }
-        
-        return data;
-    } catch (error) {
-        console.error("GoDaddy Availability Check Failed:", error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || "Failed to check domain availability");
-    }
-}
-
-async function purchaseDomain(domain, details) {
-    if (!GODADDY_API_KEY || !GODADDY_API_SECRET) {
-        throw new Error("GoDaddy API credentials missing.");
-    }
-
-    // Basic structure validation could happen here, but we'll rely on the API to validate details
-    // details should contain: contactRegistrant, contactAdmin, contactTech, contactBilling, etc.
+    console.log(`Checking availability for: ${domain} in ${ENV}...`);
     
-    // Construct the payload required by GoDaddy
-    // NOTE: This is a simplified payload construction. 
-    // In a real app, you'd likely map specific fields from 'details' to this structure to ensure safety.
-    const payload = {
-        domain: domain,
-        consent: {
-            agreedAt: new Date().toISOString(),
-            agreedBy: details.ip || '127.0.0.1', // Should be passed from request
-            agreementKeys: ['DNRA'] // "Domain Name Registration Agreement" - Standard for GoDaddy
-        },
-        period: 1,
-        renewAuto: true,
-        privacy: false,
-        nameServers: details.nameServers, // Optional
-        contactAdmin: details.contact,
-        contactBilling: details.contact,
-        contactRegistrant: details.contact,
-        contactTech: details.contact
-    };
-
     try {
-        console.log(`Purchasing domain: ${domain} in ${ENV}...`);
-        const response = await axios.post(`${BASE_URL}/v1/domains/purchase`, payload, {
-            headers: HEADERS
-        });
-        return response.data;
+        const data = await callNameSilo('checkRegisterAvailability', { domains: domain });
+        
+        // NameSilo returns 'available' object
+        // Structure: data.available.domain (if single) or array
+        
+        const availableData = data.available ? data.available.domain : null;
+        const unavailableData = data.unavailable ? data.unavailable.domain : null;
+
+        if (availableData) {
+             // It is available
+             // Sandbox might not return price, or returns standard price.
+             // data.available.domain.price exists
+             const price = availableData.price || '10.95'; // Fallback if missing
+             
+             return {
+                 domain: availableData.name || domain,
+                 available: true,
+                 price: parseFloat(price) * 1000000, // Matching previous GoDaddy micro-unit format for frontend compat? Or just standard? 
+                 // Frontend expects micro-units / 1000000. Let's fix frontend or adapt here.
+                 // Let's adapt here to match GoDaddy structure for minimal frontend breakage.
+                 // GoDaddy price 1000000 = $1.00. 
+                 // So NameSilo 10.95 -> 10950000.
+                 priceDisplay: formatPrice(price),
+                 currency: 'USD'
+             };
+        } else if (unavailableData) {
+            return {
+                domain: domain,
+                available: false,
+                error: null
+            };
+        } else {
+             // Sometimes response is empty if invalid
+             return { domain, available: false, error: "Invalid response from registrar" };
+        }
+
     } catch (error) {
-        console.error("GoDaddy Purchase Failed:", error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || "Failed to purchase domain");
+        return { domain, available: false, error: error.message };
     }
 }
 
 async function getSuggestions(query, limit = 5) {
-    if (!GODADDY_API_KEY || !GODADDY_API_SECRET) {
-        throw new Error("GoDaddy API credentials missing.");
-    }
+    // NameSilo doesn't have "suggest". We will generate standard TLD variations.
+    const tlds = ['com', 'net', 'org', 'co', 'info', 'biz', 'online'];
+    const baseName = query.split('.')[0];
+    
+    // Generate list
+    const candidates = tlds.map(tld => `${baseName}.${tld}`).slice(0, 10); // Check up to 10
+    const domainsStr = candidates.join(',');
+    
+    console.log(`Fetching suggestions (checking variations) for: ${baseName}...`);
 
     try {
-        console.log(`Fetching suggestions for: ${query} in ${ENV}...`);
-        // 1. Get Suggestions
-        const suggestResponse = await axios.get(`${BASE_URL}/v1/domains/suggest`, {
-            params: { 
-                query, 
-                limit,
-                tlds: ['com', 'net', 'org', 'co', 'io'].join(',') // Common TLDs
-            },
-            headers: HEADERS
-        });
+        const data = await callNameSilo('checkRegisterAvailability', { domains: domainsStr });
         
-        const suggestions = suggestResponse.data;
-        if (!suggestions || suggestions.length === 0) return [];
-
-        // 2. Get Prices for Suggestions (Bulk Check)
-        // suggestions is an array of objects: [{ domain: 'example.com' }, ...]
-        const domainsToCheck = suggestions.map(s => s.domain);
+        const available = data.available ? (Array.isArray(data.available.domain) ? data.available.domain : [data.available.domain]) : [];
         
-        const availabilityResponse = await axios.post(`${BASE_URL}/v1/domains/available`, 
-            domainsToCheck, 
-            { headers: HEADERS }
-        );
-
-        // 3. Merge Price Data
-        const availabilityMap = new Map();
-        availabilityResponse.data.domains.forEach(d => {
-            availabilityMap.set(d.domain, d);
-        });
-
-        return suggestions.map(s => {
-            const avail = availabilityMap.get(s.domain);
-            return {
-                ...s,
-                available: avail ? avail.available : false,
-                price: avail ? avail.price : null,
-                currency: avail ? avail.currency : null,
-                priceDisplay: avail ? formatPrice(avail.price, avail.currency) : null
-            };
-        });
+        // Map to our format
+        return available.slice(0, limit).map(d => ({
+            domain: d.name,
+            available: true,
+            price: parseFloat(d.price) * 1000000,
+            currency: 'USD',
+            priceDisplay: formatPrice(d.price)
+        }));
 
     } catch (error) {
-        console.error("GoDaddy Suggestions Failed:", error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || "Failed to fetch domain suggestions");
+        console.error("Suggestion check failed:", error);
+        return [];
+    }
+}
+
+async function purchaseDomain(domain, details) {
+    console.log(`Purchasing domain: ${domain} in ${ENV}...`);
+    
+    // NameSilo registerDomain
+    // Required: domain, years, private, auto_renew
+    // We strictly use private=1 and auto_renew=1
+    
+    try {
+        const data = await callNameSilo('registerDomain', {
+            domain: domain,
+            years: 1,
+            private: 1,
+            auto_renew: 1
+        });
+        
+        return {
+            orderId: data.message || 'SUCCESS', // NameSilo doesn't return discrete order ID in sandbox sometimes
+            domain: domain,
+            status: 'PENDING', // Async
+            total: 0 // Unknown from this response
+        };
+    } catch (error) {
+        throw new Error(error.message);
     }
 }
 
 async function updateDnsRecords(domain, records) {
-    if (!GODADDY_API_KEY || !GODADDY_API_SECRET) {
-        throw new Error("GoDaddy API credentials missing.");
-    }
-
+    console.log(`Updating DNS for ${domain}...`);
+    // NameSilo DNS is complex: list -> delete -> add.
+    // For MVP, we just ADD the A record (host=@).
+    
     try {
-        console.log(`Updating DNS records for: ${domain} in ${ENV}...`);
-        // records should be an array of { type: 'A', name: '@', data: '1.2.3.4', ttl: 600 }
-        const response = await axios.put(`${BASE_URL}/v1/domains/${domain}/records`, records, {
-            headers: HEADERS
-        });
-        return response.data;
+        // records: [{ type: 'A', name: '@', data: '1.2.3.4' }]
+        for (const record of records) {
+            if (record.type === 'A') {
+                // dnsAddRecord
+                // rrhost: The hostname (e.g. "www" or just leave empty for apex?)
+                // NameSilo: rrhost= (empty for @), rrvalue=IP, rrttl=3600
+                
+                const rrhost = record.name === '@' ? '' : record.name;
+                
+                await callNameSilo('dnsAddRecord', {
+                    domain: domain,
+                    rrtype: 'A',
+                    rrhost: rrhost,
+                    rrvalue: record.data,
+                    rrttl: 7207 // Standard
+                });
+            }
+        }
+        return { success: true };
     } catch (error) {
-        console.error("GoDaddy DNS Update Failed:", error.response?.data || error.message);
-        throw new Error(error.response?.data?.message || "Failed to update DNS records");
+        throw new Error(error.message);
     }
 }
 

@@ -1,6 +1,79 @@
-api/domains/check?domain=dosa.com:1 
- Failed to load resource: the server responded with a status of 404 (Not Found)
-
-Domains.jsx:42 
-AxiosError
-checkAvailability	@	Domains.jsx:42
+Checking availability for: dosafavu.com in PROD...
+[NameSilo] Request: https://www.namesilo.com/api/checkRegisterAvailability (Key: ...ae74)
+Fetching suggestions (checking variations) for: dosafavu...
+[NameSilo] Request: https://www.namesilo.com/api/checkRegisterAvailability (Key: ...ae74)
+NameSilo Error [checkRegisterAvailability]: {
+  code: 300,
+  detail: 'success',
+  available: {
+    domain: {
+      domain: 'dosafavu.com',
+      price: 17.29,
+      renew: 17.29,
+      premium: 0,
+      duration: 10
+    }
+  }
+}
+NameSilo Request Failed [checkRegisterAvailability]: success
+NameSilo Error [checkRegisterAvailability]: {
+  code: 300,
+  detail: 'success',
+  available: [
+    {
+      domain: 'dosafavu.com',
+      price: 17.29,
+      renew: 17.29,
+      premium: 0,
+      duration: 10
+    },
+    {
+      domain: 'dosafavu.net',
+      price: 15.95,
+      renew: 15.95,
+      premium: 0,
+      duration: 10
+    },
+    {
+      domain: 'dosafavu.org',
+      price: 9.49,
+      renew: 10.79,
+      premium: 0,
+      duration: 1
+    },
+    {
+      domain: 'dosafavu.co',
+      price: 11.99,
+      renew: 33.99,
+      premium: 0,
+      duration: 1
+    },
+    {
+      domain: 'dosafavu.info',
+      price: 4.75,
+      renew: 24.99,
+      premium: 0,
+      duration: 1
+    },
+    {
+      domain: 'dosafavu.biz',
+      price: 2.19,
+      renew: 20.99,
+      premium: 0,
+      duration: 1
+    },
+    {
+      domain: 'dosafavu.online',
+      price: 2.99,
+      renew: 26.99,
+      premium: 0,
+      duration: 1
+    }
+  ]
+}
+NameSilo Request Failed [checkRegisterAvailability]: success
+Suggestion check failed: Error: success
+    at callNameSilo (/Users/pream/Documents/Projects/sgp1/services/domains.js:47:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async getSuggestions (/Users/pream/Documents/Projects/sgp1/services/domains.js:114:22)
+    at async /Users/pream/Documents/Projects/sgp1/server.js:494:24
