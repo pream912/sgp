@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import axios from 'axios';
-import { ArrowLeft, Upload, Loader, Search, Check, Palette } from 'lucide-react';
+import { ArrowLeft, Upload, Loader, Search, Check, Palette, AlertCircle } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 const PALETTE_PRESETS = [
@@ -29,8 +29,27 @@ const NewBuilder = () => {
   // New State for Multi-page
   const [siteType, setSiteType] = useState('single'); // 'single' | 'multi'
   const [selectedPages, setSelectedPages] = useState(['Home']);
+  const [credits, setCredits] = useState(0);
+  const [fetchingCredits, setFetchingCredits] = useState(true);
   
   const AVAILABLE_PAGES = ['About', 'Services', 'Gallery', 'Contact', 'Portfolio', 'Testimonials', 'Team'];
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+        try {
+            const token = await auth.currentUser?.getIdToken();
+            if (token) {
+                const res = await axios.get('/api/credits', { headers: { Authorization: `Bearer ${token}` } });
+                setCredits(res.data.credits);
+            }
+        } catch (e) {
+            console.error('Failed to fetch credits', e);
+        } finally {
+            setFetchingCredits(false);
+        }
+    };
+    fetchCredits();
+  }, []);
 
   const navigate = useNavigate();
 
@@ -560,20 +579,29 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                                 </div>
                             )}
 
-                            <div className="mt-8 flex justify-between">
+                            <div className="mt-8 flex justify-between items-center">
                                 <button
                                     onClick={() => setStep(2)}
                                     className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white px-6 py-2"
                                 >
                                     Back
                                 </button>
-                                <button
-                                    onClick={handleBuild}
-                                    disabled={!logo && !selectedPalette}
-                                    className="bg-indigo-600 text-white px-8 py-3 rounded-md hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Build My Site
-                                </button>
+                                
+                                <div className="flex flex-col items-end">
+                                    <button
+                                        onClick={handleBuild}
+                                        disabled={!logo && !selectedPalette || (credits < (siteType === 'multi' ? 400 : 200))}
+                                        className="bg-indigo-600 text-white px-8 py-3 rounded-md hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                    >
+                                        Build My Site ({siteType === 'multi' ? '400' : '200'} Credits)
+                                    </button>
+                                    {credits < (siteType === 'multi' ? 400 : 200) && (
+                                        <div className="text-red-500 text-sm mt-2 flex items-center">
+                                            <AlertCircle className="w-4 h-4 mr-1" />
+                                            Insufficient Credits ({credits} available)
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -6,12 +6,16 @@ import axios from 'axios';
 import { Plus, ExternalLink, LogOut, Edit, Inbox, Globe } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import LeadsModal from '../components/LeadsModal';
+import CreditsDisplay from '../components/CreditsDisplay';
+import BuyCreditsModal from '../components/BuyCreditsModal';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLeadsModalOpen, setIsLeadsModalOpen] = useState(false);
+  const [isBuyCreditsOpen, setIsBuyCreditsOpen] = useState(false);
+  const [refreshCredits, setRefreshCredits] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -59,6 +63,7 @@ const Dashboard = () => {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
+              <CreditsDisplay refreshTrigger={refreshCredits} />
               <ThemeToggle />
               <button 
                 onClick={handleLogout}
@@ -75,13 +80,22 @@ const Dashboard = () => {
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Projects</h2>
-            <Link 
-              to="/builder"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              New Project
-            </Link>
+            <div className="flex space-x-3">
+                <button
+                    onClick={() => setIsBuyCreditsOpen(true)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <Plus className="h-5 w-5 mr-2 text-indigo-500" />
+                    Buy Credits
+                </button>
+                <Link 
+                to="/builder"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                >
+                <Plus className="h-5 w-5 mr-2" />
+                New Project
+                </Link>
+            </div>
           </div>
 
           {loading ? (
@@ -137,6 +151,11 @@ const Dashboard = () => {
         isOpen={isLeadsModalOpen} 
         onClose={() => setIsLeadsModalOpen(false)} 
         projectId={selectedProjectId} 
+      />
+      <BuyCreditsModal 
+        isOpen={isBuyCreditsOpen}
+        onClose={() => setIsBuyCreditsOpen(false)}
+        onSuccess={() => setRefreshCredits(p => !p)}
       />
     </div>
   );

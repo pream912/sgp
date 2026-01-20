@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@source "../public";
+
+@theme {
+  --color-brand-orange: #FF5722;
+  --color-brand-dark: #1F2937;
+  --color-brand-light: #F3F4F6;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Poppins', sans-serif;
+}
+
+@utility text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-orange to-red-600;
+}

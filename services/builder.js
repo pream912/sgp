@@ -344,7 +344,7 @@ async function rebuildSite(id) {
         await fs.emptyDir(publicSiteDir);
         await fs.copy(distPath, publicSiteDir);
         
-        return true;
+        return distPath;
     } catch (error) {
         console.error(`[${id}] Rebuild failed:`, error);
         throw error;
@@ -357,7 +357,8 @@ function runBuild(dir) {
         // Input: src/input.css (relative to dir)
         // Output: dist/style.css (relative to dir)
         // Use local binary directly to avoid npx path issues with symlinks
-        const command = './node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify';
+        // Ensure binary is executable first
+        const command = 'chmod +x ./node_modules/.bin/tailwindcss && ./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify';
         
         exec(command, { cwd: dir }, (error, stdout, stderr) => {
             if (error) {

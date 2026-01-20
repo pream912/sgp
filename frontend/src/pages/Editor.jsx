@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, RefreshCw, Palette, Loader, MousePointer, Type, Image as ImageIcon, Undo, Upload, Save, X, Shuffle, Eye } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Palette, Loader, MousePointer, Type, Image as ImageIcon, Undo, Upload, Save, X, Shuffle, Eye, Globe, Lock, AlertCircle } from 'lucide-react';
 import { auth } from '../firebase';
+import PublishModal from '../components/PublishModal';
+import BuyCreditsModal from '../components/BuyCreditsModal';
 
 const Editor = () => {
   const { projectId } = useParams(); // Fixed param name
@@ -25,6 +27,36 @@ const Editor = () => {
 
   const [loading, setLoading] = useState(false);
   const [iframeKey, setIframeKey] = useState(0); // To force reload
+
+  // New State
+  const [credits, setCredits] = useState(0);
+  const [isPublished, setIsPublished] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
+
+  // Initial Fetch
+  useEffect(() => {
+      const init = async () => {
+          try {
+              const token = await auth.currentUser?.getIdToken();
+              if (!token) return;
+              
+              const headers = { Authorization: `Bearer ${token}` };
+              
+              // Fetch Credits
+              axios.get('/api/credits', { headers }).then(res => setCredits(res.data.credits));
+              
+              // Fetch Project Status (We can get this from /api/projects or a specific endpoint, let's just check /projects for now or assume not published initially if simpler, but better to check)
+              // Actually we can hit /api/projects and find this one
+              axios.get('/api/projects', { headers }).then(res => {
+                  const p = res.data.find(x => x.projectId === projectId);
+                  if (p && p.isPublished) setIsPublished(true);
+              });
+              
+          } catch (e) { console.error(e); }
+      };
+      init();
+  }, [projectId]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -166,6 +198,14 @@ const Editor = () => {
 
   // --- Actions ---
 
+  const reloadFrame = () => {
+      setSelectedItem(null);
+      setInstruction('');
+      setTextValue('');
+      setImageFile(null);
+      setIframeKey(k => k + 1);
+  };
+
   const handleRegenerateSection = async () => {
     if (!selectedItem || !instruction) return;
     setLoading(true);
@@ -292,15 +332,45 @@ const Editor = () => {
       finally { setLoading(false); }
   };
 
-  const reloadFrame = () => {
-      setSelectedItem(null);
-      setInstruction('');
-      setTextValue('');
-      setImageFile(null);
-      setIframeKey(k => k + 1);
-  };
+    const [iframeContent, setIframeContent] = useState('');
 
-  return (
+    useEffect(() => {
+        const loadContent = async () => {
+            // Append timestamp to bust cache
+            const timestamp = Date.now();
+            const localUrl = `/sites/${projectId}/index.html?t=${timestamp}`;
+            const gcsUrl = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/index.html?t=${timestamp}`;
+            const gcsBase = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/`;
+            
+            try {
+                // Try Local First
+                const res = await fetch(localUrl);
+                if (!res.ok) throw new Error('Local not found');
+                const html = await res.text();
+                // For local, relative paths work fine, no base needed usually if proxy is good.
+                // But consistent base is safer if we are using srcDoc.
+                // Actually, if we use srcDoc, we MUST set base to where assets are.
+                // If local, assets are at /sites/${projectId}/
+                const localBase = `${window.location.origin}/sites/${projectId}/`;
+                const content = html.replace('<head>', `<head><base href="${localBase}">`);
+                setIframeContent(content);
+            } catch (e) {
+                // Fallback to GCS
+                try {
+                    const res = await fetch(gcsUrl);
+                    if (!res.ok) throw new Error('GCS not found');
+                    const html = await res.text();
+                    const content = html.replace('<head>', `<head><base href="${gcsBase}">`);
+                    setIframeContent(content);
+                } catch (err) {
+                    console.error("Failed to load site content", err);
+                }
+            }
+        };
+        loadContent();
+    }, [projectId, iframeKey]);
+
+    return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
       {/* Header */}
       <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
@@ -309,18 +379,37 @@ const Editor = () => {
                 <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-sm font-semibold text-gray-900 dark:text-white">Site Editor</h1>
+            {isPublished ? (
+                <div className="ml-4 flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-medium border border-green-200">
+                    <Globe className="w-3 h-3 mr-1" /> Published
+                </div>
+            ) : (
+                <button 
+                    onClick={() => setShowPublishModal(true)}
+                    className="ml-4 flex items-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full text-xs font-medium border border-indigo-200 transition-colors"
+                >
+                    <Lock className="w-3 h-3 mr-1" /> Publish Site
+                </button>
+            )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                {credits} Credits
+            </div>
+            <div className="flex items-center space-x-2">
             <button onClick={handleUndo} disabled={loading} className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" title="Undo">
                 <Undo className="w-5 h-5" />
             </button>
              <span className="text-xs text-gray-400">Auto-saved</span>
+            </div>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
-        <aside className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-10 shadow-xl">
+        <aside 
+            className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20 shadow-xl transition-all duration-300 ease-in-out absolute inset-y-0 left-0 ${activeMode === 'preview' ? '-translate-x-full' : 'translate-x-0'} w-80`}
+        >
             {/* Mode Switcher */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Tools</h2>
@@ -447,12 +536,20 @@ const Editor = () => {
                                 </div>
                                 <button
                                     onClick={handleRegenerateSection}
-                                    disabled={loading || !instruction}
+                                    disabled={loading || !instruction || credits < 50}
                                     className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
                                 >
                                     {loading ? <Loader className="animate-spin w-4 h-4 mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                                    Regenerate
+                                    Regenerate (50 Credits)
                                 </button>
+                                {credits < 50 && (
+                                    <button 
+                                        onClick={() => setShowBuyCredits(true)}
+                                        className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                    >
+                                        Buy more credits
+                                    </button>
+                                )}
 
                                 <div className="border-t pt-4 mt-4 dark:border-gray-700">
                                     <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-3">Section Images</h4>
@@ -559,12 +656,28 @@ const Editor = () => {
         </aside>
 
         {/* Preview Area */}
-        <main className="flex-1 bg-gray-200 dark:bg-gray-900 relative flex items-center justify-center p-8">
+        <main className={`flex-1 bg-gray-200 dark:bg-gray-900 relative flex items-center justify-center p-8 transition-all duration-300 ease-in-out ${activeMode === 'preview' ? 'ml-0' : 'ml-80'}`}>
+            {/* Preview Mode Buttons */}
+            <div className={`absolute top-4 right-4 z-50 flex space-x-4 transition-opacity duration-300 ${activeMode === 'preview' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                 <button 
+                    onClick={() => navigate('/')}
+                    className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-transform active:scale-95 border border-gray-200 dark:border-gray-700"
+                 >
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Exit
+                 </button>
+                 <button 
+                    onClick={() => setActiveMode('section')}
+                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform active:scale-95"
+                 >
+                    <Palette className="w-4 h-4 mr-2" /> Edit Site
+                 </button>
+            </div>
+
             <div className="w-full h-full bg-white shadow-2xl rounded-lg overflow-hidden relative">
                 <iframe
                     key={iframeKey}
                     ref={iframeRef}
-                    src={`/sites/${projectId}/index.html`}
+                    srcDoc={iframeContent}
                     className="w-full h-full border-0"
                     title="Site Preview"
                     onLoad={handleIframeLoad}
@@ -581,6 +694,31 @@ const Editor = () => {
             </div>
         </main>
       </div>
+      <PublishModal 
+        isOpen={showPublishModal} 
+        onClose={() => setShowPublishModal(false)} 
+        projectId={projectId}
+        currentCredits={credits}
+        onSuccess={() => {
+            setIsPublished(true);
+            setCredits(prev => prev - 500); // Rough estimate update, mostly relies on refresh
+            // Force refresh credits
+            auth.currentUser?.getIdToken().then(t => 
+                axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
+                .then(r => setCredits(r.data.credits))
+            );
+        }}
+      />
+      <BuyCreditsModal
+        isOpen={showBuyCredits}
+        onClose={() => setShowBuyCredits(false)}
+        onSuccess={() => {
+            auth.currentUser?.getIdToken().then(t => 
+                axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
+                .then(r => setCredits(r.data.credits))
+            );
+        }}
+      />
     </div>
   );
 };

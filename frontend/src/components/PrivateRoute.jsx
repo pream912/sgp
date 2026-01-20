@@ -8,7 +8,16 @@ const PrivateRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+            const token = await currentUser.getIdToken();
+            // Set cookie for backend verification (iframe access)
+            document.cookie = `access_token=${token}; path=/; max-age=3600`; 
+        } catch (e) {
+            console.error('Error setting token cookie:', e);
+        }
+      }
       setUser(currentUser);
       setLoading(false);
     });

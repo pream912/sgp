@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+frontend
+.git
+.gitignore
+temp
+projects_source
+public/sites
+*.bak
+.env
+Dockerfile
+.dockerignore

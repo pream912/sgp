@@ -1,79 +1,26 @@
-Checking availability for: dosafavu.com in PROD...
-[NameSilo] Request: https://www.namesilo.com/api/checkRegisterAvailability (Key: ...ae74)
-Fetching suggestions (checking variations) for: dosafavu...
-[NameSilo] Request: https://www.namesilo.com/api/checkRegisterAvailability (Key: ...ae74)
-NameSilo Error [checkRegisterAvailability]: {
-  code: 300,
-  detail: 'success',
-  available: {
-    domain: {
-      domain: 'dosafavu.com',
-      price: 17.29,
-      renew: 17.29,
-      premium: 0,
-      duration: 10
-    }
-  }
-}
-NameSilo Request Failed [checkRegisterAvailability]: success
-NameSilo Error [checkRegisterAvailability]: {
-  code: 300,
-  detail: 'success',
-  available: [
-    {
-      domain: 'dosafavu.com',
-      price: 17.29,
-      renew: 17.29,
-      premium: 0,
-      duration: 10
-    },
-    {
-      domain: 'dosafavu.net',
-      price: 15.95,
-      renew: 15.95,
-      premium: 0,
-      duration: 10
-    },
-    {
-      domain: 'dosafavu.org',
-      price: 9.49,
-      renew: 10.79,
-      premium: 0,
-      duration: 1
-    },
-    {
-      domain: 'dosafavu.co',
-      price: 11.99,
-      renew: 33.99,
-      premium: 0,
-      duration: 1
-    },
-    {
-      domain: 'dosafavu.info',
-      price: 4.75,
-      renew: 24.99,
-      premium: 0,
-      duration: 1
-    },
-    {
-      domain: 'dosafavu.biz',
-      price: 2.19,
-      renew: 20.99,
-      premium: 0,
-      duration: 1
-    },
-    {
-      domain: 'dosafavu.online',
-      price: 2.99,
-      renew: 26.99,
-      premium: 0,
-      duration: 1
-    }
-  ]
-}
-NameSilo Request Failed [checkRegisterAvailability]: success
-Suggestion check failed: Error: success
-    at callNameSilo (/Users/pream/Documents/Projects/sgp1/services/domains.js:47:20)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async getSuggestions (/Users/pream/Documents/Projects/sgp1/services/domains.js:114:22)
-    at async /Users/pream/Documents/Projects/sgp1/server.js:494:24
+2026-01-19 21:23:36.783 IST
+Downloading 1338 files from gs://sgp1-projects-storage/projects/1768826704613 to /app/projects_source/1768826704613...
+2026-01-19 21:23:43.355 IST
+Download complete.
+2026-01-19 21:23:43.355 IST
+[1768826704613] Project source restored.
+2026-01-19 21:23:43.357 IST
+Updating text in section 'hero' for project 1768826704613...
+2026-01-19 21:23:43.396 IST
+[Update] Searching for text: "advanced, gentle dental care" (original: "Advanced, Gentle Dental Care") in section: hero
+2026-01-19 21:23:43.397 IST
+[Update] Best match: <H1> containing "advanced, gentle dental care"
+2026-01-19 21:23:43.402 IST
+[1768826704613] Re-building site (Tailwind)...
+2026-01-19 21:23:43.482 IST
+[1768826704613] Rebuild failed: {
+2026-01-19 21:23:43.482 IST
+message: 'Command failed: chmod +x ./node_modules/.bin/tailwindcss && ./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify\n' +
+2026-01-19 21:23:43.482 IST
+'node:internal/modules/cjs/loader:1210\n' +
+2026-01-19 21:23:43.482 IST
+' throw err;\n' +
+2026-01-19 21:23:43.482 IST
+' ^\n' +
+2026-01-19 21:23:43.482 IST
+'\n' +
