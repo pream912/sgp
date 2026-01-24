@@ -14,7 +14,7 @@ const model = vertex_ai.preview.getGenerativeModel({
   },
 });
 
-const SYSTEM_PROMPT = `
+const BASE_PROMPT_START = `
 You are an expert Frontend Developer specializing in Tailwind CSS and semantic HTML5.
 Your task is to write a SINGLE FILE HTML document based on the provided Design System, User Context, and specific Page Requirement.
 
@@ -51,18 +51,78 @@ STRICT CONSTRAINTS:
    - Cycle through these URLs for your images.
    - STRICTLY use the provided URLs. DO NOT generate fake URLs.
    - For background images, use inline styles: style="background-image: url('...')" or an <img> tag with object-cover.
-8. STYLING RULES:
-   - Ensure specific contrast ratios.
-   - When placing text over background images, YOU MUST use a dark overlay (e.g., 'bg-black/50') or a strong text shadow.
-   - IMPLEMENT THE 'stylePreset' AND 'gradientStyle' AGGRESSIVELY:
-     - **Glassmorphism:** Use 'bg-white/10' or 'bg-black/20', 'backdrop-blur-md' or 'backdrop-blur-lg', 'border-white/20', and subtle 'shadow-lg' for CARDS and SECTIONS.
-     - **Neumorphism:** Use soft shadows (e.g., 'shadow-[5px_5px_10px_#bebebe,-5px_-5px_10px_#ffffff]') and low contrast borders.
-     - **Aurora:** Use multiple background gradients or absolute positioned colored blobs with high blur ('blur-3xl') behind content.
-     - **Bento Grid:** Use 'grid grid-cols-1 md:grid-cols-3 gap-4' with cards spanning different rows/cols ('col-span-2', 'row-span-2').
-     - **Brutalist:** Use heavy black borders ('border-2 border-black'), sharp corners ('rounded-none'), and high contrast.
-     - **Minimalist:** Use ample whitespace, 'text-sm', and very subtle gray borders.
-     - **Luxury:** Use serif fonts, gold/dark colors, and very soft 'shadow-2xl'.
-     - **Gradients:** Use 'bg-gradient-to-r' or 'bg-gradient-to-br'. Combine 'primary', 'secondary', 'accent' in gradients.
+`;
+
+const STYLING_VARIATIONS = {
+    'standard': `8. STYLING RULES (STANDARD - MODERN BALANCED):
+   - **PHILOSOPHY:** Clean, modern, and accessible. Think Bootstrap 5 met Tailwind but better.
+   - **SHADOWS:** Use 'shadow-md' for cards, 'shadow-lg' for floating elements.
+   - **CORNERS:** Use 'rounded-xl' for cards and 'rounded-lg' for buttons.
+   - **SPACING:** Comfortable spacing. Use 'gap-6' or 'gap-8' in grids.
+   - **CONTRAST:** High contrast text on backgrounds. 'bg-white' for cards on 'bg-gray-50' backgrounds.
+   - **BORDERS:** Subtle borders 'border border-gray-100'.
+   - **BUTTONS:** Solid primary color, standard padding 'px-6 py-3'.
+   - **LAYOUT:** Standard Container + Grid layouts.`,
+
+    'vibrant': `8. STYLING RULES (VIBRANT - BRUTALIST POP):
+   - **PHILOSOPHY:** High energy, raw, and bold. **Neo-Brutalism**.
+   - **SHADOWS:** HARD shadows. Use arbitrary values: 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' or 'shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]'. NO BLUR.
+   - **CORNERS:** SHARP or slightly rounded. 'rounded-none' or 'rounded-md'.
+   - **BORDERS:** THICK black borders. 'border-2 border-black' or 'border-4 border-black' on CARDS and BUTTONS.
+   - **COLORS:** Use High Saturation backgrounds.
+   - **TYPOGRAPHY:** LARGE, BOLD headings. 'font-black' or 'font-extrabold'.
+   - **BUTTONS:** 'bg-primary border-2 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all'.
+   - **BACKGROUNDS:** Use bold colors or simple patterns.`,
+
+    'minimal': `8. STYLING RULES (MINIMAL - SWISS STYLE):
+   - **PHILOSOPHY:** "Less is More". Maximum whitespace, focus on grid and type.
+   - **SHADOWS:** REMOVE SHADOWS. 'shadow-none'.
+   - **CORNERS:** SHARP or Micro-rounded. 'rounded-none' or 'rounded-sm'.
+   - **BORDERS:** THIN, DELICATE lines. 'border-t border-b border-gray-200' or 'border border-gray-200'.
+   - **SPACING:** EXTREME spacing. 'gap-12' or 'gap-16'. 'py-20' or 'py-32' for sections.
+   - **TYPOGRAPHY:** Use 'tracking-wider'. Headings should be relatively small but bold, or HUGE and thin.
+   - **IMAGES:** Use 'grayscale' filters often, or full-width hero images.
+   - **DECORATION:** NONE. No background patterns, no blobs. Just Structure.`,
+
+    'soft': `8. STYLING RULES (SOFT - GLASSMORPHISM & AURORA):
+   - **PHILOSOPHY:** Ethereal, translucent, and smooth.
+   - **BACKGROUNDS:** **CRITICAL:** Use distinct gradient backgrounds (Aurora) on the body or section containers.
+   - **CARDS (GLASSMORPHISM):**
+     - 'bg-white/10' or 'bg-white/70' (depending on dark/light mode).
+     - 'backdrop-blur-xl' or 'backdrop-blur-2xl'.
+     - 'border border-white/20'.
+     - 'shadow-xl'.
+   - **CORNERS:** EXTREMELY ROUNDED. 'rounded-3xl' for cards, 'rounded-full' for buttons.
+   - **BUTTONS:** Gradient backgrounds 'bg-gradient-to-r from-primary to-accent'.
+   - **TEXT:** Ensure legibility on gradients (use text-shadows if needed).
+   - **DECORATION:** Use absolute positioned, blurred circles ('blur-3xl') of 'primary' and 'secondary' colors behind content.`,
+
+    'professional': `8. STYLING RULES (PROFESSIONAL - CORPORATE SaaS):
+   - **PHILOSOPHY:** Trustworthy, organized, and scalable. Think Stripe, Linear, or Enterprise SaaS.
+   - **LAYOUT:** Strict 12-column grids. 'max-w-7xl mx-auto'.
+   - **SHADOWS:** 'shadow-sm' for borders, 'shadow-xl' for dropdowns/modals. "Lift" effect on hover.
+   - **CORNERS:** 'rounded-lg' (The industry standard).
+   - **BORDERS:** 'border border-gray-200'.
+   - **BACKGROUNDS:** 'bg-white' primary, 'bg-slate-50' secondary.
+   - **TYPOGRAPHY:** 'font-sans'. Headings 'text-slate-900', Body 'text-slate-600'.
+   - **ICONS:** Use small, subtle icons within rounded squares ('bg-primary/10 text-primary p-2 rounded-lg').
+   - **GRADIENTS:** Subtle text gradients on H1 only.`,
+    
+    'neumorphic': `8. STYLING RULES (NEUMORPHISM - SOFT PLASTIC):
+   - **PHILOSOPHY:** Soft UI, elements appear to be extruded from the background.
+   - **BACKGROUND:** 'bg-gray-200' (or similar mid-light gray). CRITICAL: Neumorphism DOES NOT work on pure white.
+   - **CARDS:**
+     - 'bg-gray-200' (Same as background).
+     - **SHADOWS (THE KEY):** 'shadow-[20px_20px_60px_#d1d5db,-20px_-20px_60px_#ffffff]' (Soft Light/Dark pair).
+     - NO BORDERS.
+   - **CORNERS:** 'rounded-[50px]' or 'rounded-3xl'.
+   - **BUTTONS:** Pressed state styles are critical.
+     - Normal: Extruded shadow.
+     - Active/Hover: Inset shadow 'shadow-[inset_20px_20px_60px_#d1d5db,inset_-20px_-20px_60px_#ffffff]'.
+   - **CONTRAST:** Low contrast UI, High contrast Text. Use 'text-gray-700'.`
+};
+
+const BASE_PROMPT_END = `
 9. DATA INTEGRATION:
    - Implement "Reviews", "Contact", "Services" if provided in User Context.
    - LOGO: Check 'designSystem.logoUrl'. 
@@ -97,14 +157,18 @@ STRICT CONSTRAINTS:
 11. NAVIGATION & MULTI-PAGE SUPPORT:
     - You will be provided with a list of 'ALL_PAGES' and the 'CURRENT_PAGE' you are generating.
     - **Header/Navigation:**
-      - Generate a Navigation Menu that includes links to ALL pages in 'ALL_PAGES'.
-      - Link format:
-        - Home -> 'index.html'
-        - About -> 'about.html'
-        - Services -> 'services.html'
-        - Contact -> 'contact.html'
-        - (Convert page names to lowercase + .html).
-      - Highlight the link for 'CURRENT_PAGE' (e.g., add 'font-bold text-primary' or an underline).
+      - IF 'ALL_PAGES' contains MORE THAN ONE page:
+        - Generate a Navigation Menu that includes links to ALL pages in 'ALL_PAGES'.
+        - Link format:
+          - Home -> 'index.html'
+          - About -> 'about.html'
+          - Services -> 'services.html'
+          - Contact -> 'contact.html'
+          - (Convert page names to lowercase + .html).
+        - Highlight the link for 'CURRENT_PAGE' (e.g., add 'font-bold text-primary' or an underline).
+      - IF 'ALL_PAGES' contains ONLY ONE page (e.g., ['Home']):
+        - **STRICTLY DO NOT GENERATE ANY NAVIGATION LINKS OR MENUS IN THE HEADER.**
+        - The header should only contain the logo/business name and a CTA button (if appropriate).
     - **CONSISTENCY (CRITICAL):**
       - If 'LAYOUT_REFERENCE' is provided, you **MUST** use the provided Header and Footer HTML structure EXACTLY.
       - **DO NOT CHANGE THE DESIGN, CLASSES, OR LAYOUT OF THE HEADER/FOOTER.**
@@ -129,7 +193,23 @@ DESIGN INTERPRETATION:
 RETURN ONLY THE HTML CODE.
 `;
 
-async function generateCode(designSystem, userContext, pageName = 'Home', allPages = ['Home'], layoutReference = null) {
+function getSystemPrompt(styleId = null) {
+    let selectedStyle;
+    
+    if (styleId && STYLING_VARIATIONS[styleId]) {
+        selectedStyle = STYLING_VARIATIONS[styleId];
+        console.log(`[AI Coder] Using selected style: ${styleId}`);
+    } else {
+        const keys = Object.keys(STYLING_VARIATIONS);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        selectedStyle = STYLING_VARIATIONS[randomKey];
+        console.log(`[AI Coder] Using random style: ${randomKey}`);
+    }
+
+    return BASE_PROMPT_START + "\\n" + selectedStyle + "\\n" + BASE_PROMPT_END;
+}
+
+async function generateCode(designSystem, userContext, pageName = 'Home', allPages = ['Home'], layoutReference = null, stylePreset = null) {
     const prompt = `
     DESIGN SYSTEM: ${JSON.stringify(designSystem)}
     USER CONTEXT: ${userContext}
@@ -142,7 +222,7 @@ async function generateCode(designSystem, userContext, pageName = 'Home', allPag
     `;
     
     const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SYSTEM_PROMPT + "\n" + prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: getSystemPrompt(stylePreset) + "\n" + prompt }] }],
     });
     
     const response = await result.response;
@@ -160,7 +240,7 @@ async function generateCode(designSystem, userContext, pageName = 'Home', allPag
     return text;
 }
 
-async function fixCode(badCode, errorLog) {
+async function fixCode(badCode, errorLog, stylePreset = null) {
     const prompt = `
     The following HTML/Tailwind code has issues. 
     
@@ -175,7 +255,7 @@ async function fixCode(badCode, errorLog) {
     `;
     
     const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SYSTEM_PROMPT + "\n" + prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: getSystemPrompt(stylePreset) + "\n" + prompt }] }],
     });
     
     const response = await result.response;
