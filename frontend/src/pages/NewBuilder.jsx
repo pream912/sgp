@@ -18,12 +18,22 @@ const PALETTE_PRESETS = [
   { name: 'Luxury', colors: { primary: '#d4af37', secondary: '#aa8c2c', accent: '#f3e5ab', background: '#1c1c1c', text: '#ffffff', buttonBackground: '#d4af37', buttonText: '#000000' } },
 ];
 
+const STYLE_PRESETS = [
+    { id: 'standard', name: 'Standard', desc: 'Balanced & Modern' },
+    { id: 'vibrant', name: 'Vibrant', desc: 'Bold & High Contrast' },
+    { id: 'minimal', name: 'Minimal', desc: 'Clean & Spacious' },
+    { id: 'soft', name: 'Soft', desc: 'Glassmorphism & Gradients' },
+    { id: 'professional', name: 'Professional', desc: 'Corporate & Trust' },
+    { id: 'neumorphic', name: 'Neumorphic', desc: 'Soft 3D Plastic' },
+];
+
 const NewBuilder = () => {
   const [step, setStep] = useState(1); // 1: Search, 2: Details, 3: Visuals, 4: Building
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [logo, setLogo] = useState(null);
   const [selectedPalette, setSelectedPalette] = useState(null);
+  const [selectedStyle, setSelectedStyle] = useState('standard');
   const [buildStatus, setBuildStatus] = useState('');
   
   // New State for Multi-page
@@ -58,11 +68,9 @@ const NewBuilder = () => {
     name: '',
     industry: '',
     description: '',
-    vibe: '',
     address: '',
     phone: '',
     email: '',
-    website: '',
     services: '',
     sellingPoints: '',
     review1: '',
@@ -118,11 +126,9 @@ const NewBuilder = () => {
       name: data.name || searchQuery,
       industry: data.industry || '',
       description: data.description || '',
-      vibe: data.vibe || '',
       address: data.address || '',
       phone: data.phone || '',
       email: data.email || '',
-      website: data.website || '',
       services: Array.isArray(data.services) ? data.services.join('\n') : (data.services || ''),
       sellingPoints: Array.isArray(data.sellingPoints) ? data.sellingPoints.join('\n') : (data.sellingPoints || ''),
       review1: parsedReviews[0] || '',
@@ -156,7 +162,6 @@ const NewBuilder = () => {
 **Business Name**: ${formData.name}
 **Business Summary**: ${formData.description}
 **Industry**: ${formData.industry}
-**Vibe**: ${formData.vibe}
 
 **Selling Points**:
 ${formData.sellingPoints}
@@ -165,7 +170,6 @@ ${formData.sellingPoints}
 *   **Address**: ${formData.address}
 *   **Phone**: ${formData.phone}
 *   **Email**: ${formData.email}
-*   **Website**: ${formData.website}
 
 **Social Media**
 *   Facebook: ${formData.facebook}
@@ -186,6 +190,7 @@ ${combinedReviews}
 
       payload.append('userContext', finalContext);
       payload.append('businessQuery', formData.name);
+      payload.append('stylePreset', selectedStyle);
       
       // Send selected pages (ensure Home is always included first)
       const finalPages = siteType === 'single' ? ['Home'] : ['Home', ...selectedPages.filter(p => p !== 'Home')];
@@ -378,15 +383,6 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                                         onChange={(e) => setFormData({...formData, description: e.target.value})}
                                     />
                                 </div>
-                                <div className="col-span-2 md:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vibe (e.g., Cozy, Modern)</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-3 dark:bg-gray-700 dark:text-white"
-                                        value={formData.vibe}
-                                        onChange={(e) => setFormData({...formData, vibe: e.target.value})}
-                                    />
-                                </div>
 
                                 {/* Contact Info */}
                                 <div className="col-span-2"><h3 className="text-lg font-medium text-gray-900 dark:text-white mt-4 border-b pb-2">Contact & Location</h3></div>
@@ -416,15 +412,6 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                                         className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-3 dark:bg-gray-700 dark:text-white"
                                         value={formData.email}
                                         onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                    />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website (Optional)</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-3 dark:bg-gray-700 dark:text-white"
-                                        value={formData.website}
-                                        onChange={(e) => setFormData({...formData, website: e.target.value})}
                                     />
                                 </div>
 
@@ -526,8 +513,31 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Visual Identity</h2>
                             
+                            {/* Style Selection - NEW */}
                             <div className="mb-8">
-                                <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">1. Upload Logo (Recommended)</label>
+                                <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">1. Choose a Style Vibe</label>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    {STYLE_PRESETS.map((style) => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => setSelectedStyle(style.id)}
+                                            className={`relative rounded-lg p-4 border-2 transition-all flex flex-col items-center justify-center text-center space-y-2 h-32 ${selectedStyle === style.id ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 ring-1 ring-indigo-200' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}
+                                        >
+                                            <span className={`font-bold text-sm ${selectedStyle === style.id ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>{style.name}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{style.desc}</span>
+                                            
+                                            {selectedStyle === style.id && (
+                                                <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-0.5">
+                                                    <Check className="h-3 w-3" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-8">
+                                <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">2. Upload Logo (Optional)</label>
                                 <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors">
                                     <div className="space-y-1 text-center">
                                         {logo ? (
@@ -549,12 +559,12 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">Uploading a logo will automatically generate a color palette for you.</p>
+                                <p className="text-xs text-gray-500 mt-2">Uploading a logo will automatically generate a matching color palette.</p>
                             </div>
 
                             {!logo && (
                                 <div>
-                                    <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">2. Choose a Color Palette</label>
+                                    <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">3. Choose a Color Palette (Optional)</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                                         {PALETTE_PRESETS.map((p) => (
                                             <button
@@ -590,7 +600,7 @@ Button Text: ${selectedPalette.colors.buttonText}`);
                                 <div className="flex flex-col items-end">
                                     <button
                                         onClick={handleBuild}
-                                        disabled={!logo && !selectedPalette || (credits < (siteType === 'multi' ? 400 : 200))}
+                                        disabled={(credits < (siteType === 'multi' ? 400 : 200))}
                                         className="bg-indigo-600 text-white px-8 py-3 rounded-md hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                                     >
                                         Build My Site ({siteType === 'multi' ? '400' : '200'} Credits)
