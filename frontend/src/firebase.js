@@ -5,12 +5,13 @@ import { getAuth } from "firebase/auth";
 // For this to work, you need to create a project in Firebase Console
 // and add a web app to get these details.
 const firebaseConfig = {
-  apiKey: "AIzaSyD1Si12JehULktT02Q1tAcR9NrRbdImlpA",
-  authDomain: "sgp-1-a8b1a.firebaseapp.com",
-  projectId: "sgp-1-a8b1a",
-  storageBucket: "sgp-1-a8b1a.firebasestorage.app",
-  messagingSenderId: "759966508100",
-  appId: "1:759966508100:web:9f9480c622b182b2250811"
+  apiKey: "AIzaSyC1ZTyTyMtm-WetW67WMxIu5Djjj3kqnDY",
+  authDomain: "gen-web-484805.firebaseapp.com",
+  projectId: "gen-web-484805",
+  storageBucket: "gen-web-484805.firebasestorage.app",
+  messagingSenderId: "719340208040",
+  appId: "1:719340208040:web:518b533e567c41aec3679d",
+  measurementId: "G-28P7PC36RH"
 };
 
 // Initialize Firebase

@@ -7,7 +7,7 @@ const { fetchImages } = require('./images');
 
 const MAX_RETRIES = 3; // Lower retries for HTML as it's less prone to build errors
 
-async function buildSite(id, userContext, logoFile, pages = ['Home']) {
+async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress = () => {}) {
     const tempDir = path.join(__dirname, '../temp', id);
     const distDir = path.join(tempDir, 'dist');
     const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
@@ -24,16 +24,22 @@ async function buildSite(id, userContext, logoFile, pages = ['Home']) {
         }
 
         // 1. Design Phase
-        console.log(`[${id}] Generating Design...`);
+        const msgDesign = `[${id}] Generating Design...`;
+        console.log(msgDesign);
+        onProgress(msgDesign);
         const designSystem = await generateDesign(userContext, logoBuffer, logoMimeType);
 
         // 1.5 Fetch Images (Unsplash)
-        console.log(`[${id}] Fetching Images...`);
+        const msgImages = `[${id}] Fetching Images...`;
+        console.log(msgImages);
+        onProgress(msgImages);
         const keywords = designSystem.imageKeywords || ['business', 'minimal'];
         designSystem.imageUrls = await fetchImages(keywords, 12);
         
         // 2. Setup Temp Dir & Copy Skeleton
-        console.log(`[${id}] Copying skeleton...`);
+        const msgSkeleton = `[${id}] Copying skeleton...`;
+        console.log(msgSkeleton);
+        onProgress(msgSkeleton);
         // Copy everything EXCEPT node_modules
         await fs.copy(skeletonDir, tempDir, {
             filter: (src) => !src.includes('node_modules')
@@ -56,11 +62,15 @@ async function buildSite(id, userContext, logoFile, pages = ['Home']) {
         }
 
         // 3. Code Gen Loop
-        console.log(`[${id}] Generating HTML for ${pages.length} pages...`);
+        const msgCodeGen = `[${id}] Generating HTML for ${pages.length} pages...`;
+        console.log(msgCodeGen);
+        onProgress(msgCodeGen);
         
         // Helper to generate a single page
         const generatePage = async (pageName, refLayout = null) => {
-             console.log(`[${id}] Generating ${pageName}...`);
+             const msgPage = `[${id}] Generating ${pageName}...`;
+             console.log(msgPage);
+             onProgress(msgPage);
             let code = '';
             let genAttempts = 0;
             const MAX_GEN_RETRIES = 3;
@@ -125,10 +135,21 @@ async function buildSite(id, userContext, logoFile, pages = ['Home']) {
 
         // 3.3 Generate Remaining Pages
         const remainingPages = pages.filter(p => p !== homePage);
-        for (const pageName of remainingPages) {
-            const pageCode = await generatePage(pageName, layoutReference);
-            const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
-            await fs.writeFile(path.join(distDir, filename), pageCode);
+        
+        if (remainingPages.length > 0) {
+            console.log(`[${id}] Generating ${remainingPages.length} remaining pages in parallel...`);
+            onProgress(`[${id}] Generating remaining pages (${remainingPages.join(', ')})...`);
+            
+            await Promise.all(remainingPages.map(async (pageName) => {
+                try {
+                    const pageCode = await generatePage(pageName, layoutReference);
+                    const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
+                    await fs.writeFile(path.join(distDir, filename), pageCode);
+                } catch (err) {
+                     console.error(`[${id}] Failed to generate ${pageName}:`, err);
+                     throw err;
+                }
+            }));
         }
 
         // 4. Build Loop (Tailwind & Config Injection)
@@ -136,7 +157,9 @@ async function buildSite(id, userContext, logoFile, pages = ['Home']) {
         
         while (attempts < MAX_RETRIES && !success) {
             attempts++;
-            console.log(`[${id}] Build Attempt ${attempts}...`);
+            const msgBuild = `[${id}] Build Attempt ${attempts}...`;
+            console.log(msgBuild);
+            onProgress(msgBuild);
             
             // 3.5. Dynamic Config & Injection (Must happen after html files are written)
             await setupConfig(tempDir, distDir, designSystem, id);

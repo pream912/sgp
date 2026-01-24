@@ -598,26 +598,76 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
             return res.status(400).json({ error: 'userContext or businessQuery is required' });
         }
 
-        // --- Credit Deduction ---
+        // --- Credit Check (Pre-Auth) ---
         const cost = parsedPages.length > 1 ? 400 : 200;
-        try {
-            await deductCredits(req.user.uid, cost, `Generate ${parsedPages.length > 1 ? 'Multi-Page' : 'Single-Page'} Site`);
-        } catch (err) {
+        const currentCredits = await getUserCredits(req.user.uid);
+        if (currentCredits < cost) {
             return res.status(402).json({ error: 'Insufficient credits. Please top up your wallet.' });
         }
-        // ------------------------
+        // -------------------------------
 
-        console.log(`Starting build for ${id} (Pages: ${parsedPages.join(', ')})...`);
-        const distPath = await buildSite(id, userContext, logoFile, parsedPages);
+        console.log(`Initializing build for ${id} (Pages: ${parsedPages.join(', ')})...`);
         
-        console.log(`Build success! Saving & Deploying...`);
+        // Initialize Firestore Document
+        if (db) {
+            await db.collection('projects').doc(id).set({ // Use custom ID as doc ID for easier lookup
+                projectId: id,
+                userId: req.user.uid,
+                query: query || 'Manual Context',
+                status: 'starting',
+                logs: [],
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                isPublished: false
+            });
+        }
+
+        // Trigger Background Process (Fire and Forget)
+        runBuildProcess(id, userContext, logoFile, parsedPages, req.user.uid, cost, query)
+            .catch(err => console.error(`Background build ${id} failed hard:`, err));
+
+        // Return immediately
+        res.json({ success: true, id, status: 'processing', message: 'Build started in background.' });
+        
+    } catch (error) {
+        console.error('Build init failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Background Build Processor
+async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, cost, query) {
+    console.log(`[${id}] Starting background build process...`);
+    
+    const logProgress = async (message) => {
+        console.log(`[${id}] Progress: ${message}`);
+        if (db) {
+            try {
+                await db.collection('projects').doc(id).update({
+                    status: 'processing',
+                    logs: admin.firestore.FieldValue.arrayUnion({
+                        message,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (e) {
+                console.warn(`[${id}] Failed to update firestore log:`, e.message);
+            }
+        }
+    };
+
+    try {
+        await logProgress('Starting build engine...');
+        
+        const distPath = await buildSite(id, userContext, logoFile, parsedPages, logProgress);
+        
+        await logProgress('Build success! Saving & Deploying...');
         
         // 1. Move the entire project (source + dist) to projects_source
         const sourcePath = path.join(__dirname, 'projects_source', id);
         const tempPath = path.join(__dirname, 'temp', id);
         
         await fs.move(tempPath, sourcePath);
-        console.log(`Source code saved to ${sourcePath}`);
+        await logProgress(`Source code saved.`);
 
         // 2. Copy the 'dist' folder to 'public/sites' for hosting (Legacy fallback)
         const localSitePath = path.join(__dirname, 'public/sites', id);
@@ -626,28 +676,58 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
 
         // 3. Post-Build: Deploy to GCS Hosting
-        const deployUrl = await handlePostBuild(id, path.join(sourcePath, 'dist'), req.user.uid);
+        await logProgress('Deploying to Cloud Storage...');
+        const deployUrl = await handlePostBuild(id, path.join(sourcePath, 'dist'), userId);
         
-        // Save to Firestore
+        // 4. Deduct Credits (Only on Success)
+        try {
+            await deductCredits(userId, cost, `Generate ${parsedPages.length > 1 ? 'Multi-Page' : 'Single-Page'} Site (${id})`);
+            await logProgress('Credits deducted.');
+        } catch (creditErr) {
+            console.error(`[${id}] Failed to deduct credits after success:`, creditErr);
+            // Don't fail the build for this, but log it critically
+        }
+
+        // Final DB Update
         if (db) {
-            await db.collection('projects').add({
-                projectId: id,
-                userId: req.user.uid,
-                query: query || 'Manual Context',
+            await db.collection('projects').doc(id).update({
+                status: 'completed',
+                isPublished: false,
                 url: deployUrl || localUrl,
                 localUrl: localUrl,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                status: 'completed'
+                deployUrl: deployUrl, // Ensure this field is set
+                completedAt: admin.firestore.FieldValue.serverTimestamp(),
+                logs: admin.firestore.FieldValue.arrayUnion({
+                    message: 'Process Finished Successfully.',
+                    timestamp: new Date().toISOString()
+                })
             });
         }
         
-        res.json({ success: true, url: deployUrl || localUrl, id });
-        
+        console.log(`[${id}] Process Finished Successfully.`);
+
     } catch (error) {
-        console.error('Process failed:', error);
-        res.status(500).json({ error: error.message, details: error.stderr });
+        console.error(`[${id}] Build Process Failed:`, error);
+        if (db) {
+            await db.collection('projects').doc(id).update({
+                status: 'failed',
+                error: error.message,
+                logs: admin.firestore.FieldValue.arrayUnion({
+                    message: `Error: ${error.message}`,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        }
+        
+        // Cleanup temp if it exists and wasn't moved
+        try {
+             const tempPath = path.join(__dirname, 'temp', id);
+             if (await fs.pathExists(tempPath)) {
+                 await fs.remove(tempPath);
+             }
+        } catch (cleanupErr) { /* ignore */ }
     }
-});
+}
 
 // --- Payments (Razorpay) ---
 
