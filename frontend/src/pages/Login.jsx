@@ -7,6 +7,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import { Phone, ArrowRight, Loader2, User, Mail } from 'lucide-react';
 
 const Login = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
   // Phone State
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
@@ -155,12 +156,38 @@ const Login = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {showProfileForm ? 'Complete Profile' : 'Welcome Back'}
+            {showProfileForm ? 'Complete Profile' : (isSignUp ? 'Create Account' : 'Welcome Back')}
           </h2>
           <p className="text-gray-500 dark:text-gray-400">
-            {showProfileForm ? 'Tell us a bit about yourself' : 'Sign in to manage your websites'}
+            {showProfileForm ? 'Tell us a bit about yourself' : (isSignUp ? 'Join us to start building' : 'Sign in to manage your websites')}
           </p>
         </div>
+
+        {/* Toggle Tabs */}
+        {!showOtpInput && !showProfileForm && (
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-6">
+            <button
+              onClick={() => { setIsSignUp(false); setError(''); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                !isSignUp 
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setIsSignUp(true); setError(''); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                isSignUp 
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
         
         {error && (
           <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-6 text-center border border-red-100 dark:border-red-800">
@@ -202,8 +229,19 @@ const Login = () => {
                 className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                {loading ? 'Sending OTP...' : 'Send OTP'}
+                {loading ? 'Sending OTP...' : (isSignUp ? 'Sign Up' : 'Sign In')}
               </button>
+              
+              <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                <button 
+                  type="button" 
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="ml-1 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium"
+                >
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </button>
+              </p>
             </form>
           )}
 
