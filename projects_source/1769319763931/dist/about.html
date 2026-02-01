@@ -1,0 +1,375 @@
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRIENDS SYSTEMS - about</title>
+    <meta name="description" content="Learn about FRIENDS SYSTEMS, your trusted electronics store in Tiruchirappalli specializing in affordable and high-quality laptops, monitors, and computer systems.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- AOS CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Tailwind CSS (Assumed to be configured) -->
+    
+    
+    <style>
+        body {
+            background-color: #e5e7eb; /* Using a specific gray for neumorphism */
+        }
+        .neumorphic-shadow {
+            box-shadow: 20px 20px 60px #d1d5db, -20px -20px 60px #ffffff;
+        }
+        .neumorphic-shadow-inset {
+             box-shadow: inset 20px 20px 60px #d1d5db, inset -20px -20px 60px #ffffff;
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-gray-200 font-body text-text">
+
+    <header data-section="header" id="header" class="sticky top-0 z-40 bg-gray-200/80 backdrop-blur-sm transition-shadow duration-300">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="flex items-center space-x-3" data-aos="fade-right">
+                    <img src="./logo.png" alt="FRIENDS SYSTEMS Logo" class="h-10 md:h-12">
+                </a>
+
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Home</a>
+                    <a href="about.html" class="font-heading font-bold text-primary transition-colors hover:text-primary">About</a>
+                    <a href="services.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Services</a>
+                    <a href="gallery.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Gallery</a>
+                    <a href="contact.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Contact</a>
+                </nav>
+
+                <div class="flex items-center space-x-4">
+                    <a href="contact.html" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-heading px-6 py-3 rounded-3xl neumorphic-shadow hover:neumorphic-shadow-inset active:neumorphic-shadow-inset transition-all duration-300" data-aos="fade-left">Get a Quote</a>
+                    <button id="mobile-menu-button" class="lg:hidden p-3 rounded-full neumorphic-shadow hover:neumorphic-shadow-inset active:neumorphic-shadow-inset transition-all duration-300" aria-label="Open Menu">
+                        <i class="fa-solid fa-bars text-gray-700 text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-gray-200 absolute top-full left-0 w-full shadow-lg">
+            <div class="flex flex-col space-y-4 p-6">
+                <a href="index.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Home</a>
+                <a href="about.html" class="font-heading font-bold text-primary text-center py-2">About</a>
+                <a href="services.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Services</a>
+                <a href="gallery.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Gallery</a>
+                <a href="contact.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- About Hero Section -->
+        <section data-section="about-hero" class="relative py-24 md:py-32 bg-gray-200">
+            <div class="container mx-auto px-6 text-center">
+                <div data-aos="fade-up">
+                    <h1 class="font-heading text-4xl md:text-6xl font-bold text-text mb-4">About <span class="text-primary">FRIENDS SYSTEMS</span></h1>
+                    <p class="font-body text-lg md:text-xl text-gray-700 max-w-3xl mx-auto">Your trusted electronics store specializing in laptops, monitors, and related computer systems, known for affordability and quality.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Our Story Section -->
+        <section data-section="our-story" class="py-20 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="grid lg:grid-cols-2 gap-16 items-center">
+                    <div data-aos="fade-right">
+                        <img src="https://images.unsplash.com/photo-1595303526913-c7037797ebe7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTk3ODB8&ixlib=rb-4.1.0&q=80&w=1080" alt="Modern electronics store interior" class="rounded-[50px] w-full h-full object-cover neumorphic-shadow">
+                    </div>
+                    <div data-aos="fade-left" data-aos-delay="100">
+                        <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-6">Our Journey to Excellence</h2>
+                        <p class="font-body text-gray-700 mb-4 leading-relaxed">Founded in Tiruchirappalli, FRIENDS SYSTEMS was born from a passion for making high-quality technology accessible to everyone. We saw a need for a reliable, customer-focused electronics store that offers not just products, but solutions and guidance.</p>
+                        <p class="font-body text-gray-700 leading-relaxed">From our humble beginnings, we've grown into a trusted name for laptops, monitors, and computer systems. Our commitment to affordability, reliability, and exceptional service has been the cornerstone of our success, creating a community of satisfied customers who trust us for all their tech needs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Values Section -->
+        <section data-section="values" class="py-20 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16" data-aos="fade-up">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">Why Choose Us?</h2>
+                    <p class="font-body text-lg text-gray-700 max-w-2xl mx-auto">We're more than just a store; we're your partners in technology.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                    <!-- Value Card 1 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow text-center" data-aos="fade-up" data-aos-delay="100">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center">
+                            <i class="fa-solid fa-tags"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Affordable Pricing</h3>
+                        <p class="font-body text-gray-700">Get the best value for your money with our competitive and transparent pricing on all products.</p>
+                    </div>
+                    <!-- Value Card 2 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">High-Quality Products</h3>
+                        <p class="font-body text-gray-700">We stock only reliable and high-performing laptops and monitors from trusted brands.</p>
+                    </div>
+                    <!-- Value Card 3 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center">
+                            <i class="fa-solid fa-headset"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Excellent Service</h3>
+                        <p class="font-body text-gray-700">Our friendly and knowledgeable staff are here to guide you to the perfect product for your needs.</p>
+                    </div>
+                    <!-- Value Card 4 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow text-center" data-aos="fade-up" data-aos-delay="400">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center">
+                            <i class="fa-solid fa-retweet"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Flexible Rentals</h3>
+                        <p class="font-body text-gray-700">Need a laptop for a short term? Our affordable rental service is the perfect solution.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" class="py-20 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16" data-aos="fade-up">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">Hear From Our Happy Customers</h2>
+                    <p class="font-body text-lg text-gray-700 max-w-2xl mx-auto">Our commitment to quality and service speaks for itself.</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    <!-- Testimonial 1 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow flex flex-col" data-aos="fade-up" data-aos-delay="100">
+                        <div class="text-primary text-3xl mb-4"><i class="fa-solid fa-quote-left"></i></div>
+                        <p class="font-body text-gray-700 mb-6 flex-grow">"I am sahana l bought a laptop from friends System, Trichy, and I am very satisfied with my purchase. The laptop is really good and works amazingly well... I got it at a low budget and affordable price."</p>
+                        <div class="mt-auto pt-4 border-t border-gray-300">
+                            <h4 class="font-heading font-bold text-text">Sahana Raju</h4>
+                            <div class="text-accent">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow flex flex-col" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-primary text-3xl mb-4"><i class="fa-solid fa-quote-left"></i></div>
+                        <p class="font-body text-gray-700 mb-6 flex-grow">"I recently purchased a monitor from this shop and had a really great experience. The staff were polite, helpful, and guided me well... Overall, I’m very satisfied with the quality, service, and the smooth buying process."</p>
+                        <div class="mt-auto pt-4 border-t border-gray-300">
+                            <h4 class="font-heading font-bold text-text">Gowtham Griffin</h4>
+                             <div class="text-accent">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div class="bg-gray-200 p-8 rounded-[50px] neumorphic-shadow flex flex-col" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-primary text-3xl mb-4"><i class="fa-solid fa-quote-left"></i></div>
+                        <p class="font-body text-gray-700 mb-6 flex-grow">"I bought my laptop from this shop and have been using it and can say that with assurance that quality is very very good. Battery life is long. Nice colour. Good speaker. Nice camera quality."</p>
+                        <div class="mt-auto pt-4 border-t border-gray-300">
+                            <h4 class="font-heading font-bold text-text">swetha mano</h4>
+                             <div class="text-accent">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Form Section -->
+        <section data-section="contact-form" id="contact-form" class="py-20 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="bg-gray-200 p-8 sm:p-12 md:p-16 rounded-[50px] neumorphic-shadow max-w-4xl mx-auto" data-aos="zoom-in">
+                    <div class="text-center mb-12">
+                        <h2 class="font-heading text-3xl md:text-4xl font-bold text-text mb-4">Have Questions? Get in Touch!</h2>
+                        <p class="font-body text-lg text-gray-700">We're here to help you with any inquiries about our products or services.</p>
+                    </div>
+                    <form onsubmit="handleLeadSubmit(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <input type="text" name="name" placeholder="Your Name" required class="w-full p-4 font-body text-gray-700 bg-gray-200 rounded-3xl neumorphic-shadow-inset focus:outline-none focus:ring-2 focus:ring-primary transition-shadow duration-300">
+                            <input type="email" name="email" placeholder="Your Email" required class="w-full p-4 font-body text-gray-700 bg-gray-200 rounded-3xl neumorphic-shadow-inset focus:outline-none focus:ring-2 focus:ring-primary transition-shadow duration-300">
+                        </div>
+                        <div class="mb-6">
+                             <input type="tel" name="phone" placeholder="Your Phone Number" class="w-full p-4 font-body text-gray-700 bg-gray-200 rounded-3xl neumorphic-shadow-inset focus:outline-none focus:ring-2 focus:ring-primary transition-shadow duration-300">
+                        </div>
+                        <div class="mb-8">
+                            <textarea name="message" placeholder="Your Message" rows="5" required class="w-full p-4 font-body text-gray-700 bg-gray-200 rounded-3xl neumorphic-shadow-inset focus:outline-none focus:ring-2 focus:ring-primary transition-shadow duration-300"></textarea>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="bg-buttonBackground text-buttonText font-heading text-lg px-10 py-4 rounded-3xl neumorphic-shadow hover:neumorphic-shadow-inset active:neumorphic-shadow-inset transition-all duration-300">Send Message</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-gray-300/70 pt-20 pb-8">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+                <div class="space-y-4" data-aos="fade-up">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="FRIENDS SYSTEMS Logo" class="h-12">
+                    </a>
+                    <p class="font-body text-gray-600">Your trusted partner for affordable and reliable computer systems in Tiruchirappalli.</p>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="font-body text-gray-600 hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="font-body text-gray-600 hover:text-primary transition-colors">About</a></li>
+                        <li><a href="services.html" class="font-body text-gray-600 hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="gallery.html" class="font-body text-gray-600 hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="contact.html" class="font-body text-gray-600 hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Contact Info</h4>
+                    <ul class="space-y-3 font-body text-gray-600">
+                        <li class="flex items-start"><i class="fa-solid fa-location-dot mt-1 mr-3 text-primary"></i><span>NO 122, POST OFFICE UPSTAIRS, 7th Cross St W, West Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018</span></li>
+                        <li class="flex items-center"><i class="fa-solid fa-phone mr-3 text-primary"></i><a href="tel:09788704704" class="hover:text-primary">097887 04704</a></li>
+                    </ul>
+                </div>
+                 <div data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Opening Hours</h4>
+                    <ul class="space-y-2 font-body text-gray-600 text-sm">
+                        <li><strong>Mon - Sat:</strong> 8:00 AM – 7:00 PM</li>
+                        <li><strong>Sunday:</strong> 8:00 AM – 3:00 PM</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-400/50 pt-8 mt-8 text-center">
+                <p class="font-body text-gray-500">&copy; <span id="current-year"></span> FRIENDS SYSTEMS. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModal()">
+        <div class="bg-background text-text p-8 md:p-12 rounded-3xl shadow-lg max-w-md w-full text-center m-4" onclick="event.stopPropagation()">
+            <div class="text-green-500 text-6xl mb-4">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="font-heading text-2xl font-bold mb-2">Thank You!</h3>
+            <p class="font-body mb-6">Your message has been sent successfully. We will get back to you shortly.</p>
+            <button onclick="closeModal()" class="bg-buttonBackground text-buttonText font-heading px-6 py-3 rounded-full hover:opacity-90 transition-opacity">Close</button>
+        </div>
+    </div>
+
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <!-- Custom JS -->
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Sticky Header Shadow
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-md');
+            } else {
+                header.classList.remove('shadow-md');
+            }
+        });
+
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Form Submission & Modal Handling
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+    </script>
+
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769319763931',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

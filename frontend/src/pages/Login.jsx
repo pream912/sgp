@@ -3,18 +3,15 @@ import { RecaptchaVerifier, signInWithPhoneNumber, updateProfile } from 'firebas
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import ThemeToggle from '../components/ThemeToggle';
-import { Phone, ArrowRight, Loader2, User, Mail } from 'lucide-react';
 
 const Login = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  // Phone State
+  // State
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
   
-  // Profile State (New)
+  // Profile State
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,8 +21,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Recaptcha Cleanup
   useEffect(() => {
-    // Cleanup recaptcha on unmount if needed
     return () => {
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
@@ -35,17 +32,35 @@ const Login = () => {
   }, []);
 
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'normal',
-        'callback': (response) => {
-          // reCAPTCHA solved
-        },
-        'expired-callback': () => {
-          setError('Recaptcha expired, please try again.');
-        }
-      });
+    // 1. Clear existing verifier instance
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {
+        console.warn("Failed to clear existing recaptcha", e);
+      }
+      window.recaptchaVerifier = null;
     }
+
+    // 2. Clear the DOM container manually to remove iframe artifacts
+    const container = document.getElementById('recaptcha-container');
+    if (container) {
+      container.innerHTML = ''; 
+    }
+
+    // 3. Create fresh instance
+    auth.useDeviceLanguage(); // Ensure language is set
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'normal',
+      'callback': (response) => {
+        // reCAPTCHA solved - response is the token
+        console.log("Recaptcha Solved");
+      },
+      'expired-callback': () => {
+        setError('Recaptcha expired, please try again.');
+        setLoading(false);
+      }
+    });
   };
 
   const handleSendOtp = async (e) => {
@@ -87,15 +102,12 @@ const Login = () => {
       const result = await confirmationResult.confirm(otp);
       const user = result.user;
       
-      // Check if user profile exists in Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
-        // User exists, go to dashboard
         navigate('/');
       } else {
-        // New user, show profile form
         setShowProfileForm(true);
       }
     } catch (err) {
@@ -121,13 +133,8 @@ const Login = () => {
       const user = auth.currentUser;
       if (!user) throw new Error('No authenticated user found.');
 
-      // Update Auth Profile
-      await updateProfile(user, {
-        displayName: name,
-        email: email 
-      });
+      await updateProfile(user, { displayName: name, email: email });
 
-      // Save to Firestore
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         name: name,
@@ -146,194 +153,159 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative px-4">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md transition-all duration-200 border border-gray-100 dark:border-gray-700">
-        
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {showProfileForm ? 'Complete Profile' : (isSignUp ? 'Create Account' : 'Welcome Back')}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            {showProfileForm ? 'Tell us a bit about yourself' : (isSignUp ? 'Join us to start building' : 'Sign in to manage your websites')}
-          </p>
-        </div>
-
-        {/* Toggle Tabs */}
-        {!showOtpInput && !showProfileForm && (
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-6">
-            <button
-              onClick={() => { setIsSignUp(false); setError(''); }}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                !isSignUp 
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setIsSignUp(true); setError(''); }}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                isSignUp 
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-6 text-center border border-red-100 dark:border-red-800">
-            {error}
-          </div>
-        )}
-
-        {/* AUTH UI STEPS */}
-        <div className="space-y-4">
+    <div className="flex h-screen w-full flex-row overflow-hidden group/design-root font-display bg-background-light dark:bg-background-dark text-brand-dark dark:text-white">
+      {/* Left Column: Form */}
+      <div className="flex w-full flex-col justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:w-1/2 lg:px-20 xl:px-24 bg-white dark:bg-[#121121] transition-colors duration-300">
+        <div className="mx-auto w-full max-w-sm lg:w-[420px]">
           
-          {/* STEP 1: PHONE INPUT */}
-          {!showOtpInput && !showProfileForm && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 dark:text-gray-400 sm:text-sm font-medium">🇮🇳 +91</span>
+          {/* Logo & Header */}
+          <div className=" flex items-center justify-center gap-3">
+            <img src="/logo_new.png" alt="GenWeb Logo" className="h-55" />
+          </div>
+
+          <div className="mb-8 flex flex-col gap-3 text-center">
+            <h1 className="text-brand-dark dark:text-white tracking-tight text-[32px] font-bold leading-tight">
+              {showProfileForm ? 'Complete your profile' : 'Sign in to your account'}
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">
+              {showProfileForm ? 'Tell us a bit about yourself to get started.' : 'Welcome back to the future of web building.'}
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-6">
+            
+            {/* STAGE 1: Phone Input */}
+            {!showOtpInput && !showProfileForm && (
+              <form onSubmit={handleSendOtp}>
+                <div>
+                  <label className="text-brand-dark dark:text-white text-base font-medium leading-normal pb-2 block">Mobile Number</label>
+                  <div className="flex gap-3">
+                    <div className="relative w-[110px]">
+                      <select className="form-select flex w-full appearance-none rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-white/5 h-14 px-4 py-3 text-base font-normal text-brand-dark dark:text-white focus:border-primary focus:ring-0 cursor-pointer">
+                        <option value="+91">🇮🇳 +91</option>
+                        {/* <option value="+1">🇺🇸 +1</option> */}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <span className="material-symbols-outlined text-sm">expand_more</span>
+                      </div>
+                    </div>
+                    <div className="relative flex-1">
+                      <input 
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-brand-dark dark:text-white focus:outline-0 focus:ring-0 border border-gray-200 dark:border-gray-700 bg-white dark:bg-white/5 focus:border-primary h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal" 
+                        placeholder="98765 00000" 
+                        type="tel" 
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      />
+                    </div>
                   </div>
-                  <input 
-                    type="tel" 
-                    required
-                    className="block w-full pl-16 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                    placeholder="98765 43210"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      if (val.length <= 10) setPhoneNumber(val);
-                    }}
-                  />
                 </div>
-              </div>
 
-              <div id="recaptcha-container" className="flex justify-center my-4"></div>
+                <div id="recaptcha-container" className="my-2"></div>
 
-              <button 
-                type="submit" 
-                disabled={loading || phoneNumber.length < 10}
-                className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                {loading ? 'Sending OTP...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-              </button>
-              
-              <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
                 <button 
-                  type="button" 
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="ml-1 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium"
+                  disabled={loading || phoneNumber.length < 10}
+                  className="mt-6 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary hover:bg-primary-hover transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                  <span className="truncate">{loading ? 'Sending...' : 'Send OTP'}</span>
                 </button>
-              </p>
-            </form>
-          )}
+              </form>
+            )}
 
-          {/* STEP 2: OTP INPUT */}
-          {showOtpInput && !showProfileForm && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="text-center mb-2">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  OTP sent to <span className="font-medium text-gray-900 dark:text-white">+91 {phoneNumber}</span>
-                </p>
-                <button 
-                  type="button" 
-                  onClick={() => setShowOtpInput(false)} 
-                  className="text-xs text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 mt-1"
-                >
-                  Change Number
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Enter OTP</label>
-                <input 
-                  type="text" 
-                  required
-                  className="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm text-center tracking-widest text-lg"
-                  placeholder="XXXXXX"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading || otp.length < 6}
-                className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                {loading ? 'Verifying...' : 'Verify & Continue'}
-              </button>
-            </form>
-          )}
-
-          {/* STEP 3: PROFILE COMPLETION (NEW) */}
-          {showProfileForm && (
-            <form onSubmit={handleSaveProfile} className="space-y-4 animate-fadeIn">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+            {/* STAGE 2: OTP Input */}
+            {showOtpInput && !showProfileForm && (
+              <form onSubmit={handleVerifyOtp}>
+                <div className="pt-2">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-brand-dark dark:text-white text-sm font-medium leading-normal">Enter Verification Code</label>
+                    <button type="button" onClick={() => setShowOtpInput(false)} className="text-primary text-sm font-semibold hover:text-orange-600">Change Number</button>
                   </div>
+                  <div className="">
+                    <input 
+                      className="h-14 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-background-light dark:bg-white/5 text-center text-2xl font-bold text-brand-dark dark:text-white focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white dark:focus:bg-white/10 transition-all outline-none tracking-[0.5em]" 
+                      type="text" 
+                      placeholder="XXXXXX"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  disabled={loading || otp.length < 6}
+                  className="mt-6 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary hover:bg-primary-hover transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="truncate">{loading ? 'Verifying...' : 'Verify & Sign In'}</span>
+                </button>
+              </form>
+            )}
+
+            {/* STAGE 3: Profile */}
+            {showProfileForm && (
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                 <div>
+                  <label className="text-brand-dark dark:text-white text-base font-medium leading-normal pb-2 block">Full Name</label>
                   <input 
-                    type="text" 
-                    required
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                    placeholder="John Doe"
+                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-brand-dark dark:text-white focus:outline-0 focus:ring-0 border border-gray-200 dark:border-gray-700 bg-white dark:bg-white/5 focus:border-primary h-14 placeholder:text-gray-400 px-[15px] text-base font-normal leading-normal" 
+                    placeholder="John Doe" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
+                <div>
+                  <label className="text-brand-dark dark:text-white text-base font-medium leading-normal pb-2 block">Email</label>
                   <input 
-                    type="email" 
-                    required
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                    placeholder="you@example.com"
+                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-brand-dark dark:text-white focus:outline-0 focus:ring-0 border border-gray-200 dark:border-gray-700 bg-white dark:bg-white/5 focus:border-primary h-14 placeholder:text-gray-400 px-[15px] text-base font-normal leading-normal" 
+                    placeholder="john@example.com" 
+                    type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-              </div>
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-                {loading ? 'Saving...' : 'Complete Registration'}
-              </button>
-            </form>
-          )}
+                <button 
+                  disabled={loading}
+                  className="mt-6 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 bg-primary hover:bg-primary-hover transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="truncate">{loading ? 'Saving...' : 'Complete Registration'}</span>
+                </button>
+              </form>
+            )}
 
+            {/* Footer Links */}
+            <p className="mt-8 text-center text-xs text-gray-500 dark:text-gray-500">
+              By proceeding, you agree to our <a className="font-medium text-brand-dark dark:text-white hover:text-primary transition-colors underline decoration-gray-300 underline-offset-2" href="#">Terms of Service</a> and <a className="font-medium text-brand-dark dark:text-white hover:text-primary transition-colors underline decoration-gray-300 underline-offset-2" href="#">Privacy Policy</a>.
+            </p>
+          </div>
         </div>
+      </div>
 
+      {/* Right Column: Hero Image */}
+      <div className="relative hidden w-0 flex-1 lg:block bg-background-light dark:bg-gray-900">
+        <div className="absolute inset-0 h-full w-full bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD4iQuOII2vTlaS2Bfxg-iMwe-p4cf3AJdbvC-d9Ieh2H6WqeGA_VyVfKikBmLxrWwTNmKQep1Z0im-zTYlorQJllK57s3xCk0lLphQ2WTuMgkFiZTXjbFCLM-ccwDEGmdeLWzcpfQDn2XOvno17tkJmUc5kp_LNHEjKxDR6TGhFNaj-ngD-r9fP4KRTl0rHJJmD1AeRkCXTpk5OjQj3JUcXyu6uKHIwIIBb6Ssb1CcPBtv-XCM9xuon7AksdMliFYAxqb58RvpaYo')" }}>
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-primary/20 mix-blend-overlay"></div>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-16 z-10">
+          <div className="max-w-lg">
+            <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-3 py-1 text-sm font-medium text-white mb-6">
+              <span className="mr-2 h-2 w-2 rounded-full bg-green-400"></span>
+              AI Engine Online
+            </div>
+            <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl mb-4">Build faster with intelligent design.</h2>
+            <p className="text-lg text-gray-200">
+              Experience the power of headless architecture combined with generative AI. Create, scale, and deploy in minutes.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

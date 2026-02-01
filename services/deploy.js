@@ -1,44 +1,42 @@
 const { uploadDirectory, HOSTING_BUCKET } = require('./storage');
+const { deployToPages } = require('./cloudflare');
 const path = require('path');
 require('dotenv').config();
 
 /**
- * Main Deploy Function (GCS Version)
+ * Main Deploy Function (GCS + Cloudflare Pages)
  * @param {string} distPath - Path to the 'dist' folder
- * @param {string} projectId - Internal Project ID
- * @param {string} existingSiteId - (Optional) Ignored for GCS, kept for compatibility
+ * @param {string} projectId - Internal Project ID (used as Site ID)
+ * @param {string} existingSiteId - (Optional)
  */
 async function deploySite(distPath, projectId, existingSiteId = null) {
-    console.log(`Preparing deployment for Project ${projectId} to GCS bucket: ${HOSTING_BUCKET}...`);
+    console.log(`Preparing deployment for Project ${projectId}...`);
 
     try {
-        // Upload the dist directory to the hosting bucket
-        // We upload to a folder named after the projectId to avoid collisions
+        // 1. Archive to GCS (Backup)
+        console.log(`Archiving to GCS bucket: ${HOSTING_BUCKET}...`);
         await uploadDirectory(distPath, projectId, HOSTING_BUCKET);
-        
-        // Construct the URL
-        let deployUrl;
-        if (process.env.LOAD_BALANCER_URL) {
-            // If using a Load Balancer, we assume it points to the bucket
-            // and we append the project ID (subdirectory)
-            const baseUrl = process.env.LOAD_BALANCER_URL.replace(/\/$/, '');
-            deployUrl = `${baseUrl}/${projectId}/`;
-        } else {
-            // Fallback to direct Storage URL
-            deployUrl = `https://storage.googleapis.com/${HOSTING_BUCKET}/${projectId}/index.html`;
-        }
+        const gcsUrl = `https://storage.googleapis.com/${HOSTING_BUCKET}/${projectId}/index.html`;
 
-        console.log(`Deployed to GCS: ${deployUrl}`);
+        // 2. Deploy to Cloudflare Pages (Live)
+        // Project Name: site-<projectId>
+        const cfProjectName = `site-${projectId}`;
+        const cfDeploy = await deployToPages(cfProjectName, distPath);
+
+        const liveUrl = cfDeploy.alias || cfDeploy.url; // Prefer alias (project.pages.dev) over hash
+
+        console.log(`Deployed to Cloudflare: ${liveUrl}`);
 
         return {
-            url: deployUrl,
-            siteId: projectId, // Use projectId as siteId for GCS
+            url: liveUrl, // Primary URL is now Cloudflare
+            gcsUrl: gcsUrl, // Backup URL
+            siteId: projectId,
             deployId: Date.now().toString(),
-            adminUrl: `https://console.cloud.google.com/storage/browser/${HOSTING_BUCKET}/${projectId}`
+            adminUrl: `https://dash.cloudflare.com/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/view/${cfProjectName}`
         };
 
     } catch (error) {
-        console.error('GCS Deploy Error:', error);
+        console.error('Deploy Error:', error);
         throw error;
     }
 }

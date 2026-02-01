@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 console.log("Starting Server...");
 const express = require('express');
 const fs = require('fs-extra');
@@ -10,8 +10,8 @@ const { deploySite } = require('./services/deploy');
 const { uploadDirectory, downloadDirectory } = require('./services/storage');
 const { createOrder, verifyPayment } = require('./services/payments');
 const { extractFromUrl } = require('./services/business-extractor');
-const { checkAvailability, purchaseDomain, getSuggestions } = require('./services/domains');
-const { generateCode, fixCode, regenerateSection, updateSectionContent } = require('./services/ai-coder');
+const { checkAvailability, purchaseDomain, getSuggestions, setupCloudflareDomain, verifyNameservers } = require('./services/domains');
+const { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
 const { getUserCredits, addCredits, deductCredits } = require('./services/credits');
 const { db, admin, auth } = require('./services/firebase');
@@ -57,6 +57,18 @@ async function ensureProjectSource(id) {
                 console.log(`[${id}] node_modules re-linked.`);
             } catch (err) {
                 console.warn(`[${id}] Failed to re-link node_modules:`, err.message);
+            }
+
+            // Ensure the site is available in public/sites for the editor preview
+            try {
+                const distPath = path.join(projectDir, 'dist');
+                const publicSitePath = path.join(__dirname, 'public/sites', id);
+                if (await fs.pathExists(distPath)) {
+                    await fs.copy(distPath, publicSitePath);
+                    console.log(`[${id}] Restored site copied to public/sites for preview.`);
+                }
+            } catch (copyErr) {
+                 console.warn(`[${id}] Failed to copy to public/sites:`, copyErr.message);
             }
 
             return true;
@@ -137,49 +149,35 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Helper: Post-Build Action (Upload & Deploy)
-async function handlePostBuild(id, distPath, userId) {
+// Helper: Save Artifacts (GCS Only - No Cloudflare Deploy)
+async function saveBuildArtifacts(id, distPath, userId) {
     try {
-        console.log(`[${id}] Post-build: Uploading and Deploying...`);
+        console.log(`[${id}] Saving build artifacts to GCS...`);
         
-        // 1. Upload Source/Dist to GCS
-        // Upload the parent folder (project root) or just dist? 
-        // Let's upload the whole project source for backup.
-        const sourcePath = path.join(__dirname, 'projects_source', id);
-        await uploadDirectory(sourcePath, `projects/${id}`);
+        // 1. Upload DIST to GCS (projects/{id}/dist)
+        await uploadDirectory(distPath, `projects/${id}/dist`);
         
-        // 2. Deploy to Hosting (GCS)
-        // We need to fetch existing ID if any from DB (kept for legacy Netlify compat, ignored by GCS deploy)
-        let existingSiteId = null;
-        if (db) {
-            const doc = await db.collection('projects').where('projectId', '==', id).limit(1).get();
-            if (!doc.empty) {
-                existingSiteId = doc.docs[0].data().netlifySiteId;
-            }
-        }
+        // 2. Return Local Preview URL
+        // In GCS storage mode, we don't have a live public URL until published.
+        // We return the local server URL for the editor preview.
+        const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
         
-        const deployResult = await deploySite(distPath, id, existingSiteId);
-        
-        // 3. Update DB
+        // Update DB with updated timestamp but NOT deployUrl
         if (db) {
             const updateData = {
-                deployUrl: deployResult.url,
-                netlifySiteId: deployResult.siteId, // In GCS mode, this is just the projectId
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             };
             
-            // Find doc by projectId (since ID is custom string, not firestore auto-id)
             const snapshot = await db.collection('projects').where('projectId', '==', id).get();
             if (!snapshot.empty) {
                 await snapshot.docs[0].ref.update(updateData);
             }
         }
         
-        return deployResult.url;
+        return localUrl;
     } catch (error) {
-        console.error(`[${id}] Post-build failed:`, error);
-        // Don't throw, just log. We still have the local build.
-        return null;
+        console.error(`[${id}] Save artifacts failed:`, error);
+        throw error; 
     }
 }
 
@@ -269,6 +267,41 @@ app.post('/api/submit-lead', async (req, res) => {
     }
 });
 
+// Get All Leads for User
+app.get('/api/leads', verifyToken, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json([]);
+        }
+
+        let snapshot;
+        try {
+            snapshot = await db.collection('leads')
+                .where('userId', '==', req.user.uid)
+                .orderBy('createdAt', 'desc')
+                .get();
+        } catch (queryError) {
+            console.warn('Sorted query failed (api/leads), falling back to unsorted:', queryError.message);
+            // Fallback to unsorted if index is missing
+            snapshot = await db.collection('leads')
+                .where('userId', '==', req.user.uid)
+                .get();
+        }
+            
+        const leads = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
+        }));
+        
+        res.json(leads);
+        
+    } catch (error) {
+        console.error('Fetch all leads failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get Leads for a Project
 app.get('/api/project/:id/leads', verifyToken, async (req, res) => {
     const { id } = req.params;
@@ -334,6 +367,35 @@ app.get('/api/projects', verifyToken, async (req, res) => {
     }
 });
 
+// Get Pages List
+app.get('/api/project/:id/pages', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+        
+        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+        if (!await fs.pathExists(distPath)) {
+            return res.status(404).json({ error: 'Dist folder not found' });
+        }
+        
+        const files = await fs.readdir(distPath);
+        const htmlFiles = files.filter(f => f.endsWith('.html'));
+        
+        // Ensure index.html is first
+        const sorted = htmlFiles.sort((a, b) => {
+            if (a === 'index.html') return -1;
+            if (b === 'index.html') return 1;
+            return a.localeCompare(b);
+        });
+        
+        res.json({ pages: sorted });
+        
+    } catch (error) {
+        console.error('Fetch pages list failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get Current Theme
 app.get('/api/project/:id/theme', verifyToken, async (req, res) => {
     const { id } = req.params;
@@ -391,7 +453,7 @@ app.post('/api/project/:id/theme/regenerate', verifyToken, async (req, res) => {
 // Update a Section (Generic AI Instruction)
 app.post('/api/project/:id/section', verifyToken, async (req, res) => {
     const { id } = req.params;
-    const { sectionId, instruction } = req.body;
+    const { sectionId, instruction, page } = req.body;
     
     try {
         if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
@@ -404,15 +466,38 @@ app.post('/api/project/:id/section', verifyToken, async (req, res) => {
         }
         // ------------------------
 
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        let targetFile = 'index.html';
+
+        if (page) {
+            targetFile = page;
+        } else {
+             // Auto-discovery
+             try {
+                 const files = await fs.readdir(distDir);
+                 const htmlFiles = files.filter(f => f.endsWith('.html'));
+                 
+                 for (const file of htmlFiles) {
+                     const content = await fs.readFile(path.join(distDir, file), 'utf-8');
+                     if (content.includes(`data-section="${sectionId}"`)) {
+                         targetFile = file;
+                         break;
+                     }
+                 }
+             } catch (e) {
+                 console.warn(`[AutoDiscovery] Failed to scan files: ${e.message}`);
+             }
+        }
+
+        const sourcePath = path.join(distDir, targetFile);
         
         if (!await fs.pathExists(sourcePath)) {
-            return res.status(404).json({ error: 'Project source not found' });
+            return res.status(404).json({ error: `Page ${targetFile} not found` });
         }
         
         const currentCode = await fs.readFile(sourcePath, 'utf-8');
         
-        console.log(`Regenerating section '${sectionId}' for project ${id}...`);
+        console.log(`Regenerating section '${sectionId}' in file '${targetFile}' for project ${id}...`);
         const newCode = await regenerateSection(currentCode, sectionId, instruction);
         
         // Backup old code (simple undo)
@@ -422,10 +507,11 @@ app.post('/api/project/:id/section', verifyToken, async (req, res) => {
         await fs.writeFile(sourcePath, newCode);
         
         // Rebuild & Deploy
+        // Rebuild & Save (GCS only)
         const distPath = await rebuildSite(id);
-        const deployUrl = await handlePostBuild(id, distPath, req.user.uid);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
         
-        res.json({ success: true, url: deployUrl });
+        res.json({ success: true, url: previewUrl });
         
     } catch (error) {
         console.error('Update failed:', error);
@@ -433,23 +519,93 @@ app.post('/api/project/:id/section', verifyToken, async (req, res) => {
     }
 });
 
-// Update Specific Content (Text/Image)
-app.post('/api/project/:id/content', verifyToken, async (req, res) => {
+// Regenerate Entire Page (Global AI Instruction)
+app.post('/api/project/:id/regenerate-page', verifyToken, async (req, res) => {
     const { id } = req.params;
-    const { sectionId, type, originalValue, newValue } = req.body; // type: 'text' | 'image'
+    const { instruction, page } = req.body;
     
     try {
         if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
 
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
+        // --- Credit Deduction ---
+        try {
+            await deductCredits(req.user.uid, 100, `Regenerate page for project ${id}`);
+        } catch (err) {
+            return res.status(402).json({ error: 'Insufficient credits for AI regeneration.' });
+        }
+        // ------------------------
+
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        const targetFile = page || 'index.html';
+        const sourcePath = path.join(distDir, targetFile);
         
         if (!await fs.pathExists(sourcePath)) {
-            return res.status(404).json({ error: 'Project source not found' });
+            return res.status(404).json({ error: `Page ${targetFile} not found` });
         }
         
         const currentCode = await fs.readFile(sourcePath, 'utf-8');
         
-        console.log(`Updating ${type} in section '${sectionId}' for project ${id}...`);
+        console.log(`Regenerating page '${targetFile}' for project ${id}...`);
+        const newCode = await regeneratePage(currentCode, instruction);
+        
+        // Backup old code
+        await fs.writeFile(sourcePath + '.bak', currentCode);
+        
+        // Write new code
+        await fs.writeFile(sourcePath, newCode);
+        
+        // Rebuild & Save (GCS only)
+        const distPath = await rebuildSite(id);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+        
+        res.json({ success: true, url: previewUrl });
+        
+    } catch (error) {
+        console.error('Page regeneration failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update Specific Content (Text/Image)
+app.post('/api/project/:id/content', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { sectionId, type, originalValue, newValue, page } = req.body; // type: 'text' | 'image'
+    
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        let targetFile = 'index.html';
+
+        if (page) {
+            targetFile = page;
+        } else {
+             // Auto-discovery: Find which file contains the section
+             try {
+                 const files = await fs.readdir(distDir);
+                 const htmlFiles = files.filter(f => f.endsWith('.html'));
+                 
+                 for (const file of htmlFiles) {
+                     const content = await fs.readFile(path.join(distDir, file), 'utf-8');
+                     if (content.includes(`data-section="${sectionId}"`)) {
+                         targetFile = file;
+                         break;
+                     }
+                 }
+             } catch (e) {
+                 console.warn(`[AutoDiscovery] Failed to scan files: ${e.message}`);
+             }
+        }
+
+        const sourcePath = path.join(distDir, targetFile);
+        
+        if (!await fs.pathExists(sourcePath)) {
+            return res.status(404).json({ error: `Page ${targetFile} not found` });
+        }
+        
+        const currentCode = await fs.readFile(sourcePath, 'utf-8');
+        
+        console.log(`Updating ${type} in section '${sectionId}' in file '${targetFile}' for project ${id}...`);
         const newCode = await updateSectionContent(currentCode, sectionId, type, originalValue, newValue);
         
         // Backup
@@ -459,10 +615,11 @@ app.post('/api/project/:id/content', verifyToken, async (req, res) => {
         await fs.writeFile(sourcePath, newCode);
         
         // Rebuild & Deploy
+        // Rebuild & Save (GCS only)
         const distPath = await rebuildSite(id);
-        const deployUrl = await handlePostBuild(id, distPath, req.user.uid);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
         
-        res.json({ success: true, url: deployUrl });
+        res.json({ success: true, url: previewUrl });
         
     } catch (error) {
         console.error('Content update failed:', error);
@@ -487,10 +644,11 @@ app.post('/api/project/:id/undo', verifyToken, async (req, res) => {
         await fs.copy(backupPath, sourcePath);
         
         console.log(`Undoing changes for project ${id}...`);
+        // Rebuild & Save (GCS only)
         const distPath = await rebuildSite(id);
-        const deployUrl = await handlePostBuild(id, distPath, req.user.uid);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
         
-        res.json({ success: true, url: deployUrl });
+        res.json({ success: true, url: previewUrl });
     } catch (error) {
          console.error('Undo failed:', error);
          res.status(500).json({ error: error.message });
@@ -556,10 +714,11 @@ app.post('/api/project/:id/theme', verifyToken, async (req, res) => {
         await fs.writeFile(configPath, configContent);
         
         console.log(`Updating theme for project ${id}...`);
+        // Rebuild & Save (GCS only)
         const distPath = await rebuildSite(id);
-        const deployUrl = await handlePostBuild(id, distPath, req.user.uid);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
         
-        res.json({ success: true, url: deployUrl });
+        res.json({ success: true, url: previewUrl });
         
     } catch (error) {
         console.error('Theme update failed:', error);
@@ -567,8 +726,25 @@ app.post('/api/project/:id/theme', verifyToken, async (req, res) => {
     }
 });
 
+// Extract Business Info (Pre-Build)
+app.post('/api/extract', verifyToken, async (req, res) => {
+    const { query } = req.body;
+    try {
+        if (!query) return res.status(400).json({ error: 'Query is required' });
+        
+        console.log(`[API] Extracting info for: "${query}"...`);
+        const userContext = await extractFromUrl(query);
+        
+        res.json({ success: true, data: userContext });
+    } catch (error) {
+        console.error('Extraction failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Initialize Build (Step 1)
 app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
-    let { userContext, businessUrl, businessQuery, pages } = req.body;
+    let { userContext, businessUrl, businessQuery, pages, stylePreset } = req.body;
     const logoFile = req.file; // Get the uploaded logo file
 
     // Parse pages if it comes as a string (from FormData)
@@ -617,12 +793,13 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
                 status: 'starting',
                 logs: [],
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                isPublished: false
+                isPublished: false,
+                stylePreset: stylePreset || 'standard'
             });
         }
 
         // Trigger Background Process (Fire and Forget)
-        runBuildProcess(id, userContext, logoFile, parsedPages, req.user.uid, cost, query)
+        runBuildProcess(id, userContext, logoFile, parsedPages, req.user.uid, cost, query, stylePreset)
             .catch(err => console.error(`Background build ${id} failed hard:`, err));
 
         // Return immediately
@@ -635,7 +812,7 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
 });
 
 // Background Build Processor
-async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, cost, query) {
+async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, cost, query, stylePreset) {
     console.log(`[${id}] Starting background build process...`);
     
     const logProgress = async (message) => {
@@ -658,7 +835,7 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
     try {
         await logProgress('Starting build engine...');
         
-        const distPath = await buildSite(id, userContext, logoFile, parsedPages, logProgress);
+        const distPath = await buildSite(id, userContext, logoFile, parsedPages, logProgress, stylePreset);
         
         await logProgress('Build success! Saving & Deploying...');
         
@@ -675,9 +852,9 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
         
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
 
-        // 3. Post-Build: Deploy to GCS Hosting
-        await logProgress('Deploying to Cloud Storage...');
-        const deployUrl = await handlePostBuild(id, path.join(sourcePath, 'dist'), userId);
+        // 3. Post-Build: Save to Storage (GCS)
+        await logProgress('Saving to Cloud Storage...');
+        const savedUrl = await saveBuildArtifacts(id, path.join(sourcePath, 'dist'), userId);
         
         // 4. Deduct Credits (Only on Success)
         try {
@@ -693,9 +870,9 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
             await db.collection('projects').doc(id).update({
                 status: 'completed',
                 isPublished: false,
-                url: deployUrl || localUrl,
+                url: savedUrl, // Default to preview URL until published
                 localUrl: localUrl,
-                deployUrl: deployUrl, // Ensure this field is set
+                // deployUrl: null, // Don't wipe it if it exists, but don't set it either
                 completedAt: admin.firestore.FieldValue.serverTimestamp(),
                 logs: admin.firestore.FieldValue.arrayUnion({
                     message: 'Process Finished Successfully.',
@@ -796,7 +973,7 @@ app.post('/api/credits/verify', verifyToken, async (req, res) => {
     }
 });
 
-// Unlock Publishing Plan
+// Unlock Publishing Plan & Deploy to Cloudflare
 app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { plan } = req.body; // 'basic' (500), 'single' (2000), 'multi' (3000)
@@ -807,12 +984,17 @@ app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
         'multi': 3000
     };
     
+    // Allow republishing without cost if already unlocked (client logic usually handles this, but backend should verify)
+    // For now, let's assume we always charge or check "publishedPlan"
+    
     const cost = COSTS[plan];
     if (!cost) {
         return res.status(400).json({ error: 'Invalid plan' });
     }
     
     try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
         // 1. Check ownership
         const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
         const snapshot = await projectRef.get();
@@ -824,27 +1006,38 @@ app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
         const projectDoc = snapshot.docs[0];
         const projectData = projectDoc.data();
         
-        // 2. Check if already unlocked for this plan or higher? 
-        // For now, simple additive or just check if "published" flag is set.
-        // Let's assume user pays per publish/unlock type.
+        // 2. Deduct Credits (if not upgrading or if we charge per publish? Assume one-time unlock per plan level)
+        // Simplified: Always deduct for now as per previous logic, or maybe check if already published?
+        // Let's stick to the previous simple logic: Deduct.
+        // Optimization: Check if projectData.publishedPlan == plan, maybe skip deduction?
+        // User asked for "only when the site is published, it should be pushed".
+        // This endpoint is the trigger.
         
-        // 3. Deduct Credits
-        await deductCredits(req.user.uid, cost, `Unlock ${plan} plan for project ${id}`);
+        if (projectData.publishedPlan !== plan) {
+             await deductCredits(req.user.uid, cost, `Unlock ${plan} plan for project ${id}`);
+        }
         
-        // 4. Update Project Status
+        // 3. Deploy to Cloudflare
+        console.log(`Publishing project ${id} to Cloudflare...`);
+        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+        const deployResult = await deploySite(distPath, id, projectData.netlifySiteId); // netlifySiteId reused as generic siteId
+
+        // 4. Update Project Status & URL
         await projectDoc.ref.update({
             publishedPlan: plan,
             isPublished: true,
-            publishedAt: admin.firestore.FieldValue.serverTimestamp()
+            deployUrl: deployResult.url,
+            publishedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        res.json({ success: true });
+        res.json({ success: true, url: deployResult.url });
         
     } catch (error) {
         if (error.message === 'Insufficient credits') {
             return res.status(402).json({ error: 'Insufficient credits' });
         }
-        console.error('Publish unlock failed:', error);
+        console.error('Publish unlock/deploy failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -903,7 +1096,7 @@ app.get('/api/domains', verifyToken, async (req, res) => {
 
 // Purchase Domain
 app.post('/api/domains/buy', verifyToken, async (req, res) => {
-    const { domain, contactInfo } = req.body;
+    const { domain, contactInfo, projectId } = req.body;
 
     if (!domain || !contactInfo) {
         return res.status(400).json({ error: 'Domain and contactInfo are required' });
@@ -921,21 +1114,134 @@ app.post('/api/domains/buy', verifyToken, async (req, res) => {
 
         const result = await purchaseDomain(domain, details);
         
+        let cfStatus = null;
+        
+        // If projectId is provided, we can auto-setup Cloudflare immediately
+        // Otherwise, user will have to "Connect" it later.
+        // For now, let's assume we want to setup Cloudflare Zone regardless to get NS.
+        // We use a placeholder project ID if none provided, or just init the zone.
+        
+        try {
+            // true = isManagedByUs (Auto update NS)
+            // If no project ID, we might fail linking, but we can still Add Zone.
+            // Let's rely on setupCloudflareDomain to handle the zone creation.
+            // We pass a dummy project name "pending-setup" if none provided, 
+            // or better, we just Add Zone manually here if no project. 
+            // But consistency is key. Let's ask for projectId or handle it later.
+            
+            if (projectId) {
+                 cfStatus = await setupCloudflareDomain(domain, projectId, true);
+            }
+        } catch (cfError) {
+            console.error("Auto-Cloudflare setup failed during purchase:", cfError);
+            // Don't fail the purchase response, just log it.
+            cfStatus = { status: 'SETUP_FAILED', error: cfError.message };
+        }
+        
         // Save to Firestore
         if (db) {
             await db.collection('domains').add({
                 domain,
                 userId: req.user.uid,
-                orderId: result.orderId || 'unknown', // GoDaddy might return purchaseId or similar
+                orderId: result.orderId || 'unknown',
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 provider: 'namesilo',
                 status: 'active',
-                autoRenew: true
+                autoRenew: true,
+                cloudflare: cfStatus,
+                nameservers: cfStatus?.nameservers || []
             });
         }
 
-        res.json({ success: true, order: result });
+        res.json({ success: true, order: result, cloudflare: cfStatus });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Custom Domain Hosting (Caddy Integration) ---
+
+
+
+// Verify Domain DNS Setup (Cloudflare NS Check)
+app.get('/api/domains/verify-setup', verifyToken, async (req, res) => {
+    const { domain } = req.query;
+
+    if (!domain) {
+        return res.status(400).json({ error: 'Domain is required' });
+    }
+
+    try {
+        const result = await verifyNameservers(domain);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Assign Custom Domain to Project (Cloudflare)
+app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { domain } = req.body; 
+
+    if (!domain) {
+        return res.status(400).json({ error: 'Domain is required' });
+    }
+
+    const cleanDomain = domain.toLowerCase().trim();
+
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+
+        // 1. Check if domain is taken
+        const duplicateCheck = await db.collection('projects')
+            .where('customDomain', '==', cleanDomain)
+            .get();
+
+        if (!duplicateCheck.empty) {
+            if (duplicateCheck.docs[0].data().projectId === id) {
+                return res.json({ success: true, message: 'Domain already assigned.' });
+            }
+            return res.status(409).json({ error: 'Domain already connected to another site.' });
+        }
+
+        // 2. Verify Ownership
+        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
+        const snapshot = await projectRef.get();
+
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Project not found or unauthorized' });
+        }
+
+        const projectDoc = snapshot.docs[0];
+
+        // 3. Setup Cloudflare
+        // Check if we manage this domain in our 'domains' collection to set isManagedByUs
+        let isManaged = false;
+        const domainDoc = await db.collection('domains').where('domain', '==', cleanDomain).where('userId', '==', req.user.uid).get();
+        if (!domainDoc.empty && domainDoc.docs[0].data().provider === 'namesilo') {
+            isManaged = true;
+        }
+
+        const cfResult = await setupCloudflareDomain(cleanDomain, id, isManaged);
+
+        // 4. Update Project
+        await projectDoc.ref.update({
+            customDomain: cleanDomain,
+            domainUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            nameservers: cfResult.nameservers, // Array of NS for user to configure
+            domainStatus: cfResult.status // 'CONFIGURED' or 'ACTION_REQUIRED'
+        });
+
+        res.json({ 
+            success: true, 
+            domain: cleanDomain,
+            nameservers: cfResult.nameservers,
+            managed: isManaged
+        });
+
+    } catch (error) {
+        console.error('Assign domain failed:', error);
         res.status(500).json({ error: error.message });
     }
 });

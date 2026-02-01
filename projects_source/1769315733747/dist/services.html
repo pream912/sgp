@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jp Digital Studio - services</title>
+    <meta name="description" content="Explore the professional digital services offered by Jp Digital Studio, including photography, digital imaging, photo editing, and printing.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --color-primary: #9D1B2B;
+            --color-secondary: #1E3F66;
+            --color-accent: #A7B9CD;
+            --color-background: #121212;
+            --color-text: #EAEAEA;
+            --color-buttonBackground: #9D1B2B;
+            --color-buttonText: #EAEAEA;
+        }
+        .bg-primary { background-color: var(--color-primary); }
+        .bg-secondary { background-color: var(--color-secondary); }
+        .bg-accent { background-color: var(--color-accent); }
+        .bg-background { background-color: var(--color-background); }
+        .bg-buttonBackground { background-color: var(--color-buttonBackground); }
+        .text-primary { color: var(--color-primary); }
+        .text-secondary { color: var(--color-secondary); }
+        .text-accent { color: var(--color-accent); }
+        .text-text { color: var(--color-text); }
+        .text-buttonText { color: var(--color-buttonText); }
+        .border-primary { border-color: var(--color-primary); }
+        .font-heading { font-family: 'Playfair Display', serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+        .radial-gradient { background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 70%); }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body">
+
+    <header data-section="header" id="header" class="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-lg shadow-md shadow-black/10">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="index.html" class="flex-shrink-0" aria-label="Jp Digital Studio Home">
+                    <img src="./logo.png" alt="Jp Digital Studio Logo" class="h-12 w-auto">
+                </a>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="about.html" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-body text-lg font-bold text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Gallery</a>
+                    <a href="contact.html" class="font-body text-lg text-text hover:text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <div class="flex items-center">
+                    <a href="contact.html" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-body font-bold py-2 px-6 rounded-full hover:opacity-90 transition-opacity duration-300">
+                        Get a Quote
+                    </a>
+                    <!-- Mobile Menu Button -->
+                    <button id="mobile-menu-button" class="lg:hidden ml-4 p-2 rounded-md text-text hover:text-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" aria-label="Open main menu">
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Home</a>
+                <a href="about.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">About</a>
+                <a href="services.html" class="text-primary block px-3 py-2 rounded-md text-base font-medium">Services</a>
+                <a href="gallery.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Gallery</a>
+                <a href="contact.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Page Header -->
+        <section data-section="services-hero" class="py-20 md:py-28 bg-gray-900/50 radial-gradient">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 data-aos="fade-up" class="font-heading text-4xl md:text-6xl font-bold text-text">Our Digital Services</h1>
+                <p data-aos="fade-up" data-aos-delay="100" class="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-300">Professional, reliable, and creative solutions for all your digital needs, delivered by experienced technicians.</p>
+            </div>
+        </section>
+
+        <!-- Services Grid -->
+        <section data-section="services-grid" class="py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 data-aos="fade-up" class="font-heading text-3xl md:text-4xl font-bold">What We Offer</h2>
+                    <p data-aos="fade-up" data-aos-delay="100" class="mt-3 text-gray-400 max-w-2xl mx-auto">From capturing moments to bringing them to life in print, we provide a comprehensive suite of digital services.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <!-- Service 1: Photography -->
+                    <div data-aos="fade-up" class="lg:col-span-2 bg-gray-900/50 rounded-2xl p-8 flex flex-col justify-between hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+                        <div>
+                            <i class="fas fa-camera-retro text-4xl text-primary mb-4"></i>
+                            <h3 class="font-heading text-2xl font-bold mb-3">Photography Services</h3>
+                            <p class="text-gray-300 mb-6">Our studio provides professional photography for portraits, events, and commercial projects. We focus on capturing high-quality images that tell your story.</p>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1493156624194-053884f699d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080" alt="Professional camera setup" class="rounded-lg object-cover h-48 w-full mt-4">
+                    </div>
+
+                    <!-- Service 2: Digital Imaging -->
+                    <div data-aos="fade-up" data-aos-delay="100" class="bg-gray-900/50 rounded-2xl p-8 flex flex-col justify-between hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+                        <div>
+                            <i class="fas fa-desktop text-4xl text-primary mb-4"></i>
+                            <h3 class="font-heading text-2xl font-bold mb-3">Digital Imaging</h3>
+                            <p class="text-gray-300">We specialize in high-resolution scanning, image restoration, and digital conversion of analog media, preserving your memories for the future.</p>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1519638831568-d9897f54ed69?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080" alt="Digital imaging software on a monitor" class="rounded-lg object-cover h-32 w-full mt-4">
+                    </div>
+
+                    <!-- Service 3: Photo Editing -->
+                    <div data-aos="fade-up" data-aos-delay="200" class="bg-gray-900/50 rounded-2xl p-8 flex flex-col justify-between hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+                        <div>
+                            <i class="fas fa-pen-ruler text-4xl text-primary mb-4"></i>
+                            <h3 class="font-heading text-2xl font-bold mb-3">Photo Editing</h3>
+                            <p class="text-gray-300">Our expert technicians provide meticulous photo editing, color correction, and retouching services to make your images look their absolute best.</p>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1547250073-12153df20c2f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080" alt="Photo editing on a tablet" class="rounded-lg object-cover h-32 w-full mt-4">
+                    </div>
+
+                    <!-- Service 4: Printing Services -->
+                    <div data-aos="fade-up" data-aos-delay="300" class="lg:col-span-4 bg-gray-900/50 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-8 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300">
+                        <div class="flex-1">
+                            <i class="fas fa-print text-4xl text-primary mb-4"></i>
+                            <h3 class="font-heading text-2xl font-bold mb-3">Printing Services</h3>
+                            <p class="text-gray-300 mb-6">Get stunning, high-quality prints of your digital photos. We offer a variety of sizes and finishes, from standard prints to large-format canvases, ensuring vibrant and lasting results.</p>
+                        </div>
+                        <div class="flex-1 w-full">
+                            <img src="https://images.unsplash.com/photo-1561713383-78b4befb5f86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080" alt="Large format printer in action" class="rounded-lg object-cover h-48 w-full">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Choose Us Section -->
+        <section data-section="why-us" class="py-20 md:py-28 bg-gray-900/50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <img src="https://images.unsplash.com/photo-1609228427006-f81656a2a51d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080" alt="Experienced technician working in a studio" class="rounded-2xl shadow-lg w-full h-auto object-cover">
+                    </div>
+                    <div data-aos="fade-left" data-aos-delay="100">
+                        <h2 class="font-heading text-3xl md:text-4xl font-bold mb-6">Why Jp Digital Studio?</h2>
+                        <p class="text-gray-300 mb-8">We are committed to excellence, combining technical expertise with a passion for creativity to deliver results that exceed expectations.</p>
+                        <ul class="space-y-6">
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <i class="fas fa-user-tie text-2xl text-primary"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-xl font-bold font-body">Experienced Technicians</h4>
+                                    <p class="text-gray-400 mt-1">Our team consists of seasoned professionals with years of experience in the digital imaging industry.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <i class="fas fa-thumbs-up text-2xl text-primary"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-xl font-bold font-body">Great Service</h4>
+                                    <p class="text-gray-400 mt-1">We pride ourselves on providing friendly, attentive, and personalized service to every client.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <i class="fas fa-shield-halved text-2xl text-primary"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-xl font-bold font-body">Reliable Work</h4>
+                                    <p class="text-gray-400 mt-1">Count on us for consistent quality and dependable results, delivered on time, every time.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section data-section="cta" class="py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto text-center" data-aos="zoom-in">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold">Get a Custom Quote</h2>
+                    <p class="mt-4 text-lg text-gray-300">Have a specific project in mind? Fill out the form below, and we'll get back to you with a personalized quote.</p>
+                </div>
+                <div class="mt-12 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="200">
+                    <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div>
+                                <label for="name" class="sr-only">Name</label>
+                                <input type="text" name="name" id="name" placeholder="Your Name" required class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div>
+                                <label for="email" class="sr-only">Email</label>
+                                <input type="email" name="email" id="email" placeholder="Your Email" required class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="service" class="sr-only">Service</label>
+                            <select id="service" name="service" required class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                                <option value="" disabled selected>Select a Service</option>
+                                <option value="Photography">Photography Services</option>
+                                <option value="Digital Imaging">Digital Imaging</option>
+                                <option value="Photo Editing">Photo Editing</option>
+                                <option value="Printing">Printing Services</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="message" class="sr-only">Message</label>
+                            <textarea name="message" id="message" rows="4" placeholder="Tell us about your project" class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-text focus:outline-none focus:ring-2 focus:ring-primary transition-all"></textarea>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="bg-buttonBackground text-buttonText font-body font-bold py-3 px-10 rounded-full hover:opacity-90 transition-opacity duration-300 text-lg">
+                                Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-gray-900/80 border-t border-gray-800">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-2 mb-6 md:mb-0">
+                    <a href="index.html" class="inline-block mb-4">
+                        <img src="./logo.png" alt="Jp Digital Studio Logo" class="h-12 w-auto">
+                    </a>
+                    <p class="text-gray-400 max-w-sm">Your trusted partner for professional digital photography, imaging, and printing services in Tiruchirappalli.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="text-gray-400 hover:text-primary">Home</a></li>
+                        <li><a href="about.html" class="text-gray-400 hover:text-primary">About Us</a></li>
+                        <li><a href="services.html" class="text-gray-400 hover:text-primary">Services</a></li>
+                        <li><a href="gallery.html" class="text-gray-400 hover:text-primary">Gallery</a></li>
+                        <li><a href="contact.html" class="text-gray-400 hover:text-primary">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Contact</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 mr-2 text-primary"></i>
+                            <span>No: 5 VOC Nagar, 2nd St, Tiruchirappalli, TN 620001</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone mr-2 text-primary"></i>
+                            <a href="tel:09952338811" class="hover:text-primary">099523 38811</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Follow Us</h4>
+                    <div class="flex space-x-4">
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Facebook"><i class="fab fa-facebook-f fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Instagram"><i class="fab fa-instagram fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Twitter"><i class="fab fa-twitter fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="LinkedIn"><i class="fab fa-linkedin-in fa-lg"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-800 pt-8 text-center text-gray-500">
+                <p>&copy; <span id="current-year"></span> Jp Digital Studio. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onclick="closeModal()">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 m-4 max-w-sm w-full text-center" onclick="event.stopPropagation()">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                <i class="fas fa-check text-green-600 text-3xl"></i>
+            </div>
+            <h3 class="font-heading text-2xl font-bold text-text mb-2">Thank You!</h3>
+            <p class="text-gray-300 mb-6">Your request has been submitted. We'll be in touch shortly.</p>
+            <button onclick="closeModal()" class="bg-primary text-buttonText font-bold py-2 px-6 rounded-full hover:opacity-90 transition-opacity">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Footer Current Year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Form Submission & Modal
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769315733747',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

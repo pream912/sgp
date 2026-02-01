@@ -7,7 +7,7 @@ const { fetchImages } = require('./images');
 
 const MAX_RETRIES = 3; // Lower retries for HTML as it's less prone to build errors
 
-async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress = () => {}) {
+async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress = () => {}, stylePreset = null) {
     const tempDir = path.join(__dirname, '../temp', id);
     const distDir = path.join(tempDir, 'dist');
     const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
@@ -27,7 +27,26 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         const msgDesign = `[${id}] Generating Design...`;
         console.log(msgDesign);
         onProgress(msgDesign);
-        const designSystem = await generateDesign(userContext, logoBuffer, logoMimeType);
+        
+        let designSystem;
+        let designAttempts = 0;
+        const MAX_DESIGN_RETRIES = 3;
+        
+        while (designAttempts < MAX_DESIGN_RETRIES) {
+            designAttempts++;
+            try {
+                designSystem = await generateDesign(userContext, logoBuffer, logoMimeType);
+                break; // Success
+            } catch (err) {
+                console.warn(`[${id}] Design Generation Attempt ${designAttempts} failed: ${err.message}`);
+                if (designAttempts >= MAX_DESIGN_RETRIES) {
+                     throw new Error(`Failed to generate Design after ${MAX_DESIGN_RETRIES} attempts. Last error: ${err.message}`);
+                }
+                const delay = 2000 * Math.pow(2, designAttempts - 1); // 2s, 4s
+                console.log(`[${id}] Waiting ${delay}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
 
         // 1.5 Fetch Images (Unsplash)
         const msgImages = `[${id}] Fetching Images...`;
@@ -62,7 +81,7 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         }
 
         // 3. Code Gen Loop
-        const msgCodeGen = `[${id}] Generating HTML for ${pages.length} pages...`;
+        const msgCodeGen = `[${id}] Generating ${pages.length} pages...`;
         console.log(msgCodeGen);
         onProgress(msgCodeGen);
         
@@ -73,18 +92,20 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
              onProgress(msgPage);
             let code = '';
             let genAttempts = 0;
-            const MAX_GEN_RETRIES = 3;
+            const MAX_GEN_RETRIES = 5;
 
             while (genAttempts < MAX_GEN_RETRIES) {
                 genAttempts++;
                 try {
-                    code = await generateCode(designSystem, userContext, pageName, pages, refLayout);
+                    code = await generateCode(designSystem, userContext, pageName, pages, refLayout, stylePreset);
                     
                     // Basic Validation & Cleanup
-                    if (code.includes('cdn.tailwindcss.com')) {
-                        code = code.replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>/g, '');
-                        code = code.replace(/<script>\s*tailwind\.config\s*=\s*{[\s\S]*?}\s*<\/script>/g, '');
-                    }
+                    // Always remove Tailwind CDN if present (it's strictly forbidden)
+                    code = code.replace(/<script\s+src="https:\/\/cdn\.tailwindcss\.com[^"]*"><\/script>/g, '');
+                    
+                    // Always remove any script that tries to define tailwind.config
+                    // This regex matches <script ...> ... tailwind.config = ... </script> including newlines/comments
+                    code = code.replace(/<script[^>]*>[\s\S]*?tailwind\.config\s*=[\s\S]*?<\/script>/g, '');
     
                     if (!code.trim().endsWith('</html>')) {
                         throw new Error("Incomplete HTML generated (Missing </html>)");
@@ -94,8 +115,15 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
                 } catch (err) {
                     console.warn(`[${id}] ${pageName} Generation Attempt ${genAttempts} failed: ${err.message}`);
                     if (genAttempts >= MAX_GEN_RETRIES) {
-                        throw new Error(`Failed to generate ${pageName} after ${MAX_GEN_RETRIES} attempts.`);
+                        throw new Error(`Failed to generate ${pageName} after ${MAX_GEN_RETRIES} attempts. Last error: ${err.message}`);
                     }
+                    
+                    // Exponential Backoff with Jitter
+                    const backoff = 2000 * Math.pow(2, genAttempts - 1);
+                    const jitter = Math.random() * 1000;
+                    const delay = backoff + jitter;
+                    console.log(`[${id}] Waiting ${Math.round(delay)}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
         };
@@ -137,10 +165,10 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         const remainingPages = pages.filter(p => p !== homePage);
         
         if (remainingPages.length > 0) {
-            console.log(`[${id}] Generating ${remainingPages.length} remaining pages in parallel...`);
+            console.log(`[${id}] Generating ${remainingPages.length} remaining pages sequentially...`);
             onProgress(`[${id}] Generating remaining pages (${remainingPages.join(', ')})...`);
             
-            await Promise.all(remainingPages.map(async (pageName) => {
+            for (const pageName of remainingPages) {
                 try {
                     const pageCode = await generatePage(pageName, layoutReference);
                     const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
@@ -149,7 +177,7 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
                      console.error(`[${id}] Failed to generate ${pageName}:`, err);
                      throw err;
                 }
-            }));
+            }
         }
 
         // 4. Build Loop (Tailwind & Config Injection)

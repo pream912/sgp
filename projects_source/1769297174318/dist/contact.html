@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surya Dental Care - contact</title>
+    <meta name="description" content="Get in touch with Surya Dental Care for exceptional patient care, professionalism, and advanced dental treatments in a comfortable, clean environment.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    
+    
+    <style>
+        /* Minimalist scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #FDFDFD; }
+        ::-webkit-scrollbar-thumb { background: #A9A9A9; border-radius: 0; }
+        ::-webkit-scrollbar-thumb:hover { background: #20B2AA; }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body antialiased">
+
+    <header data-section="header" class="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-gray-200 shadow-none">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="shrink-0" data-aos="fade-right">
+                    <img src="./logo.png" alt="Surya Dental Care Logo" class="h-10 w-auto">
+                </a>
+                <nav class="hidden lg:flex items-center space-x-10">
+                    <a href="index.html" class="font-body tracking-wider text-sm hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="about.html" class="font-body tracking-wider text-sm hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-body tracking-wider text-sm hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-body tracking-wider text-sm hover:text-primary transition-colors duration-300">Gallery</a>
+                    <a href="contact.html" class="font-body tracking-wider text-sm text-primary font-bold">Contact</a>
+                    <a href="testimonials.html" class="font-body tracking-wider text-sm hover:text-primary transition-colors duration-300">Testimonials</a>
+                </nav>
+                <div class="lg:hidden">
+                    <button id="mobile-menu-button" aria-label="Open Menu" class="text-text text-2xl">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden absolute top-full left-0 w-full bg-background border-b border-gray-200 shadow-none">
+            <nav class="flex flex-col space-y-4 p-6">
+                <a href="index.html" class="font-body tracking-wider hover:text-primary transition-colors duration-300">Home</a>
+                <a href="about.html" class="font-body tracking-wider hover:text-primary transition-colors duration-300">About</a>
+                <a href="services.html" class="font-body tracking-wider hover:text-primary transition-colors duration-300">Services</a>
+                <a href="gallery.html" class="font-body tracking-wider hover:text-primary transition-colors duration-300">Gallery</a>
+                <a href="contact.html" class="font-body tracking-wider text-primary font-bold">Contact</a>
+                <a href="testimonials.html" class="font-body tracking-wider hover:text-primary transition-colors duration-300">Testimonials</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Page Header Section -->
+        <section data-section="contact-hero" class="py-20 md:py-32 bg-background">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="font-heading text-4xl md:text-5xl font-bold text-text tracking-wider" data-aos="fade-up">Get In Touch</h1>
+                <p class="mt-6 font-body text-lg text-secondary max-w-2xl mx-auto tracking-wider" data-aos="fade-up" data-aos-delay="100">
+                    We're here to help. Reach out to us for appointments, inquiries, or any questions you may have about our dental services.
+                </p>
+            </div>
+        </section>
+
+        <!-- Contact Form & Details Section -->
+        <section data-section="contact-main" class="py-20 md:py-32 border-t border-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
+                    
+                    <!-- Contact Form -->
+                    <div data-aos="fade-right">
+                        <h2 class="font-heading text-3xl font-bold text-text tracking-wider mb-8">Send Us a Message</h2>
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                            <div>
+                                <label for="name" class="sr-only">Name</label>
+                                <input type="text" id="name" name="name" placeholder="Your Name" required class="w-full px-4 py-3 font-body bg-background border border-gray-200 rounded-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-300 tracking-wider">
+                            </div>
+                            <div>
+                                <label for="email" class="sr-only">Email</label>
+                                <input type="email" id="email" name="email" placeholder="Your Email" required class="w-full px-4 py-3 font-body bg-background border border-gray-200 rounded-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-300 tracking-wider">
+                            </div>
+                             <div>
+                                <label for="phone" class="sr-only">Phone</label>
+                                <input type="tel" id="phone" name="phone" placeholder="Your Phone Number" class="w-full px-4 py-3 font-body bg-background border border-gray-200 rounded-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-300 tracking-wider">
+                            </div>
+                            <div>
+                                <label for="message" class="sr-only">Message</label>
+                                <textarea id="message" name="message" rows="5" placeholder="Your Message" required class="w-full px-4 py-3 font-body bg-background border border-gray-200 rounded-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-300 tracking-wider"></textarea>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full md:w-auto px-10 py-4 font-body font-bold text-buttonText bg-buttonBackground rounded-none hover:opacity-90 transition-opacity duration-300 tracking-wider">
+                                    Submit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Contact Details -->
+                    <div class="space-y-12" data-aos="fade-left" data-aos-delay="100">
+                        <h2 class="font-heading text-3xl font-bold text-text tracking-wider">Contact Information</h2>
+                        
+                        <div class="space-y-8">
+                            <div class="flex items-start space-x-6">
+                                <div class="text-primary text-2xl pt-1">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg tracking-wider">Address</h3>
+                                    <p class="mt-1 font-body text-secondary tracking-wider">D-77, 8th Cross St, near Padma Pazhamudir Solai, Thillai Nagar East, East, Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018, India</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-6">
+                                <div class="text-primary text-2xl pt-1">
+                                    <i class="fa-solid fa-phone"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg tracking-wider">Phone</h3>
+                                    <a href="tel:09943297779" class="mt-1 font-body text-secondary hover:text-primary transition-colors tracking-wider block">099432 97779</a>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start space-x-6">
+                                <div class="text-primary text-2xl pt-1">
+                                    <i class="fa-solid fa-clock"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg tracking-wider">Opening Hours</h3>
+                                    <div class="mt-1 font-body text-secondary tracking-wider space-y-1">
+                                        <p>Mon - Sat: 9:30 AM – 9:00 PM</p>
+                                        <p>Sunday: 9:30 AM – 6:00 PM</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Map Section -->
+        <section data-section="contact-map" class="border-t border-gray-200">
+            <div class="relative h-96 w-full" data-aos="fade-in">
+                <img src="https://images.unsplash.com/photo-1623852516990-b92586f7dd5c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkyOTcxOTF8&ixlib=rb-4.1.0&q=80&w=1080" alt="Map showing location of Surya Dental Care" class="w-full h-full object-cover grayscale">
+                <div class="absolute inset-0 bg-black/30"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <a href="https://www.google.com/maps/search/?api=1&query=D-77, 8th Cross St, near Padma Pazhamudir Solai, Thillai Nagar East, East, Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018, India" target="_blank" rel="noopener noreferrer" class="text-center p-8 bg-background/80 backdrop-blur-sm rounded-none border border-gray-200 shadow-none hover:bg-background transition-colors">
+                        <h3 class="font-heading text-xl font-bold tracking-wider text-text">Find Us Here</h3>
+                        <p class="mt-2 font-body text-secondary tracking-wider max-w-xs">D-77, 8th Cross St, Thillai Nagar, Tiruchirappalli</p>
+                        <span class="mt-4 inline-block font-body text-primary tracking-wider font-bold">Open in Maps &rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-background border-t border-gray-200">
+        <div class="container mx-auto px-6 py-20">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
+                <!-- Column 1: Logo & Summary -->
+                <div class="space-y-6" data-aos="fade-up">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="Surya Dental Care Logo" class="h-10 w-auto">
+                    </a>
+                    <p class="font-body text-secondary tracking-wider text-sm">
+                        Providing professional, calm, and trustworthy dental care with modern technology.
+                    </p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="font-heading font-bold tracking-wider text-text mb-6">Quick Links</h4>
+                    <nav class="space-y-4">
+                        <a href="index.html" class="block font-body text-sm text-secondary hover:text-primary tracking-wider transition-colors">Home</a>
+                        <a href="about.html" class="block font-body text-sm text-secondary hover:text-primary tracking-wider transition-colors">About Us</a>
+                        <a href="services.html" class="block font-body text-sm text-secondary hover:text-primary tracking-wider transition-colors">Services</a>
+                        <a href="contact.html" class="block font-body text-sm text-primary font-bold tracking-wider transition-colors">Contact</a>
+                    </nav>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="font-heading font-bold tracking-wider text-text mb-6">Contact Us</h4>
+                    <div class="space-y-4 font-body text-sm text-secondary tracking-wider">
+                        <p><i class="fa-solid fa-location-dot mr-3 text-primary"></i>D-77, 8th Cross St, Thillai Nagar, Tiruchirappalli, TN 620018</p>
+                        <p><i class="fa-solid fa-phone mr-3 text-primary"></i><a href="tel:09943297779" class="hover:text-primary">099432 97779</a></p>
+                    </div>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="font-heading font-bold tracking-wider text-text mb-6">Opening Hours</h4>
+                    <div class="space-y-2 font-body text-sm text-secondary tracking-wider">
+                        <p>Mon - Sat: 9:30 AM – 9:00 PM</p>
+                        <p>Sunday: 9:30 AM – 6:00 PM</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-20 pt-8 border-t border-gray-200 text-center text-sm text-secondary tracking-wider font-body">
+                <p>&copy; <span id="currentYear"></span> Surya Dental Care. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModal()">
+        <div class="bg-background rounded-none shadow-none border border-gray-200 p-8 md:p-12 text-center max-w-md w-full mx-4" onclick="event.stopPropagation()">
+            <div class="text-primary text-5xl mb-6">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h2 class="font-heading text-2xl font-bold tracking-wider text-text">Thank You!</h2>
+            <p class="mt-4 font-body text-secondary tracking-wider">Your message has been sent successfully. We will get back to you shortly.</p>
+            <button onclick="closeModal()" class="mt-8 px-8 py-3 font-body font-bold text-buttonText bg-buttonBackground rounded-none hover:opacity-90 transition-opacity tracking-wider">
+                Close
+            </button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Footer Current Year
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Form Submission & Modal Handling
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769297174318',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

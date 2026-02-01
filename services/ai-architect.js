@@ -28,7 +28,7 @@ Include:
 - stylePreset (Choose one: "Glassmorphism", "Neumorphism", "Bento Grid", "Aurora", "Brutalist", "Minimalist", "Luxury")
 - gradientStyle (Choose one: "Linear Fade", "Mesh/Aurora", "Subtle Radial", "High Contrast Diagonal", "Glassy Blur", "None")
 - layoutStructure (brief description, e.g., "Bento Grid Layout", "Asymmetrical Split", "Single Column Scroll", "Parallax Sections")
-- heroStyle (Choose one: "Split Screen (Text Left/Image Right)", "Centered Text with Large Background Image", "Minimalist Typography-Focused", "Grid Gallery Hero", "Asymmetrical Creative Layout", "Card-Based Hero", "Floating 3D Elements", "Video Background with Overlay")
+- heroStyle (Choose one: "Split Screen (Text Left/Image Right)", "Centered Text with Large Background Image", "Grid Gallery Hero", "Asymmetrical Creative Layout", "Card-Based Hero", "Floating 3D Elements")
 - headerStyle (Choose one: "Simple Logo Left, Links Right", "Centered Logo, Split Navigation", "Full Width with Hamburger Menu", "Minimalist Sticky Header", "Double Navbar (Top Info Bar + Main Nav)", "Sidebar Navigation (Left Aligned)", "Floating Pill Navigation (Centered)", "Mega Menu with Icons", "Transparent Overlay Header", "Brutalist Bordered Header", "Glassmorphic Strip")
 - footerStyle (Choose one: "Simple Copyright Only", "Multi-Column Links", "Centered Logo & Socials", "Newsletter Focus", "Dark Minimalist", "Big Typography Footer", "Interactive Map & Contact Footer", "Asymmetrical Grid Footer", "Sticky Bottom Bar", "Gradient Background Footer")
 - imageKeywords (Array of 5 strings: relevant search terms for images based on the business, e.g., ["coffee", "cafe", "latte", "beans", "barista"])

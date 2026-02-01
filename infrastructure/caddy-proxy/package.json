@@ -1,0 +1,12 @@
+{
+  "name": "sgp1-proxy-router",
+  "version": "1.0.0",
+  "description": "Router script for Caddy Proxy VM",
+  "main": "router.js",
+  "scripts": {
+    "start": "node router.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  }
+}

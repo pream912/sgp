@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile Dental Care - gallery</title>
+    
+    
+    
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* This is a placeholder for the actual Tailwind build process. */
+        /* For this exercise, the config is in the script tag above. */
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background font-body text-text">
+
+    <header data-section="header" id="header" class="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-lg shadow-sm transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a href="index.html" class="flex items-center">
+                        <img class="h-10 w-auto" src="./logo.png" alt="Smile Dental Care Logo">
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex md:items-center md:space-x-8">
+                    <a href="index.html" class="font-medium text-slate-600 hover:text-primary transition-colors duration-200">Home</a>
+                    <a href="about.html" class="font-medium text-slate-600 hover:text-primary transition-colors duration-200">About</a>
+                    <a href="services.html" class="font-medium text-slate-600 hover:text-primary transition-colors duration-200">Services</a>
+                    <a href="gallery.html" class="font-bold text-primary border-b-2 border-primary pb-1">Gallery</a>
+                    <a href="testimonials.html" class="font-medium text-slate-600 hover:text-primary transition-colors duration-200">Testimonials</a>
+                    <a href="contact.html" class="font-medium text-slate-600 hover:text-primary transition-colors duration-200">Contact</a>
+                </nav>
+
+                <!-- CTA Button & Mobile Menu Toggle -->
+                <div class="flex items-center">
+                    <a href="#appointment-form" class="hidden sm:inline-block bg-buttonBackground text-buttonText px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:bg-primary/90 transition-transform duration-200 hover:scale-105">Book Now</a>
+                    <div class="md:hidden ml-4">
+                        <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-slate-600 hover:text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
+                            <span class="sr-only">Open main menu</span>
+                            <i id="menu-icon-open" class="fa-solid fa-bars text-xl"></i>
+                            <i id="menu-icon-close" class="fa-solid fa-xmark text-xl hidden"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="text-slate-600 hover:bg-primary/10 hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Home</a>
+                <a href="about.html" class="text-slate-600 hover:bg-primary/10 hover:text-primary block px-3 py-2 rounded-md text-base font-medium">About</a>
+                <a href="services.html" class="text-slate-600 hover:bg-primary/10 hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Services</a>
+                <a href="gallery.html" class="bg-primary/10 text-primary block px-3 py-2 rounded-md text-base font-medium">Gallery</a>
+                <a href="testimonials.html" class="text-slate-600 hover:bg-primary/10 hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Testimonials</a>
+                <a href="contact.html" class="text-slate-600 hover:bg-primary/10 hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Contact</a>
+                <a href="#appointment-form" class="bg-buttonBackground text-buttonText block w-full text-center mt-2 px-3 py-3 rounded-md text-base font-medium">Book Now</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Gallery Section -->
+        <section data-section="gallery-main" class="py-20 sm:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center" data-aos="fade-up">
+                    <h2 class="text-base font-semibold text-primary tracking-wide uppercase font-heading">Our Gallery</h2>
+                    <h1 class="mt-2 text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl lg:text-5xl font-heading bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        A Glimpse Into Our Clinic
+                    </h1>
+                    <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-600 font-body">
+                        Explore our clean, modern, and peaceful environment, and see the happy smiles we help create every day.
+                    </p>
+                </div>
+
+                <div class="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/dental%20office%20interior?width=800&height=600&nologo=true&seed=1" alt="Modern dental office interior">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Modern Clinic</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="200">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/healthy%20smile?width=800&height=600&nologo=true&seed=2" alt="Patient with a healthy smile">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Happy Patients</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="300">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/modern%20dentistry?width=800&height=600&nologo=true&seed=3" alt="Advanced dental technology">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Advanced Tech</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="400">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/patient%20care?width=800&height=600&nologo=true&seed=4" alt="Dentist providing patient care">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Expert Care</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/dentist?width=800&height=600&nologo=true&seed=5" alt="Friendly dentist">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Friendly Staff</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="200">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/dental%20office%20interior?width=800&height=600&nologo=true&seed=6" alt="Clean and peaceful waiting area">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Peaceful Atmosphere</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="300">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/healthy%20smile?width=800&height=600&nologo=true&seed=7" alt="Another happy patient smile">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Bright Smiles</h3>
+                        </div>
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg shadow-sm" data-aos="fade-up" data-aos-delay="400">
+                        <img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://pollinations.ai/p/modern%20dentistry?width=800&height=600&nologo=true&seed=8" alt="Dental equipment">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4">
+                            <h3 class="text-lg font-semibold text-white font-heading">Precision Tools</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Form Section -->
+        <section data-section="cta-form" id="appointment-form" class="bg-slate-50 py-20 sm:py-28">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    <div data-aos="fade-right">
+                        <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl font-heading">Ready for a Brighter Smile?</h2>
+                        <p class="mt-4 text-lg text-slate-600 font-body">
+                            Schedule your appointment today and experience the exceptional care at Smile Dental Care. Our friendly team is ready to assist you.
+                        </p>
+                        <div class="mt-8 space-y-4">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                        <i class="fa-solid fa-check text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-lg leading-6 font-medium text-slate-900 font-heading">Patient-Centric Approach</h3>
+                                    <p class="mt-2 text-base text-slate-600">We prioritize your comfort and explain every procedure clearly.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                        <i class="fa-solid fa-microchip text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-lg leading-6 font-medium text-slate-900 font-heading">Advanced Technology</h3>
+                                    <p class="mt-2 text-base text-slate-600">Utilizing the latest tech for effective and efficient treatment.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-lg shadow-xl" data-aos="fade-left" data-aos-delay="100">
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-slate-700">Full Name</label>
+                                <div class="mt-1">
+                                    <input type="text" name="name" id="name" required class="block w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-primary focus:border-primary sm:text-sm" placeholder="John Doe">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-slate-700">Email Address</label>
+                                <div class="mt-1">
+                                    <input type="email" name="email" id="email" required class="block w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-primary focus:border-primary sm:text-sm" placeholder="you@example.com">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-slate-700">Phone Number</label>
+                                <div class="mt-1">
+                                    <input type="tel" name="phone" id="phone" required class="block w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-primary focus:border-primary sm:text-sm" placeholder="+1 (555) 987-6543">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="message" class="block text-sm font-medium text-slate-700">Message</label>
+                                <div class="mt-1">
+                                    <textarea name="message" id="message" rows="4" class="block w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-primary focus:border-primary sm:text-sm" placeholder="How can we help?"></textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-buttonText bg-buttonBackground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-transform duration-200 hover:scale-105">
+                                    Book My Appointment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-primary text-white">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
+            <div class="xl:grid xl:grid-cols-4 xl:gap-8">
+                <div class="space-y-8 xl:col-span-1">
+                    <a href="index.html">
+                        <img class="h-10" src="./logo.png" alt="Smile Dental Care Logo">
+                    </a>
+                    <p class="text-gray-300 text-base font-body">
+                        Providing excellent and satisfying dental treatment in a clean, peaceful, and friendly environment.
+                    </p>
+                </div>
+                <div class="mt-12 grid grid-cols-2 gap-8 xl:mt-0 xl:col-span-3 xl:grid-cols-3">
+                    <div>
+                        <h3 class="text-sm font-semibold tracking-wider uppercase font-heading">Quick Links</h3>
+                        <ul class="mt-4 space-y-4">
+                            <li><a href="about.html" class="text-base text-gray-300 hover:text-white">About</a></li>
+                            <li><a href="services.html" class="text-base text-gray-300 hover:text-white">Services</a></li>
+                            <li><a href="gallery.html" class="text-base text-gray-300 hover:text-white">Gallery</a></li>
+                            <li><a href="contact.html" class="text-base text-gray-300 hover:text-white">Contact</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold tracking-wider uppercase font-heading">Contact Us</h3>
+                        <ul class="mt-4 space-y-4 font-body">
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-location-dot mt-1 flex-shrink-0 h-5 w-5 text-secondary"></i>
+                                <span class="ml-3 text-base text-gray-300">Basement, Joshi & Joshi Complex, Tiruchirappalli, Tamil Nadu 620019</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-phone mt-1 flex-shrink-0 h-5 w-5 text-secondary"></i>
+                                <span class="ml-3 text-base text-gray-300">097917 65077</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold tracking-wider uppercase font-heading">Opening Hours</h3>
+                        <ul class="mt-4 space-y-2 text-sm text-gray-300 font-body">
+                            <li>Mon - Sat: 11AM-2:30PM, 6PM-9PM</li>
+                            <li>Sunday: 6PM - 8:30PM</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-primary/50 pt-8">
+                <p class="text-base text-gray-300 xl:text-center">&copy; 2024 Smile Dental Care. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModal()">
+        <div class="bg-background rounded-lg shadow-xl p-8 w-full max-w-md m-4 text-center" onclick="event.stopPropagation()">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-secondary/20">
+                <i class="fa-solid fa-check-double text-4xl text-secondary"></i>
+            </div>
+            <h3 class="mt-5 text-2xl font-bold font-heading text-text">Thank You!</h3>
+            <p class="mt-3 text-lg text-slate-600 font-body">Your appointment request has been sent. We will contact you shortly to confirm.</p>
+            <div class="mt-6">
+                <button onclick="closeModal()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-buttonBackground text-base font-medium text-buttonText hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIconOpen = document.getElementById('menu-icon-open');
+        const menuIconClose = document.getElementById('menu-icon-close');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            menuIconOpen.classList.toggle('hidden');
+            menuIconClose.classList.toggle('hidden');
+        });
+        
+        // Form Submission & Modal
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (!mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                    menuIconOpen.classList.remove('hidden');
+                    menuIconClose.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769295873550',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

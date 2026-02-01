@@ -1,1 +1,30 @@
 @import "tailwindcss";
+
+@theme {
+  --color-background-light: #f8fafc;
+  --color-background-dark: #0f172a;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+  
+  --color-primary: #f97316; /* Orange 500 */
+  --color-primary-hover: #ea580c; /* Orange 600 */
+  --color-brand-dark: #1e293b; /* Slate 800 */
+
+  --font-display: "Inter", sans-serif;
+
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Force dark mode to use class strategy instead of system preference */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-background-light text-slate-900 dark:bg-background-dark dark:text-white transition-colors duration-200;
+  }
+}

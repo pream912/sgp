@@ -30,20 +30,39 @@ async function uploadFile(localPath, destinationPath, bucketName = BUCKET_NAME) 
  */
 async function uploadDirectory(localDir, destPrefix, bucketName = BUCKET_NAME) {
     const files = await getFiles(localDir);
-    const uploadPromises = files.map(async (filePath) => {
-        const relativePath = path.relative(localDir, filePath);
-        const destination = path.join(destPrefix, relativePath).replace(/\\/g, '/'); // Ensure forward slashes
-        
-        await storage.bucket(bucketName).upload(filePath, {
-            destination: destination,
-            gzip: true,
-            metadata: {
-                cacheControl: filePath.endsWith('.html') ? 'no-cache, max-age=0' : 'public, max-age=31536000',
-            },
-        });
-    });
+    
+    // Batch uploads to avoid "socket hang up" and rate limits
+    const BATCH_SIZE = 20;
+    console.log(`Starting upload of ${files.length} files to gs://${bucketName}/${destPrefix} (Batch size: ${BATCH_SIZE})...`);
 
-    await Promise.all(uploadPromises);
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async (filePath) => {
+            const relativePath = path.relative(localDir, filePath);
+            const destination = path.join(destPrefix, relativePath).replace(/\\/g, '/'); // Ensure forward slashes
+            
+            try {
+                await storage.bucket(bucketName).upload(filePath, {
+                    destination: destination,
+                    gzip: true,
+                    metadata: {
+                        cacheControl: filePath.endsWith('.html') ? 'no-cache, max-age=0' : 'public, max-age=31536000',
+                    },
+                });
+            } catch (err) {
+                console.error(`Failed to upload ${filePath}:`, err.message);
+                // Don't throw immediately, let other files try? 
+                // Better to throw if it's critical, but for backup/assets, maybe warn.
+                // Throwing to ensure integrity.
+                throw err;
+            }
+        }));
+        
+        // Optional: Small delay between batches if needed, but sequential batches usually suffice
+        if ((i + BATCH_SIZE) < files.length) {
+             console.log(`Uploaded ${Math.min(i + BATCH_SIZE, files.length)}/${files.length} files...`);
+        }
+    }
     console.log(`Uploaded directory ${localDir} to gs://${bucketName}/${destPrefix}`);
 }
 
@@ -91,6 +110,10 @@ async function getFiles(dir) {
     const subdirs = await fs.readdir(dir);
     const files = await Promise.all(subdirs.map(async (subdir) => {
         const res = path.resolve(dir, subdir);
+        // Filter out node_modules, .git, and system files
+        if (subdir === 'node_modules' || subdir === '.git' || subdir === '.DS_Store') {
+            return [];
+        }
         return (await fs.stat(res)).isDirectory() ? getFiles(res) : res;
     }));
     return files.reduce((a, f) => a.concat(f), []);

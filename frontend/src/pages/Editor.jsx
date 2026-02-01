@@ -1,81 +1,104 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, RefreshCw, Palette, Loader, MousePointer, Type, Image as ImageIcon, Undo, Upload, Save, X, Shuffle, Eye, Globe, Lock, AlertCircle } from 'lucide-react';
 import { auth } from '../firebase';
 import PublishModal from '../components/PublishModal';
 import BuyCreditsModal from '../components/BuyCreditsModal';
 
 const Editor = () => {
-  const { projectId } = useParams(); // Fixed param name
+  const { projectId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const iframeRef = useRef(null);
   
-  // Modes: 'section' (Regenerate), 'text' (Edit Text), 'image' (Replace Image), 'theme' (Edit Colors)
-  const [activeMode, setActiveMode] = useState('section'); 
-  const activeModeRef = useRef(activeMode); // Ref to access current mode in listeners
+  // Modes: 'preview', 'section', 'text', 'image', 'theme'
+  const [activeMode, setActiveMode] = useState('preview'); 
+  const activeModeRef = useRef(activeMode);
+
+  // View Mode: 'desktop', 'tablet', 'mobile'
+  const [viewMode, setViewMode] = useState('desktop');
   
+  // Sidebar State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('content'); // 'content', 'theme'
+
   // Selection State
   const [selectedItem, setSelectedItem] = useState(null); // { type, value, sectionId }
   
   // Input State
-  const [instruction, setInstruction] = useState(''); // For AI Section regen
-  const [textValue, setTextValue] = useState('');     // For Text Edit
-  const [imageFile, setImageFile] = useState(null);   // For Image Upload
-  const [colors, setColors] = useState({});           // For Theme Edit
-  const [sectionImages, setSectionImages] = useState([]); // List of images in selected section
+  const [instruction, setInstruction] = useState(''); // Section instruction
+  const [globalInstruction, setGlobalInstruction] = useState(''); // Global page instruction
+  const [textValue, setTextValue] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [colors, setColors] = useState({});
+  const [sectionsList, setSectionsList] = useState([]);
+
+  // Pages State
+  // Format: [{ name: 'Home', path: 'index.html' }, ...]
+  const [pages, setPages] = useState([{ name: 'Home', path: 'index.html' }]);
+  const [currentPage, setCurrentPage] = useState('index.html');
+  const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0); // To force reload
+  const [iframeKey, setIframeKey] = useState(0);
+  const [iframeContent, setIframeContent] = useState('');
 
-  // New State
+  // Project State
   const [credits, setCredits] = useState(0);
   const [isPublished, setIsPublished] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
 
-  // Initial Fetch
   useEffect(() => {
       const init = async () => {
+          // Initialize mode from URL
+          const modeParam = searchParams.get('mode');
+          if (modeParam && ['preview', 'section', 'text', 'image', 'theme', 'menu'].includes(modeParam)) {
+              setActiveMode(modeParam);
+          } else {
+             // Default behavior if no param
+             setActiveMode('section'); 
+          }
+
           try {
               const token = await auth.currentUser?.getIdToken();
               if (!token) return;
-              
               const headers = { Authorization: `Bearer ${token}` };
-              
-              // Fetch Credits
               axios.get('/api/credits', { headers }).then(res => setCredits(res.data.credits));
-              
-              // Fetch Project Status (We can get this from /api/projects or a specific endpoint, let's just check /projects for now or assume not published initially if simpler, but better to check)
-              // Actually we can hit /api/projects and find this one
               axios.get('/api/projects', { headers }).then(res => {
                   const p = res.data.find(x => x.projectId === projectId);
                   if (p && p.isPublished) setIsPublished(true);
               });
-              
           } catch (e) { console.error(e); }
       };
       init();
-  }, [projectId]);
+  }, [projectId, searchParams]);
 
-  // Keep ref in sync with state
   useEffect(() => {
     activeModeRef.current = activeMode;
-    setSelectedItem(null); // Clear selection on mode switch
-    setTextValue('');
-    setImageFile(null);
-
-    // Fetch theme if entering theme mode
-    if (activeMode === 'theme') {
-        fetchTheme();
-    }
     
-    // Re-run setup to ensure clean state if iframe is already loaded
-    if (iframeRef.current && iframeRef.current.contentDocument) {
-       // Optional: Clear any existing highlights if needed
-       // But usually the simple mouseover logic handles it
+    // Auto-open sidebar unless in preview
+    if (activeMode !== 'preview') {
+        setIsSidebarOpen(true);
+    } else {
+        setIsSidebarOpen(false);
     }
+
+    if (activeMode === 'theme') {
+        setActiveTab('theme');
+        fetchTheme();
+    } else if (activeMode !== 'preview') {
+        setActiveTab('content');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMode]);
+
+  const handleModeChange = (mode) => {
+      setActiveMode(mode);
+      setSelectedItem(null);
+      setTextValue('');
+      setImageFile(null);
+  };
 
   const fetchTheme = async () => {
       try {
@@ -87,33 +110,87 @@ const Editor = () => {
       } catch (e) { console.error('Failed to fetch theme', e); }
   };
 
+  const scanPagesFromNav = (doc) => {
+      if (!doc) return;
+      
+      // Look for nav links in typical locations
+      const navLinks = doc.querySelectorAll('nav a, header a, [data-section="header"] a');
+      const foundPages = [];
+      const seenPaths = new Set();
+      
+      // Always include current page if not found
+      if (!seenPaths.has(currentPage)) {
+          // If we have a name for it in state, use it, else default
+          const existing = pages.find(p => p.path === currentPage);
+          foundPages.push(existing || { name: 'Current Page', path: currentPage });
+          seenPaths.add(currentPage);
+      }
+
+      navLinks.forEach(link => {
+          const href = link.getAttribute('href');
+          if (href && href.endsWith('.html') && !href.startsWith('http')) {
+              if (!seenPaths.has(href)) {
+                  seenPaths.add(href);
+                  let name = link.innerText.trim();
+                  if (!name) name = href.replace('.html', '').replace(/-/g, ' '); // Fallback
+                  // Title case
+                  name = name.charAt(0).toUpperCase() + name.slice(1);
+                  foundPages.push({ name, path: href });
+              }
+          }
+      });
+      
+      // Sort: Home/Index first
+      foundPages.sort((a, b) => {
+          if (a.path === 'index.html') return -1;
+          if (b.path === 'index.html') return 1;
+          return a.name.localeCompare(b.name);
+      });
+
+      if (foundPages.length > 0) {
+          setPages(foundPages);
+      }
+  };
+
   const handleIframeLoad = () => {
     try {
         const iframeDoc = iframeRef.current.contentDocument;
         if (!iframeDoc) return;
 
+        // 1. Scan Sections
+        const sections = Array.from(iframeDoc.querySelectorAll('[data-section]')).map(el => ({
+            id: el.getAttribute('data-section'),
+            name: (el.getAttribute('data-section') || 'Section').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        }));
+        setSectionsList(sections);
+
+        // 2. Scan Pages from Nav
+        scanPagesFromNav(iframeDoc);
+
         let hoveredElement = null;
 
         const getTarget = (e) => {
             const mode = activeModeRef.current;
+            if (mode === 'preview') return null;
             if (mode === 'section') return e.target.closest('[data-section]');
             if (mode === 'text') {
                 const el = e.target;
-                if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','LI'].includes(el.tagName)) return el;
+                if (el.childNodes.length > 0 && el.innerText.trim().length > 0) return el;
                 return null;
             }
-            if (mode === 'image') return e.target.tagName === 'IMG' ? e.target : null;
+            if (mode === 'image') return e.target.tagName === 'IMG' || window.getComputedStyle(e.target).backgroundImage !== 'none' ? e.target : null;
             return null;
         };
 
-        // Attach MouseOver
         iframeDoc.addEventListener('mouseover', (e) => {
+            if (activeModeRef.current === 'preview') return;
+            
             const target = getTarget(e);
             if (target) {
                 if (hoveredElement && hoveredElement !== target) {
                     hoveredElement.style.outline = 'none';
                 }
-                target.style.outline = '2px solid #6366f1';
+                target.style.outline = '2px solid #f97316'; 
                 target.style.cursor = 'pointer';
                 hoveredElement = target;
                 e.stopPropagation();
@@ -123,101 +200,120 @@ const Editor = () => {
             }
         });
 
-        // Attach MouseOut to clean up when leaving elements
-        iframeDoc.addEventListener('mouseout', (e) => {
+        iframeDoc.addEventListener('mouseout', () => {
              if (hoveredElement) {
                  hoveredElement.style.outline = 'none';
                  hoveredElement = null;
              }
         });
 
-        // Attach Click
         iframeDoc.addEventListener('click', (e) => {
+            if (activeModeRef.current === 'preview') {
+                const link = e.target.closest('a');
+                if (link) {
+                    const href = link.getAttribute('href');
+                    if (href && href.endsWith('.html')) {
+                         setCurrentPage(href);
+                         e.preventDefault();
+                    }
+                }
+                return;
+            }
+
             const target = getTarget(e);
             if (target) {
                 e.preventDefault();
                 e.stopPropagation();
-
                 const mode = activeModeRef.current;
-                
-                // Find parent section ID for context
                 const section = target.closest('[data-section]');
                 const sectionId = section ? section.getAttribute('data-section') : null;
 
-                if (mode === 'section' && sectionId) {
-                   setSelectedItem({ type: 'section', sectionId });
-                   
-                   // Scan for Images (Img tags + Backgrounds)
-                   const images = [];
-                   // 1. Img tags
-                   section.querySelectorAll('img').forEach(img => {
-                       const rawSrc = img.getAttribute('src');
-                       if (rawSrc) {
-                           images.push({ type: 'img', src: img.src, originalValue: rawSrc });
-                       }
-                   });
-                   // 2. Background Images
-                   section.querySelectorAll('*').forEach(el => {
-                       const style = iframeDoc.defaultView.getComputedStyle(el);
-                       if (style.backgroundImage && style.backgroundImage !== 'none') {
-                           const match = style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
-                           if (match && match[1]) {
-                               // Use fullUrl for matching to be safe and allow exact replacement
-                               const fullUrl = match[1];
-                               // const filename = fullUrl.split('/').pop(); 
-                               images.push({ type: 'bg', src: fullUrl, originalValue: fullUrl });
-                           }
-                       }
-                   });
-                   
-                   // Dedup by src
-                   const unique = Array.from(new Map(images.map(item => [item.src, item])).values());
-                   setSectionImages(unique);
+                if (!sectionId && mode !== 'theme') return;
 
-                } else if (mode === 'text' && sectionId) {
-                   setSelectedItem({ 
-                       type: 'text', 
-                       value: target.innerText, 
-                       sectionId 
-                   });
+                if (mode === 'section') {
+                   setSelectedItem({ type: 'section', sectionId });
+                } else if (mode === 'text') {
+                   setSelectedItem({ type: 'text', value: target.innerText, sectionId });
                    setTextValue(target.innerText);
-                } else if (mode === 'image' && sectionId) {
-                   setSelectedItem({ 
-                       type: 'image', 
-                       value: target.getAttribute('src'), 
-                       sectionId 
-                   });
+                } else if (mode === 'image') {
+                   const isBg = target.tagName !== 'IMG';
+                   const src = isBg 
+                       ? window.getComputedStyle(target).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1] 
+                       : target.getAttribute('src');
+                   
+                   setSelectedItem({ type: 'image', value: src, sectionId, isBg });
                 }
             }
         });
 
-    } catch (e) {
-        console.error("Iframe access error:", e);
-    }
+    } catch (e) { console.error("Iframe access error:", e); }
   };
 
-  // --- Actions ---
+  // --- Content Loading ---
+  useEffect(() => {
+    const loadContent = async () => {
+        const timestamp = Date.now();
+        const pageFile = currentPage; 
+        const localUrl = `/sites/${projectId}/${pageFile}?t=${timestamp}`;
+        const gcsUrl = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/${pageFile}?t=${timestamp}`;
+        const gcsBase = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/`;
+        
+        try {
+            const res = await fetch(localUrl);
+            if (!res.ok) throw new Error('Local not found');
+            const html = await res.text();
+            const localBase = `${window.location.origin}/sites/${projectId}/`;
+            setIframeContent(html.replace('<head>', `<head><base href="${localBase}">`));
+        } catch {
+            try {
+                const res = await fetch(gcsUrl);
+                if (!res.ok) throw new Error('GCS not found');
+                const html = await res.text();
+                setIframeContent(html.replace('<head>', `<head><base href="${gcsBase}">`));
+            } catch (err) { console.error("Failed to load site content", err); }
+        }
+    };
+    loadContent();
+  }, [projectId, iframeKey, currentPage]);
 
+  // --- Actions ---
   const reloadFrame = () => {
       setSelectedItem(null);
       setInstruction('');
+      setGlobalInstruction('');
       setTextValue('');
       setImageFile(null);
       setIframeKey(k => k + 1);
+      auth.currentUser?.getIdToken().then(t => 
+        axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
+        .then(r => setCredits(r.data.credits))
+      );
   };
-
+  
   const handleRegenerateSection = async () => {
     if (!selectedItem || !instruction) return;
     setLoading(true);
     try {
         const token = await auth.currentUser.getIdToken();
         await axios.post(`/api/project/${projectId}/section`, {
-            sectionId: selectedItem.sectionId,
-            instruction
+            sectionId: selectedItem.sectionId, instruction
         }, { headers: { Authorization: `Bearer ${token}` } });
         reloadFrame();
-    } catch (e) { alert('Failed'); console.error(e); }
-    finally { setLoading(false); }
+    } catch { alert('Failed'); } finally { setLoading(false); }
+  };
+
+  const handleRegeneratePage = async () => {
+      if (!globalInstruction) return;
+      if (!window.confirm('This will rebuild the entire page and costs 100 credits. Continue?')) return;
+      
+      setLoading(true);
+      try {
+          const token = await auth.currentUser.getIdToken();
+          await axios.post(`/api/project/${projectId}/regenerate-page`, {
+              instruction: globalInstruction
+          }, { headers: { Authorization: `Bearer ${token}` } });
+          reloadFrame();
+      } catch { alert('Failed'); } finally { setLoading(false); }
   };
 
   const handleSaveText = async () => {
@@ -226,14 +322,10 @@ const Editor = () => {
       try {
         const token = await auth.currentUser.getIdToken();
         await axios.post(`/api/project/${projectId}/content`, {
-            sectionId: selectedItem.sectionId,
-            type: 'text',
-            originalValue: selectedItem.value,
-            newValue: textValue
+            sectionId: selectedItem.sectionId, type: 'text', originalValue: selectedItem.value, newValue: textValue
         }, { headers: { Authorization: `Bearer ${token}` } });
         reloadFrame();
-      } catch (e) { alert('Failed'); console.error(e); }
-      finally { setLoading(false); }
+      } catch { alert('Failed'); } finally { setLoading(false); }
   };
 
   const handleSaveImage = async () => {
@@ -241,53 +333,16 @@ const Editor = () => {
       setLoading(true);
       try {
         const token = await auth.currentUser.getIdToken();
-        
-        // 1. Upload
         const formData = new FormData();
         formData.append('file', imageFile);
         const uploadRes = await axios.post(`/api/project/${projectId}/upload`, formData, {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
         });
-        const newUrl = uploadRes.data.url;
-
-        // 2. Update Content
         await axios.post(`/api/project/${projectId}/content`, {
-            sectionId: selectedItem.sectionId,
-            type: 'image',
-            originalValue: selectedItem.value,
-            newValue: newUrl
+            sectionId: selectedItem.sectionId, type: 'image', originalValue: selectedItem.value, newValue: uploadRes.data.url
         }, { headers: { Authorization: `Bearer ${token}` } });
-
         reloadFrame();
-      } catch (e) { alert('Failed'); console.error(e); }
-      finally { setLoading(false); }
-  };
-
-  const handleReplaceSectionImage = async (file, imageMeta) => {
-      if (!selectedItem || !file) return;
-      setLoading(true);
-      try {
-        const token = await auth.currentUser.getIdToken();
-        
-        // 1. Upload
-        const formData = new FormData();
-        formData.append('file', file);
-        const uploadRes = await axios.post(`/api/project/${projectId}/upload`, formData, {
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
-        });
-        const newUrl = uploadRes.data.url;
-
-        // 2. Update Content
-        await axios.post(`/api/project/${projectId}/content`, {
-            sectionId: selectedItem.sectionId,
-            type: 'image',
-            originalValue: imageMeta.originalValue,
-            newValue: newUrl
-        }, { headers: { Authorization: `Bearer ${token}` } });
-
-        reloadFrame();
-      } catch (e) { alert('Failed to replace image'); console.error(e); }
-      finally { setLoading(false); }
+      } catch { alert('Failed'); } finally { setLoading(false); }
   };
 
   const handleUndo = async () => {
@@ -295,405 +350,410 @@ const Editor = () => {
       setLoading(true);
       try {
           const token = await auth.currentUser.getIdToken();
-          await axios.post(`/api/project/${projectId}/undo`, {}, { 
-              headers: { Authorization: `Bearer ${token}` } 
-          });
+          await axios.post(`/api/project/${projectId}/undo`, {}, { headers: { Authorization: `Bearer ${token}` } });
           reloadFrame();
-      } catch (e) { console.error(e); alert('Undo failed'); }
-      finally { setLoading(false); }
-  };
-
-  const handleColorChange = (key, value) => {
-      setColors(prev => ({ ...prev, [key]: value }));
+      } catch { alert('Undo failed'); } finally { setLoading(false); }
   };
 
   const handleSaveTheme = async () => {
       setLoading(true);
       try {
           const token = await auth.currentUser.getIdToken();
-          await axios.post(`/api/project/${projectId}/theme`, { colors }, { 
-              headers: { Authorization: `Bearer ${token}` } 
-          });
+          await axios.post(`/api/project/${projectId}/theme`, { colors }, { headers: { Authorization: `Bearer ${token}` } });
           reloadFrame();
-      } catch (e) { console.error(e); alert('Theme update failed'); }
-      finally { setLoading(false); }
+      } catch { alert('Theme update failed'); } finally { setLoading(false); }
   };
 
-  const handleRegeneratePalette = async () => {
-      if (!window.confirm("This will replace current colors. Continue?")) return;
-      setLoading(true);
-      try {
-          const token = await auth.currentUser.getIdToken();
-          const res = await axios.post(`/api/project/${projectId}/theme/regenerate`, {}, {
-               headers: { Authorization: `Bearer ${token}` }
-          });
-          setColors(res.data.colors);
-      } catch (e) { console.error(e); alert('Regeneration failed'); }
-      finally { setLoading(false); }
+  const getImagesInSection = (sectionId) => {
+      if (!iframeRef.current) return [];
+      const iframeDoc = iframeRef.current.contentDocument;
+      const section = iframeDoc.querySelector(`[data-section="${sectionId}"]`);
+      if (!section) return [];
+      
+      const images = [];
+      section.querySelectorAll('img').forEach(img => {
+          images.push({ type: 'img', src: img.src });
+      });
+      section.querySelectorAll('*').forEach(el => {
+           const bg = iframeDoc.defaultView.getComputedStyle(el).backgroundImage;
+           if (bg && bg !== 'none') {
+               const match = bg.match(/url\(["']?(.*?)["']?\)/);
+               if (match) images.push({ type: 'bg', src: match[1] });
+           }
+      });
+      return Array.from(new Map(images.map(item => [item.src, item])).values());
   };
 
-    const [iframeContent, setIframeContent] = useState('');
+  // Helper for view mode width
+  const getViewModeStyle = () => {
+      if (viewMode === 'mobile') return 'w-[375px] h-[667px] shadow-2xl rounded-2xl border-4 border-gray-800 my-8';
+      if (viewMode === 'tablet') return 'w-[768px] h-[1024px] shadow-xl rounded-xl border border-gray-200 my-8';
+      return 'w-full h-full border-0 rounded-none'; // Desktop
+  };
 
-    useEffect(() => {
-        const loadContent = async () => {
-            // Append timestamp to bust cache
-            const timestamp = Date.now();
-            const localUrl = `/sites/${projectId}/index.html?t=${timestamp}`;
-            const gcsUrl = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/index.html?t=${timestamp}`;
-            const gcsBase = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/`;
-            
-            try {
-                // Try Local First
-                const res = await fetch(localUrl);
-                if (!res.ok) throw new Error('Local not found');
-                const html = await res.text();
-                // For local, relative paths work fine, no base needed usually if proxy is good.
-                // But consistent base is safer if we are using srcDoc.
-                // Actually, if we use srcDoc, we MUST set base to where assets are.
-                // If local, assets are at /sites/${projectId}/
-                const localBase = `${window.location.origin}/sites/${projectId}/`;
-                const content = html.replace('<head>', `<head><base href="${localBase}">`);
-                setIframeContent(content);
-            } catch (e) {
-                // Fallback to GCS
-                try {
-                    const res = await fetch(gcsUrl);
-                    if (!res.ok) throw new Error('GCS not found');
-                    const html = await res.text();
-                    const content = html.replace('<head>', `<head><base href="${gcsBase}">`);
-                    setIframeContent(content);
-                } catch (err) {
-                    console.error("Failed to load site content", err);
-                }
-            }
-        };
-        loadContent();
-    }, [projectId, iframeKey]);
+  // Helper for view mode container wrapper
+  const getViewWrapperClass = () => {
+      if (viewMode === 'desktop') return 'w-full h-full'; // Full space
+      return 'w-full h-full flex items-center justify-center py-8 bg-gray-100 dark:bg-black/20'; // Center centered
+  };
 
-    return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
+  return (
+    <div className="bg-background-light dark:bg-background-dark text-[#121117] dark:text-white h-screen flex flex-col overflow-hidden font-display">
       {/* Header */}
-      <header className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
-        <div className="flex items-center">
-            <button onClick={() => navigate('/')} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mr-4">
-                <ArrowLeft className="w-5 h-5" />
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#f1f0f4] dark:border-gray-800 bg-white dark:bg-[#1a1924] px-6 py-3 h-16 shrink-0 z-20 relative">
+        <div className="flex items-center gap-4 text-[#121117] dark:text-white">
+            <button onClick={() => navigate('/')} className="flex items-center justify-center size-8 rounded bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
             </button>
-            <h1 className="text-sm font-semibold text-gray-900 dark:text-white">Site Editor</h1>
-            {isPublished ? (
-                <div className="ml-4 flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-medium border border-green-200">
-                    <Globe className="w-3 h-3 mr-1" /> Published
+            <div>
+                <h2 className="text-base font-bold leading-tight">GenWeb Editor</h2>
+                <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span>{credits} Credits</span>
                 </div>
-            ) : (
-                <button 
-                    onClick={() => setShowPublishModal(true)}
-                    className="ml-4 flex items-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full text-xs font-medium border border-indigo-200 transition-colors"
+            </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+            {/* View Mode Switcher */}
+            <div className="flex bg-[#f6f6f8] dark:bg-gray-800 rounded-lg p-1 mr-4">
+                 <button 
+                    onClick={() => setViewMode('desktop')}
+                    title="Desktop View"
+                    className={`flex size-8 cursor-pointer items-center justify-center rounded transition-all ${viewMode === 'desktop' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-500' : 'text-gray-500 dark:text-gray-400'}`}
+                 >
+                    <span className="material-symbols-outlined text-[20px]">desktop_windows</span>
+                 </button>
+                 <button 
+                    onClick={() => setViewMode('tablet')}
+                    title="Tablet View"
+                    className={`flex size-8 cursor-pointer items-center justify-center rounded transition-all ${viewMode === 'tablet' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-500' : 'text-gray-500 dark:text-gray-400'}`}
+                 >
+                    <span className="material-symbols-outlined text-[20px]">tablet_mac</span>
+                 </button>
+                 <button 
+                    onClick={() => setViewMode('mobile')}
+                    title="Mobile View"
+                    className={`flex size-8 cursor-pointer items-center justify-center rounded transition-all ${viewMode === 'mobile' ? 'bg-white dark:bg-gray-700 shadow-sm text-orange-500' : 'text-gray-500 dark:text-gray-400'}`}
+                 >
+                    <span className="material-symbols-outlined text-[20px]">smartphone</span>
+                 </button>
+            </div>
+
+            <div className="flex bg-[#f6f6f8] dark:bg-gray-800 rounded-lg p-1 mr-4">
+                <button onClick={handleUndo} className="flex size-8 cursor-pointer items-center justify-center rounded hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm text-gray-600 dark:text-gray-300 transition-all" title="Undo">
+                    <span className="material-symbols-outlined text-[20px]">undo</span>
+                </button>
+                <button onClick={reloadFrame} className="flex size-8 cursor-pointer items-center justify-center rounded hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm text-gray-600 dark:text-gray-300 transition-all" title="Refresh">
+                    <span className="material-symbols-outlined text-[20px]">refresh</span>
+                </button>
+            </div>
+            
+        </div>
+
+        <div className="flex gap-3">
+            {/* Edit Site Button - Visible only in preview mode */}
+            {!isSidebarOpen && (
+                 <button 
+                    onClick={() => {
+                        handleModeChange('menu');
+                        setIsSidebarOpen(true);
+                    }}
+                    className="flex h-9 items-center justify-center rounded-lg px-4 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 text-sm font-semibold transition-colors animate-fadeIn"
                 >
-                    <Lock className="w-3 h-3 mr-1" /> Publish Site
+                    <span className="material-symbols-outlined text-[18px] mr-1">edit</span>
+                    Edit Site
+                </button>
+            )}
+
+            {!isPublished ? (
+                <button onClick={() => setShowPublishModal(true)} className="flex h-9 items-center justify-center rounded-lg px-4 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors shadow-sm shadow-orange-500/30">
+                    <span className="truncate">Publish</span>
+                </button>
+            ) : (
+                <button className="flex h-9 items-center justify-center rounded-lg px-4 bg-green-500 text-white text-sm font-semibold cursor-default">
+                     Published
                 </button>
             )}
         </div>
-        <div className="flex items-center space-x-4">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                {credits} Credits
-            </div>
-            <div className="flex items-center space-x-2">
-            <button onClick={handleUndo} disabled={loading} className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" title="Undo">
-                <Undo className="w-5 h-5" />
-            </button>
-             <span className="text-xs text-gray-400">Auto-saved</span>
-            </div>
-        </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
-        <aside 
-            className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20 shadow-xl transition-all duration-300 ease-in-out absolute inset-y-0 left-0 ${activeMode === 'preview' ? '-translate-x-full' : 'translate-x-0'} w-80`}
-        >
-            {/* Mode Switcher */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Tools</h2>
-                <div className="grid grid-cols-2 gap-2">
+        <aside className={`w-[320px] bg-white dark:bg-[#1a1924] border-r border-[#f1f0f4] dark:border-gray-800 flex flex-col shrink-0 z-10 transition-all duration-300 absolute h-full top-0 left-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            {/* Page Selector */}
+            <div className="px-4 py-4 border-b border-[#f1f0f4] dark:border-gray-800">
+                <div className="relative">
                     <button 
-                        onClick={() => setActiveMode('preview')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-colors ${activeMode === 'preview' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                        onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-[#f6f6f8] dark:bg-gray-800 rounded-lg text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
-                        <Eye className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-medium">Preview</span>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-gray-500 text-[18px]">web</span>
+                            Page: {pages.find(p => p.path === currentPage)?.name || currentPage.replace('.html', '')}
+                        </div>
+                        <span className="material-symbols-outlined text-gray-500 text-[18px]">expand_more</span>
                     </button>
-                    <button 
-                        onClick={() => setActiveMode('section')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-colors ${activeMode === 'section' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    >
-                        <MousePointer className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-medium">Sections</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveMode('text')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-colors ${activeMode === 'text' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    >
-                        <Type className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-medium">Edit Text</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveMode('image')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-colors ${activeMode === 'image' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    >
-                        <ImageIcon className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-medium">Images</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveMode('theme')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-colors ${activeMode === 'theme' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                    >
-                        <Palette className="w-6 h-6 mb-1" />
-                        <span className="text-xs font-medium">Theme</span>
-                    </button>
+                    
+                    {/* Pages Dropdown */}
+                    {isPagesDropdownOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
+                            {pages.map((page, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => {
+                                        setCurrentPage(page.path);
+                                        setIsPagesDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${currentPage === page.path ? 'text-orange-500 font-semibold bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                >
+                                    {page.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Contextual Editor Panel */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {activeMode === 'theme' ? (
-                    <div className="space-y-4 animate-fadeIn">
-                        <div className="flex justify-between items-center border-b pb-2 mb-4 dark:border-gray-700">
-                             <h3 className="text-sm font-bold text-gray-900 dark:text-white">Color Palette</h3>
-                        </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-3">
+                {activeMode === 'menu' ? (
+                     <div className="space-y-3 animate-fadeIn">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-2">Editor Tools</h3>
                         
-                        <button
-                             onClick={handleRegeneratePalette}
-                             disabled={loading}
-                             className="w-full flex justify-center items-center py-2 px-4 mb-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                        >
-                            <Shuffle className="w-4 h-4 mr-2" /> Regenerate Palette
-                        </button>
+                        <div onClick={() => handleModeChange('section')} className="group flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-orange-500/50 hover:shadow-md cursor-pointer transition-all">
+                             <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                                 <span className="material-symbols-outlined text-2xl">web_stories</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900 dark:text-white">Structure & Layout</h4>
+                                 <p className="text-xs text-gray-500 mt-1">Reorder sections and AI redesign.</p>
+                             </div>
+                        </div>
 
+                        <div onClick={() => handleModeChange('text')} className="group flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-500/50 hover:shadow-md cursor-pointer transition-all">
+                             <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                 <span className="material-symbols-outlined text-2xl">edit_note</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900 dark:text-white">Edit Content</h4>
+                                 <p className="text-xs text-gray-500 mt-1">Update text and copy.</p>
+                             </div>
+                        </div>
+
+                        <div onClick={() => handleModeChange('image')} className="group flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-500/50 hover:shadow-md cursor-pointer transition-all">
+                             <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-500 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                                 <span className="material-symbols-outlined text-2xl">image</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900 dark:text-white">Images & Media</h4>
+                                 <p className="text-xs text-gray-500 mt-1">Replace photos and backgrounds.</p>
+                             </div>
+                        </div>
+
+                        <div onClick={() => handleModeChange('theme')} className="group flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-500/50 hover:shadow-md cursor-pointer transition-all">
+                             <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                                 <span className="material-symbols-outlined text-2xl">palette</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900 dark:text-white">Theme & Styling</h4>
+                                 <p className="text-xs text-gray-500 mt-1">Customize brand colors.</p>
+                             </div>
+                        </div>
+
+                        <div onClick={() => handleModeChange('preview')} className="group flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-all mt-6">
+                             <div className="p-2 text-gray-500">
+                                 <span className="material-symbols-outlined text-2xl">visibility</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-700 dark:text-gray-300">Preview Site</h4>
+                             </div>
+                        </div>
+
+                     </div>
+                ) : activeTab === 'theme' ? (
+                     <div className="space-y-4 animate-fadeIn">
+                        <button onClick={() => handleModeChange('menu')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-2">
+                            <span className="material-symbols-outlined text-[18px]">arrow_back</span> Back to Tools
+                        </button>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Color Theme</h3>
                         <div className="space-y-3">
-                            {['primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'].map(key => (
+                            {['primary', 'secondary', 'accent', 'background', 'text'].map(key => (
                                 <div key={key} className="flex items-center justify-between">
-                                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
-                                    <div className="flex items-center space-x-2">
-                                        <input 
-                                            type="text" 
-                                            value={colors[key] || ''} 
-                                            onChange={(e) => handleColorChange(key, e.target.value)}
-                                            className="w-20 text-xs p-1 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                        />
-                                        <input 
-                                            type="color" 
-                                            value={colors[key] || '#000000'} 
-                                            onChange={(e) => handleColorChange(key, e.target.value)}
-                                            className="h-8 w-8 rounded cursor-pointer border-0 p-0"
-                                        />
+                                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 capitalize">{key}</label>
+                                    <div className="flex items-center gap-2">
+                                        <input type="color" value={colors[key] || '#000000'} onChange={e => setColors({...colors, [key]: e.target.value})} className="h-8 w-8 rounded cursor-pointer border-0 p-0" />
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        <button onClick={handleSaveTheme} disabled={loading} className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50">Apply Theme</button>
+                     </div>
+                ) : (
+                    <>
+                        <button onClick={() => handleModeChange('menu')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-2">
+                            <span className="material-symbols-outlined text-[18px]">arrow_back</span> Back to Tools
+                        </button>
+                        
+                        {selectedItem ? (
+                             <div className="space-y-4 animate-fadeIn">
+                                <div className="flex justify-between items-center border-b pb-2 mb-2 dark:border-gray-700">
+                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                                        Edit {selectedItem.type === 'section' ? selectedItem.sectionId : selectedItem.type}
+                                    </h3>
+                                    <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined text-[18px]">close</span></button>
+                                </div>
+                                
+                                {selectedItem.type === 'section' && (
+                                    <>
+                                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                                            <label className="text-xs font-bold text-orange-700 dark:text-orange-400 flex items-center gap-1 mb-2">
+                                                <span className="material-symbols-outlined text-[16px]">auto_fix_high</span>
+                                                AI Redesign (50 Credits)
+                                            </label>
+                                            <textarea value={instruction} onChange={e => setInstruction(e.target.value)} rows={3} className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm p-2 mb-2" placeholder="e.g. Make it dark themed, add more padding..." />
+                                            <button onClick={handleRegenerateSection} disabled={loading || !instruction} className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 text-xs font-bold">Regenerate Section</button>
+                                        </div>
+                                        
+                                        <div className="mt-4">
+                                            <p className="text-xs font-semibold text-gray-500 mb-2">Images in this section</p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {getImagesInSection(selectedItem.sectionId).map((img, idx) => (
+                                                    <div key={idx} className="aspect-square bg-gray-100 dark:bg-gray-800 rounded overflow-hidden border border-gray-200 dark:border-gray-700 relative group cursor-pointer"
+                                                         onClick={() => {
+                                                             setActiveMode('image');
+                                                             setSelectedItem({ type: 'image', value: img.src, sectionId: selectedItem.sectionId, isBg: img.type === 'bg' });
+                                                         }}
+                                                    >
+                                                        <img src={img.src} alt="" className="w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <span className="material-symbols-outlined text-white text-sm">edit</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {getImagesInSection(selectedItem.sectionId).length === 0 && <p className="text-xs text-gray-400 col-span-3">No images found.</p>}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                                
+                                {selectedItem.type === 'text' && (
+                                    <>
+                                        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Text Content</label>
+                                        <textarea value={textValue} onChange={e => setTextValue(e.target.value)} rows={6} className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm p-2" />
+                                        <button onClick={handleSaveText} disabled={loading} className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50">Save Changes</button>
+                                    </>
+                                )}
+                                
+                                {selectedItem.type === 'image' && (
+                                    <>
+                                        <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-4 border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                                            {selectedItem.value ? <img src={selectedItem.value} className="max-w-full max-h-full" alt="Preview" /> : <span className="text-xs text-gray-400">No Image</span>}
+                                        </div>
+                                        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Upload Replacement</label>
+                                        <input type="file" onChange={e => setImageFile(e.target.files[0])} className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 mb-2" />
+                                        <button onClick={handleSaveImage} disabled={loading || !imageFile} className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50">Replace Image</button>
+                                    </>
+                                )}
+                             </div>
+                        ) : (
+                            <>
+                                {activeMode === 'section' && (
+                                    <>
+                                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Select a Section</p>
+                                        {sectionsList.map((section, idx) => (
+                                            <div key={idx} className="group flex items-center gap-3 bg-white dark:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 p-3 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer ring-1 ring-black/5 dark:ring-white/10"
+                                                onClick={() => {
+                                                    const el = iframeRef.current.contentDocument.querySelector(`[data-section="${section.id}"]`);
+                                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                                    setActiveMode('section');
+                                                    setSelectedItem({ type: 'section', sectionId: section.id });
+                                                }}
+                                            >
+                                                <span className="material-symbols-outlined text-gray-400 text-[20px]">drag_indicator</span>
+                                                <div className="flex items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-500 shrink-0 size-9">
+                                                    <span className="material-symbols-outlined text-[20px]">web_asset</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{section.name}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {activeMode === 'text' && (
+                                    <div className="text-center p-8 text-gray-500">
+                                        <span className="material-symbols-outlined text-4xl mb-2">edit_note</span>
+                                        <p>Click on any text in the preview to edit its content.</p>
+                                    </div>
+                                )}
+                                {activeMode === 'image' && (
+                                    <div className="text-center p-8 text-gray-500">
+                                        <span className="material-symbols-outlined text-4xl mb-2">image</span>
+                                        <p>Click on any image or background in the preview to replace it.</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
+                )}
+            </div>
 
-                        <button
-                            onClick={handleSaveTheme}
-                            disabled={loading}
-                            className="w-full mt-6 flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+            {/* Global GenWeb Assistant Input */}
+            {activeTab !== 'theme' && (
+                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-[#f1f0f4] dark:border-gray-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-orange-500 text-[18px]">rocket_launch</span>
+                        <div className="flex-1">
+                            <span className="text-xs font-bold text-gray-900 dark:text-white block">Page Assistant</span>
+                            <span className="text-[10px] text-gray-500">Rebuild entire page (100 Credits)</span>
+                        </div>
+                    </div>
+                    <div className="relative">
+                        <input 
+                            value={globalInstruction}
+                            onChange={(e) => setGlobalInstruction(e.target.value)}
+                            className="w-full pl-3 pr-10 py-2.5 rounded-lg border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-orange-500 shadow-sm" 
+                            placeholder="Describe page-wide changes..." 
+                            type="text" 
+                        />
+                        <button 
+                            onClick={handleRegeneratePage}
+                            disabled={!globalInstruction || loading}
+                            className="absolute right-2 top-1.5 p-1 text-orange-500 hover:bg-orange-500/10 rounded disabled:opacity-50"
                         >
-                            {loading ? <Loader className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                            Apply Theme
+                            <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                         </button>
                     </div>
-                ) : !selectedItem ? (
-                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                        <p className="text-sm">
-                            {activeMode === 'preview' && "Interact with your site as a visitor."}
-                            {activeMode === 'section' && "Select a section to regenerate it with AI."}
-                            {activeMode === 'text' && "Click on any text to edit it."}
-                            {activeMode === 'image' && "Click on an image to replace it."}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4 animate-fadeIn">
-                        <div className="flex justify-between items-center border-b pb-2 mb-4 dark:border-gray-700">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                                Edit {selectedItem.type}
-                            </h3>
-                            <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* SECTION REGENERATOR */}
-                        {selectedItem.type === 'section' && (
-                            <>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        AI Instruction
-                                    </label>
-                                    <textarea
-                                        value={instruction}
-                                        onChange={(e) => setInstruction(e.target.value)}
-                                        rows={6}
-                                        className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 dark:bg-gray-700 dark:text-white"
-                                        placeholder="e.g., Change the background to dark blue and make the text larger."
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleRegenerateSection}
-                                    disabled={loading || !instruction || credits < 50}
-                                    className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    {loading ? <Loader className="animate-spin w-4 h-4 mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                                    Regenerate (50 Credits)
-                                </button>
-                                {credits < 50 && (
-                                    <button 
-                                        onClick={() => setShowBuyCredits(true)}
-                                        className="w-full mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
-                                    >
-                                        Buy more credits
-                                    </button>
-                                )}
-
-                                <div className="border-t pt-4 mt-4 dark:border-gray-700">
-                                    <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-3">Section Images</h4>
-                                    {sectionImages.length === 0 ? (
-                                        <p className="text-xs text-gray-500">No images found in this section.</p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {sectionImages.map((img, idx) => (
-                                                <div key={idx} className="flex items-center space-x-3 bg-gray-50 dark:bg-gray-700/50 p-2 rounded">
-                                                    <img src={img.src} alt="thumbnail" className="w-10 h-10 object-cover rounded border dark:border-gray-600" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs text-gray-500 truncate" title={img.originalValue}>
-                                                            {img.type === 'bg' ? 'Background' : 'Image'}: {img.originalValue}
-                                                        </p>
-                                                        <label className="cursor-pointer text-xs text-indigo-600 hover:text-indigo-500 font-medium flex items-center mt-1">
-                                                            <Upload className="w-3 h-3 mr-1" /> Replace
-                                                            <input 
-                                                                type="file" 
-                                                                className="sr-only" 
-                                                                accept="image/*"
-                                                                onChange={(e) => {
-                                                                    if(e.target.files[0]) handleReplaceSectionImage(e.target.files[0], img);
-                                                                }}
-                                                            />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-
-                        {/* TEXT EDITOR */}
-                        {selectedItem.type === 'text' && (
-                            <>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Content
-                                    </label>
-                                    <textarea
-                                        value={textValue}
-                                        onChange={(e) => setTextValue(e.target.value)}
-                                        rows={6}
-                                        className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-3 dark:bg-gray-700 dark:text-white"
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleSaveText}
-                                    disabled={loading || !textValue}
-                                    className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    {loading ? <Loader className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                    Save Changes
-                                </button>
-                            </>
-                        )}
-
-                        {/* IMAGE EDITOR */}
-                        {selectedItem.type === 'image' && (
-                            <>
-                                <div className="mb-4">
-                                    <img src={selectedItem.value} alt="Preview" className="w-full h-32 object-cover rounded-md border dark:border-gray-700" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Upload New Image
-                                    </label>
-                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md hover:border-indigo-400 transition-colors">
-                                        <div className="space-y-1 text-center">
-                                            {imageFile ? (
-                                                <div className="text-sm text-gray-900 dark:text-white font-medium break-all">
-                                                    {imageFile.name}
-                                                    <button type="button" onClick={() => setImageFile(null)} className="ml-2 text-red-500">x</button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                                                    <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                                                        <label htmlFor="img-upload" className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-indigo-600 hover:text-indigo-500">
-                                                            <span>Upload file</span>
-                                                            <input id="img-upload" type="file" className="sr-only" onChange={(e) => setImageFile(e.target.files[0])} accept="image/*" />
-                                                        </label>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleSaveImage}
-                                    disabled={loading || !imageFile}
-                                    className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    {loading ? <Loader className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                    Replace Image
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
         </aside>
 
-        {/* Preview Area */}
-        <main className={`flex-1 bg-gray-200 dark:bg-gray-900 relative flex items-center justify-center p-8 transition-all duration-300 ease-in-out ${activeMode === 'preview' ? 'ml-0' : 'ml-80'}`}>
-            {/* Preview Mode Buttons */}
-            <div className={`absolute top-4 right-4 z-50 flex space-x-4 transition-opacity duration-300 ${activeMode === 'preview' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                 <button 
-                    onClick={() => navigate('/')}
-                    className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-transform active:scale-95 border border-gray-200 dark:border-gray-700"
-                 >
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Exit
-                 </button>
-                 <button 
-                    onClick={() => setActiveMode('section')}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform active:scale-95"
-                 >
-                    <Palette className="w-4 h-4 mr-2" /> Edit Site
-                 </button>
-            </div>
-
-            <div className="w-full h-full bg-white shadow-2xl rounded-lg overflow-hidden relative">
-                <iframe
-                    key={iframeKey}
-                    ref={iframeRef}
-                    srcDoc={iframeContent}
-                    className="w-full h-full border-0"
-                    title="Site Preview"
-                    onLoad={handleIframeLoad}
-                />
-                
-                {loading && (
-                    <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
-                        <div className="text-center">
-                            <Loader className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Updating...</h3>
+        {/* Main Preview Area */}
+        <main className={`flex-1 relative bg-background-light dark:bg-[#0f0e15] overflow-auto custom-scrollbar transition-all duration-300 ${isSidebarOpen ? 'ml-[320px]' : 'ml-0'}`}>
+            <div className={getViewWrapperClass()}>
+                <div className={`${getViewModeStyle()} bg-white text-gray-900 overflow-hidden relative transition-all duration-300`}>
+                     <iframe
+                        key={iframeKey}
+                        ref={iframeRef}
+                        srcDoc={iframeContent}
+                        className="w-full h-full border-0"
+                        title="Site Preview"
+                        onLoad={handleIframeLoad}
+                    />
+                    
+                    {loading && (
+                        <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="text-center">
+                                <span className="material-symbols-outlined text-4xl text-orange-500 animate-spin">progress_activity</span>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-white mt-2">Updating...</h3>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </main>
       </div>
+
       <PublishModal 
         isOpen={showPublishModal} 
         onClose={() => setShowPublishModal(false)} 
@@ -701,8 +761,8 @@ const Editor = () => {
         currentCredits={credits}
         onSuccess={() => {
             setIsPublished(true);
-            setCredits(prev => prev - 500); // Rough estimate update, mostly relies on refresh
-            // Force refresh credits
+            setCredits(prev => prev - 500); 
+            // Refresh
             auth.currentUser?.getIdToken().then(t => 
                 axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
                 .then(r => setCredits(r.data.credits))

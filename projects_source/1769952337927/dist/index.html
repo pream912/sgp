@@ -1,0 +1,480 @@
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile Dental Care</title>
+    <meta name="description" content="Smile Dental Care offers advanced, comfortable, and painless dental procedures, including low-level laser treatment. Experience our caring doctors and peaceful clinic atmosphere.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* 
+        This is a placeholder for your compiled Tailwind CSS.
+        You would typically have a build process that generates this file.
+        For this exercise, we assume Tailwind classes work out-of-the-box.
+        */
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css');
+
+        /* Custom Theme Configuration */
+        .theme-configured {
+            --color-primary: #2E7D32;
+            --color-secondary: #C62828;
+            --color-accent: #81D4FA;
+            --color-background: #FDFDFD;
+            --color-text: #1A1A1A;
+            --color-buttonBackground: #2E7D32;
+            --color-buttonText: #FDFDFD;
+        }
+        
+        /* Applying fonts and base styles */
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #e5e7eb; /* Neumorphism requires a non-white background */
+            color: #374151; /* text-gray-700 */
+        }
+
+        .font-heading {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .font-body {
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        /* Neumorphic Shadows */
+        .neumorphic-card {
+            background-color: #e5e7eb;
+            box-shadow: 20px 20px 60px #d1d5db, -20px -20px 60px #ffffff;
+        }
+        .neumorphic-card-inset {
+            background-color: #e5e7eb;
+            box-shadow: inset 20px 20px 60px #d1d5db, inset -20px -20px 60px #ffffff;
+        }
+        .neumorphic-button {
+            background-color: #e5e7eb;
+            box-shadow: 10px 10px 30px #d1d5db, -10px -10px 30px #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+        .neumorphic-button:hover, .neumorphic-button:active {
+            box-shadow: inset 10px 10px 30px #d1d5db, inset -10px -10px 30px #ffffff;
+        }
+        .neumorphic-input {
+             background-color: #e5e7eb;
+             box-shadow: inset 5px 5px 10px #d1d5db, inset -5px -5px 10px #ffffff;
+        }
+
+        /* Tailwind Theme Colors (for reference, used as classes) */
+        .bg-primary { background-color: #2E7D32; }
+        .text-primary { color: #2E7D32; }
+        .bg-secondary { background-color: #C62828; }
+        .text-secondary { color: #C62828; }
+        .bg-accent { background-color: #81D4FA; }
+        .text-accent { color: #81D4FA; }
+        .bg-background { background-color: #FDFDFD; }
+        .text-text { color: #1A1A1A; }
+        .bg-buttonBackground { background-color: #2E7D32; }
+        .text-buttonText { color: #FDFDFD; }
+
+    </style>
+    <script>
+        // This script is to make Tailwind JIT work in a browser environment for demonstration.
+        // In a real project, you would compile your CSS.
+        // As per instructions, this will be empty, assuming a pre-compiled environment.
+    </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-gray-200 font-body text-gray-700 antialiased">
+
+    <!-- Header -->
+    <header data-section="header" id="main-header" class="sticky top-0 z-40 w-full bg-gray-200/80 backdrop-blur-sm transition-shadow duration-300">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="flex items-center space-x-3" data-aos="fade-right">
+                    <img src="./logo.png" alt="Smile Dental Care Logo" class="h-12 w-auto">
+                </a>
+
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html" class="font-heading font-bold text-primary transition-colors duration-300">Home</a>
+                    <a href="about.html" class="font-heading hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-heading hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-heading hover:text-primary transition-colors duration-300">Gallery</a>
+                    <a href="contact.html" class="font-heading hover:text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <div class="flex items-center space-x-4">
+                    <a href="#contact" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-heading font-semibold px-6 py-3 rounded-full shadow-md hover:bg-opacity-90 transition-all duration-300" data-aos="fade-left">
+                        Book Now
+                    </a>
+                    <button id="mobile-menu-button" class="lg:hidden text-2xl text-gray-700">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-gray-200 shadow-lg">
+            <nav class="flex flex-col items-center space-y-4 py-6">
+                <a href="index.html" class="font-heading font-bold text-primary">Home</a>
+                <a href="about.html" class="font-heading hover:text-primary">About</a>
+                <a href="services.html" class="font-heading hover:text-primary">Services</a>
+                <a href="gallery.html" class="font-heading hover:text-primary">Gallery</a>
+                <a href="contact.html" class="font-heading hover:text-primary">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section data-section="hero" class="relative overflow-hidden bg-gray-200 py-20 md:py-32">
+            <div class="container mx-auto px-6">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="text-center lg:text-left">
+                        <h1 class="font-heading text-4xl md:text-6xl font-bold text-gray-800 leading-tight mb-4" data-aos="fade-right">
+                            Gentle, Modern, <span class="text-primary">Painless</span> Dental Care.
+                        </h1>
+                        <p class="font-body text-lg text-gray-600 mb-8 max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="200">
+                            Experience a new standard of dentistry with our advanced low-level laser technology. We prioritize your comfort, providing exceptional care in a calm and friendly environment.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start" data-aos="fade-up" data-aos-delay="400">
+                            <a href="#contact" class="bg-buttonBackground text-buttonText font-heading font-semibold px-8 py-4 rounded-full shadow-lg hover:bg-opacity-90 transform hover:-translate-y-1 transition-all duration-300">
+                                Get a Free Consultation
+                            </a>
+                            <a href="#services" class="bg-gray-100 text-gray-700 font-heading font-semibold px-8 py-4 rounded-full shadow-md hover:bg-white transform hover:-translate-y-1 transition-all duration-300">
+                                Our Services
+                            </a>
+                        </div>
+                    </div>
+                    <div class="relative h-80 lg:h-full w-full" data-aos="fade-left" data-aos-delay="200">
+                        <img src="https://images.pexels.com/photos/6627533/pexels-photo-6627533.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Dentist with a smiling patient" class="absolute inset-0 w-full h-full object-cover rounded-3xl shadow-2xl">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section data-section="features" id="services" class="py-20 md:py-28 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-gray-800" data-aos="fade-up">Why Patients Choose Us</h2>
+                    <p class="font-body text-lg text-gray-600 mt-4 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+                        We combine advanced technology with a compassionate approach to redefine your dental experience.
+                    </p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
+                    <!-- Feature Card 1 -->
+                    <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Painless Laser Technology</h3>
+                        <p class="font-body text-gray-600">Our low-level laser treatments for cavities are smooth, comfortable, and virtually painless, ensuring a stress-free procedure.</p>
+                    </div>
+                    <!-- Feature Card 2 -->
+                    <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-user-doctor"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Skilled & Caring Doctors</h3>
+                        <p class="font-body text-gray-600">Our doctors are not only highly skilled but also genuinely caring, taking the time to explain every step of your treatment.</p>
+                    </div>
+                    <!-- Feature Card 3 -->
+                    <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up" data-aos-delay="400">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Free Consultations</h3>
+                        <p class="font-body text-gray-600">We believe in patient-first care. That's why we offer free consultations to help you understand your needs without any pressure.</p>
+                    </div>
+                    <!-- Feature Card 4 -->
+                     <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up" data-aos-delay="100">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-pump-soap"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Clean & Peaceful Clinic</h3>
+                        <p class="font-body text-gray-600">Our clinic atmosphere is designed to be clean, calm, and peaceful, helping you feel relaxed from the moment you walk in.</p>
+                    </div>
+                     <!-- Feature Card 5 -->
+                     <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-comments"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Thorough Explanations</h3>
+                        <p class="font-body text-gray-600">We empower you with knowledge. Our team provides clear, patient explanations so you're always informed about your dental health.</p>
+                    </div>
+                     <!-- Feature Card 6 -->
+                     <div class="neumorphic-card p-8 rounded-[50px] text-center" data-aos="fade-up" data-aos-delay="500">
+                        <div class="text-primary text-5xl mb-6 flex items-center justify-center h-16">
+                            <i class="fa-solid fa-people-group"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-gray-800 mb-3">Friendly & Supportive Staff</h3>
+                        <p class="font-body text-gray-600">From the front desk to the dental chair, our friendly staff is here to support you and make your visit as pleasant as possible.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" class="py-20 md:py-28 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-gray-800" data-aos="fade-up">Hear From Our Happy Patients</h2>
+                    <p class="font-body text-lg text-gray-600 mt-4 max-w-2xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+                        Our patients' smiles speak for themselves.
+                    </p>
+                </div>
+                <div class="grid lg:grid-cols-3 gap-12 items-start">
+                    <!-- Main Testimonial -->
+                    <div class="lg:col-span-3 neumorphic-card p-8 md:p-12 rounded-[50px]" data-aos="zoom-in">
+                        <div class="flex items-start">
+                             <i class="fa-solid fa-quote-left text-primary text-5xl mr-6 mt-1"></i>
+                            <div>
+                                <p class="font-body text-lg text-gray-700 mb-6">
+                                    🤩 Exceptional Dental Care & Smooth Procedure! We had a truly excellent dental experience... The procedure, which utilized low-level laser technology, went incredibly smoothly and was completely painless! The doctor is genuinely exceptional—possessing high skill and a wonderful, caring demeanor... If you require any dental work... I recommend this clinic highly enough. Visit them once; you'll never consider going anywhere else!
+                                </p>
+                                <p class="font-heading font-semibold text-gray-800">- Satisfied Patient</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Other Testimonials -->
+                    <div class="lg:col-span-1 neumorphic-card p-8 rounded-[50px]" data-aos="fade-up" data-aos-delay="200">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-gray-700 mb-4">"The treatment was really good, and the doctor explained everything patiently. Also staffs are so friendly."</p>
+                        <p class="font-heading font-semibold text-gray-800">- Happy Patient</p>
+                    </div>
+                    <div class="lg:col-span-1 neumorphic-card p-8 rounded-[50px]" data-aos="fade-up" data-aos-delay="300">
+                        <i class="fa-solid fa-quote-left text-primary text-3xl mb-4"></i>
+                        <p class="font-body text-gray-700 mb-4">"Doctor at this clinic is very friendly. Explains everything very clearly. Atmosphere is very clean and peaceful."</p>
+                        <p class="font-heading font-semibold text-gray-800">- Relaxed Patient</p>
+                    </div>
+                    <div class="lg:col-span-1 flex items-center justify-center h-full" data-aos="fade-up" data-aos-delay="400">
+                        <img src="https://images.pexels.com/photos/4269691/pexels-photo-4269691.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Happy patient smiling" class="w-full h-full object-cover rounded-3xl shadow-lg">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA / Contact Form Section -->
+        <section data-section="contact" id="contact" class="py-20 md:py-28 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="neumorphic-card rounded-[50px] overflow-hidden grid lg:grid-cols-2">
+                    <div class="p-8 md:p-12" data-aos="fade-right">
+                        <h2 class="font-heading text-3xl md:text-4xl font-bold text-gray-800 mb-4">Book Your Free Consultation</h2>
+                        <p class="font-body text-lg text-gray-600 mb-8">
+                            Take the first step towards a healthier, brighter smile. Fill out the form and our friendly team will get in touch with you shortly.
+                        </p>
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                            <div>
+                                <label for="name" class="font-body font-semibold text-gray-700 block mb-2">Full Name</label>
+                                <input type="text" id="name" name="name" required class="w-full p-4 font-body rounded-2xl neumorphic-input border-none focus:ring-2 focus:ring-primary focus:outline-none transition-shadow">
+                            </div>
+                            <div>
+                                <label for="email" class="font-body font-semibold text-gray-700 block mb-2">Email Address</label>
+                                <input type="email" id="email" name="email" required class="w-full p-4 font-body rounded-2xl neumorphic-input border-none focus:ring-2 focus:ring-primary focus:outline-none transition-shadow">
+                            </div>
+                            <div>
+                                <label for="phone" class="font-body font-semibold text-gray-700 block mb-2">Phone Number</label>
+                                <input type="tel" id="phone" name="phone" class="w-full p-4 font-body rounded-2xl neumorphic-input border-none focus:ring-2 focus:ring-primary focus:outline-none transition-shadow">
+                            </div>
+                             <div>
+                                <label for="message" class="font-body font-semibold text-gray-700 block mb-2">Message (Optional)</label>
+                                <textarea id="message" name="message" rows="4" class="w-full p-4 font-body rounded-2xl neumorphic-input border-none focus:ring-2 focus:ring-primary focus:outline-none transition-shadow"></textarea>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full bg-buttonBackground text-buttonText font-heading font-bold text-lg py-4 px-8 rounded-full shadow-lg hover:bg-opacity-90 transform hover:-translate-y-1 transition-all duration-300">
+                                    Request Appointment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="hidden lg:block relative" data-aos="fade-left">
+                        <img src="https://images.pexels.com/photos/5622240/pexels-photo-5622240.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Modern and clean dental clinic interior" class="absolute inset-0 w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-gray-800 text-gray-300 font-body">
+        <div class="container mx-auto px-6 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Column 1: Logo & Info -->
+                <div class="space-y-4">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="Smile Dental Care Logo" class="h-12 w-auto">
+                    </a>
+                    <p class="text-gray-400">
+                        Providing modern, painless, and compassionate dental care for the whole family.
+                    </p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white text-lg mb-4">Quick Links</h4>
+                    <ul class="space-y-3">
+                        <li><a href="index.html" class="hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="services.html" class="hover:text-primary transition-colors">Our Services</a></li>
+                        <li><a href="gallery.html" class="hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white text-lg mb-4">Contact Us</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-location-dot mt-1 mr-3 text-primary"></i>
+                            <span>Basement, Joshi & Joshi Complex, opp. Zudio showroom, Tiruchirappalli, Tamil Nadu 620019</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa-solid fa-phone mr-3 text-primary"></i>
+                            <a href="tel:09791765077" class="hover:text-primary">097917 65077</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div>
+                    <h4 class="font-heading font-semibold text-white text-lg mb-4">Opening Hours</h4>
+                    <div class="text-gray-400 space-y-2">
+                        <p><strong>Mon - Sat:</strong> 11am-2:30pm, 6pm-9pm</p>
+                        <p><strong>Sunday:</strong> 6pm - 8:30pm</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 pt-8 border-t border-gray-700 text-center text-gray-500">
+                <p>&copy; <span id="current-year"></span> Smile Dental Care. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onclick="closeModal()">
+        <div class="bg-background text-text rounded-3xl shadow-2xl p-8 md:p-12 w-full max-w-md text-center" onclick="event.stopPropagation()">
+            <div class="text-primary text-6xl mb-4">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="font-heading text-2xl font-bold mb-2">Thank You!</h3>
+            <p class="font-body text-gray-600 mb-6">Your appointment request has been sent. We will contact you shortly to confirm.</p>
+            <button onclick="closeModal()" class="bg-buttonBackground text-buttonText font-heading font-semibold px-8 py-3 rounded-full shadow-lg hover:bg-opacity-90 transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Sticky Header Shadow
+        const header = document.getElementById('main-header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-lg');
+            } else {
+                header.classList.remove('shadow-lg');
+            }
+        });
+
+        // Form Submission & Modal Handling
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769952337927',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

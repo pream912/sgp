@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { X, ExternalLink } from 'lucide-react';
 
-const BuyCreditsModal = ({ isOpen, onClose, onSuccess }) => {
+const BuyCreditsModal = ({ isOpen, onClose }) => {
     const [loading, setLoading] = useState(false);
     const [creditsToBuy, setCreditsToBuy] = useState(500); // Default value
     const [cost, setCost] = useState(500);

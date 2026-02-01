@@ -1,0 +1,27 @@
+{
+    # Enable On-Demand TLS
+    on_demand_tls {
+        # Security: Ask our router if this domain is allowed before issuing a cert
+        # This prevents abuse (people pointing random domains to your IP to exhaust your rate limits)
+        ask http://localhost:3000/ask-permission
+        
+        # Rate Limiting (Optional but recommended)
+        interval 2m
+        burst 5
+    }
+}
+
+# Catch-all for HTTPS traffic
+:443 {
+    tls {
+        on_demand
+    }
+
+    # Reverse Proxy to our Node.js Router Script
+    reverse_proxy localhost:3000
+}
+
+# Catch-all for HTTP traffic (Redirect to HTTPS)
+:80 {
+    redir https://{host}{uri}
+}

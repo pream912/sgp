@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GenWeb Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f97316", // GenWeb Orange
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#121121",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e1c2e",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display text-slate-900 dark:text-white transition-colors duration-200">
+<header class="bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
+<div class="px-6 lg:px-8 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">rocket_launch</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+<span class="text-primary">Gen</span>Web
+            </h1>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium text-primary border-b-2 border-primary pb-0.5" href="#">Projects</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors" href="#">Domains</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors" href="#">Integrations</a>
+</nav>
+<div class="flex items-center gap-3">
+<div class="hidden sm:flex items-center bg-primary/10 dark:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-semibold gap-1.5">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+                500 Credits
+            </div>
+<button class="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">light_mode</span>
+</button>
+<button class="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-400 to-slate-700 overflow-hidden ring-2 ring-white dark:ring-slate-800 ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYZ2zmywv0WBDmFtAcgIEt7uFsDft2y86uFCxyJwq5IN3dJjrgN9iTdj3wQ6I2Drjf2eRW4Dx9a7cy9QrQmF2YUwr5dL070DFTJUjDa2iQ6O2U8zD4SL-QNYeUftRvG--x8KT6Eg40jmfLug58jgug1q25NhA_HOAo02qMhrG8IqYKz4TtJsv_t0UXF1zaNeTy2jFgsOOrf5DxvOqko_mK-7CtJU3RSlaiPxv04yUYh9Ewj_dDbVSW_ZfTqVzjs7YzRnPwW_pzzcM"/>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-grow container mx-auto px-6 lg:px-8 py-8 max-w-7xl">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<div class="flex flex-col gap-2">
+<h2 class="text-3xl font-bold text-slate-900 dark:text-white">Your Projects</h2>
+<p class="text-slate-500 dark:text-slate-400">Manage and edit your AI-generated websites.</p>
+</div>
+<div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+<div class="relative group flex-grow md:flex-grow-0 md:w-64">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Search projects..." type="text"/>
+</div>
+<div class="flex gap-3 ml-auto md:ml-0">
+<button class="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl transition-all shadow-sm group">
+<span class="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">add_card</span>
+<span class="whitespace-nowrap">Buy Credits</span>
+</button>
+<button class="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-500/30">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span class="whitespace-nowrap">New Project</span>
+</button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+<div class="group bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+<div class="relative aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden">
+<div class="absolute top-3 right-3 z-10">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 border border-green-200 dark:border-green-500/30 hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-colors cursor-default">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Live
+                    </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Screenshot of a modern SaaS landing page dashboard" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAzdJ2GfO50zdTqqpG_fE8h0d4F6rtqKVx7M1qd6-RpZBTbR-mTIDYa2xWOL4BuzYjgbUmFqG4w2SM6zJJW2Sffj-eUbTSuXYUuU_ZVYcF-G8yJS2MqObico7bTkGF0_yM3o-B5xgMOsJ9iRE0QTkeWUXr-4jBPjR84pyUjswg8YVi4S9ViVtcOBfdVqMV40G8RaVQtPNCoyxVuRUXYwDZnGoB6CdOChXQZ7lx1gr545AYiGUx4EI3pePUI2w6_LFaFxTUFE-FpFxI');"></div>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[1px]">
+<button class="bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:text-primary">
+                        Preview
+                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<div class="flex items-start justify-between mb-2">
+<div>
+<h3 class="font-bold text-lg text-slate-900 dark:text-white leading-tight">SaaS Analytics Landing</h3>
+<a class="text-xs text-primary hover:underline mt-1 block truncate max-w-[200px]" href="#">analytics-demo.genweb.app</a>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4">
+<span>Created 2 days ago</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+                            1.2k views
+                        </div>
+</div>
+<div class="flex items-center justify-between gap-2">
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors tooltip" title="Analytics">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors tooltip" title="Domain Settings">
+<span class="material-symbols-outlined text-[20px]">language</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors tooltip" title="Leads">
+<span class="material-symbols-outlined text-[20px]">contacts</span>
+</button>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+                            Edit
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<div class="group bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+<div class="relative aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden">
+<div class="absolute top-3 right-3 z-10">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-colors cursor-default">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        Draft
+                    </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Screenshot of a colorful creative portfolio website" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDcKHCK3oqoiYAqpsbTl90qJy2Ke6YiKwHteEv5o0fUZYjxceLRFVZW1kDSc6e7fB8t9lUI8SSxsUZUfnQjPwy3nXl8pWrNBnADVK0G4bP0OV8mrDfZ20mHh2pv6rXWjKgfr_hHwplpasdDJZREuW9e5vCFsdVJZOvb7QLIkrV6eMbm_YvnELo4xUyIbbD9RxS2BhG-UriE43Stou4V2LyKr1JcdL6S9Jh5DZj3obL0vU6ol2_HmA1xREuBiyQ77ES8UktK3GJABiE');"></div>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[1px]">
+<button class="bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:text-primary">
+                        Preview
+                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<div class="flex items-start justify-between mb-2">
+<div>
+<h3 class="font-bold text-lg text-slate-900 dark:text-white leading-tight">Portfolio V2</h3>
+<span class="text-xs text-slate-400 dark:text-slate-500 mt-1 block">Not published yet</span>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4">
+<span>Edited 5 hours ago</span>
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-[14px]">visibility_off</span>
+                            Private
+                        </div>
+</div>
+<div class="flex items-center justify-between gap-2">
+<div class="flex gap-1">
+<button class="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors disabled:opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">language</span>
+</button>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-primary hover:text-white dark:hover:bg-primary rounded-lg text-sm font-semibold transition-all group/publish">
+<span class="material-symbols-outlined text-[16px]">rocket_launch</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+                                Edit
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="group bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+<div class="relative aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden">
+<div class="absolute top-3 right-3 z-10">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 border border-green-200 dark:border-green-500/30 hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-colors cursor-default">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Live
+                    </span>
+</div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Screenshot of a sleek ecommerce store homepage" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCDca0wF9pn9Bhd0h_guZ15FYLl5tBxL1oNLpv7tjkqcCFShbTxsYd3xzs5KMzYnJ11YMnaiq8g8wER6IXTx8LLSOEKAE1X4pcYNZNAaQoGM3YILoaSX5Tg0q0folH09xFMJP5SRhhCdwPAITQ1ruNwBWJrvunbkQoNDzOob6G3t65-zXyN3_JUIfiE1mZt5Gf-PmqkLV68O6o2R5X6LGe_MZnRqJAewG1dWlJRP68qZE34shrSeDIO6n-jT1_cjk22sr_S-a7ACqA');"></div>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[1px]">
+<button class="bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:text-primary">
+                        Preview
+                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-grow">
+<div class="flex items-start justify-between mb-2">
+<div>
+<h3 class="font-bold text-lg text-slate-900 dark:text-white leading-tight">Neon E-Commerce</h3>
+<a class="text-xs text-primary hover:underline mt-1 block truncate max-w-[200px]" href="#">neon-shop.genweb.app</a>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
+<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4">
+<span>Created 1 week ago</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">shopping_cart</span>
+                            42 Orders
+                        </div>
+</div>
+<div class="flex items-center justify-between gap-2">
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Analytics">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Domain Settings">
+<span class="material-symbols-outlined text-[20px]">language</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Leads">
+<span class="material-symbols-outlined text-[20px]">contacts</span>
+</button>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+                            Edit
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<button class="group bg-white dark:bg-surface-dark rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center p-8 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 h-full min-h-[360px]">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined text-3xl text-primary">add</span>
+</div>
+<h3 class="font-bold text-lg text-slate-900 dark:text-white mb-2">Create New Project</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 text-center max-w-[200px]">Use AI to generate a complete website in seconds.</p>
+</button>
+</div>
+</main>
+<footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark py-8">
+<div class="container mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+<p>© 2024 GenWeb. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Support</a>
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+
+</body></html>

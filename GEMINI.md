@@ -12,12 +12,14 @@
 ### A. The Backend (Our Infrastructure)
 *   **Runtime:** Node.js 20.x (LTS)
 *   **Framework:** Express.js
+*   **Hosting:** Google Cloud Run (Containerized)
 *   **AI Provider:** Google Vertex AI via `@google-cloud/vertexai`
     *   **Model:** `gemini-2.0-flash-exp` (High performance, large context)
     *   **Region:** `us-central1` (Hardcoded for availability)
     *   **Settings:** `maxOutputTokens: 16384` (To prevent truncation)
+*   **Database:** Firebase Firestore & Auth
 *   **File Ops:** `fs-extra`
-*   **Deployment:** Local Preview / Vercel API
+*   **Deployment:** Cloudflare Pages (Direct Upload)
 
 ### B. The Generated Sites (The Output)
 *Lightweight, high-performance static sites.*
@@ -26,6 +28,7 @@
 *   **Styling:** Tailwind CSS 3.4.1 (Built via CLI)
 *   **Icons:** FontAwesome 6.5.1 (CDN)
 *   **Fonts:** Google Fonts (Injected dynamically)
+*   **Hosting:** Cloudflare Pages (Global CDN, Instant SSL)
 
 ---
 
@@ -34,12 +37,13 @@
 ```text
 /
 ├── server.js                 # Express entry point
-├── .env                      # GCP_PROJECT, GOOGLE_CLOUD_LOCATION
+├── .env                      # GCP_PROJECT, CLOUDFLARE_API_TOKEN
 ├── services/
 │   ├── ai-architect.js       # Gemini: Generates JSON Design System
 │   ├── ai-coder.js           # Gemini: Writes HTML5 Code (HTML generation & validation)
 │   ├── builder.js            # Orchestrates: Copy Skeleton -> AI Code -> Tailwind CLI
-│   └── ...
+│   ├── cloudflare.js         # Cloudflare Pages & DNS Management
+│   └── domains.js            # NameSilo API & Domain Purchasing
 ├── templates/
 │   └── html-skeleton/        # THE SOURCE OF TRUTH
 │       ├── node_modules/     # Pre-installed Tailwind CSS v3
@@ -79,25 +83,41 @@
 
 ---
 
-## 4. Coding Standards (Backend)
+## 4. Architecture & Services
+
+### Hosting & Deployment
+
+#### A. Development & Storage (GCS)
+*   **Strategy:** Google Cloud Storage (GCS) for persistence + Local Preview.
+*   **Workflow:**
+    1.  **Generation/Edit:** When a site is generated or edited, build artifacts (`dist/`) are uploaded to GCS (`projects/{id}/dist`).
+    2.  **Preview:** The Editor loads the site from the local `public/sites/{id}` folder. If missing locally, it fetches from GCS.
+    3.  **Updates:** Changes (AI edits, manual tweaks) trigger a rebuild and GCS upload. **Cloudflare is NOT updated yet.**
+
+#### B. Production (Cloudflare Pages)
+*   **Strategy:** Cloudflare Pages for live hosting.
+*   **Trigger:** Only when the user explicitly clicks **"Publish"**.
+*   **Process:**
+    1.  Backend fetches the latest artifacts (from local source or GCS).
+    2.  Uploads directly to Cloudflare Pages (`site-{id}`).
+    3.  Updates the live URL (`deployUrl`) in Firestore.
+*   **Note:** GCS is strictly for storage/backup. Never serve the live site directly from GCS buckets.
+
+### Custom Domains & SSL (Cloudflare Managed)
+*   **Component 1 (DNS & SSL):** Cloudflare handles all DNS and SSL automatically.
+*   **Workflow:**
+    1.  **Purchase:** User buys domain via NameSilo (Backend API).
+    2.  **Zone Creation:** Backend creates a Zone in Cloudflare.
+    3.  **Link:** Backend links the Domain to the Cloudflare Pages Project.
+    4.  **Config:** User updates NameSilo Nameservers to Cloudflare's NS (or we automate if possible).
+*   **Verification:** Cloudflare verifies ownership via NS delegation.
+*   **Payments:** Razorpay.
+
+---
+
+## 5. Coding Standards (Backend)
 
 *   **Async/Await**: Use for all File I/O and API calls.
 *   **Error Handling**: Wrap all builder logic in `try/catch`. 
 *   **Model Config**: Use `us-central1` and `gemini-2.0-flash-exp` for reliability.
 *   **Security**: Never log raw API keys.
-
----
-
-## 5. Implementation Tasks (Updated)
-
-**Task: Initialize Project**
-> "Scaffold the Node.js project structure, installing backend dependencies (express, fs-extra, @google-cloud/vertexai, dotenv)."
-
-**Task: Create HTML Skeleton**
-> "Create `templates/html-skeleton`. Install `tailwindcss` locally. Create `tailwind.config.js` and `src/input.css`."
-
-**Task: Implement AI Service**
-> "Write `services/ai-coder.js` using `gemini-2.0-flash-exp`. Implement `generateCode` with a strict system prompt for HTML/Tailwind and a validation check for truncated output."
-
-**Task: Implement Builder**
-> "Write `services/builder.js`. Implement the symlink optimization for `node_modules`. Execute the local Tailwind binary directly (`./node_modules/.bin/tailwindcss`) to avoid npx issues."

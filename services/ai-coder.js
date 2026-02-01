@@ -27,8 +27,19 @@ STRICT CONSTRAINTS:
    - DO NOT use arbitrary values for main colors. The config is already set up.
    - **NO TAILWIND CDN OR CONFIG IN HTML.**
    - DO NOT include <script src="https://cdn.tailwindcss.com"></script>.
-   - DO NOT include <script>tailwind.config = ...</script>.
+   - DO NOT include <script>tailwind.config = ...</script> or any variation of it.
+   - DO NOT include "demonstration" or "placeholder" tailwind configs.
+   - The build process handles the config. You must output PURE HTML classes only.
    - Assume standard Tailwind classes work immediately.
+   - **NO <style> BLOCKS:**
+     - DO NOT use <style> tags to define custom classes (e.g., .card-neumorphic { ... }).
+     - DO NOT use @apply in <style> tags.
+     - ALL STYLING MUST BE DONE VIA INLINE TAILWIND CLASSES in the HTML elements themselves.
+     - If you need a complex specific shadow or value, USE ARBITRARY VALUES (e.g., shadow-[...]).
+     - DO NOT invent new utility classes (like 'shadow-neumorphic'). If it's not standard Tailwind, use an arbitrary value.
+   - **NO SCROLL LOCKING:**
+     - DO NOT use 'overflow-hidden' on the <body>, <html>, or <main> tags. This breaks scrolling.
+     - Only use 'overflow-hidden' on specific small containers (like cards or image wrappers) where absolutely necessary.
 4. TYPOGRAPHY:
    - Use 'font-heading' for all headings (h1, h2, h3, etc.).
    - Use 'font-body' for all body text.
@@ -296,6 +307,36 @@ async function regenerateSection(code, sectionId, instruction) {
     return text;
 }
 
+async function regeneratePage(code, instruction) {
+    const prompt = `
+    EXISTING HTML CODE:
+    ${code}
+    
+    TASK:
+    Modify the ENTIRE HTML document based on the following instruction:
+    "${instruction}"
+    
+    CRITICAL:
+    1. You can add, remove, or modify sections, styles, and content as needed to fulfill the request.
+    2. Maintain the overall structure (<html>, <head>, <body>).
+    3. Use the same Tailwind theme and design system.
+    4. RETURN THE FULL UPDATED 'index.html' FILE.
+    
+    STRICT CONSTRAINTS:
+    - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
+    `;
+    
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    
+    const response = await result.response;
+    let text = response.candidates[0].content.parts[0].text;
+    
+    text = text.replace(/```html/g, '').replace(/```/g, '');
+    return text;
+}
+
 async function updateSectionContent(code, sectionId, type, originalValue, newValue) {
     const $ = cheerio.load(code);
     const $section = $(`[data-section="${sectionId}"]`);
@@ -400,4 +441,4 @@ async function updateSectionContent(code, sectionId, type, originalValue, newVal
     return $.html();
 }
 
-module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent };
+module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage };

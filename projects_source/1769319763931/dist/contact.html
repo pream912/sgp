@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRIENDS SYSTEMS - contact</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#C62828',
+                        'secondary': '#4A5568',
+                        'accent': '#64B5F6',
+                        'background': '#F8F8F8',
+                        'text': '#1A202C',
+                        'buttonBackground': '#C62828',
+                        'buttonText': '#FFFFFF',
+                        'light-shadow': '#ffffff',
+                        'dark-shadow': '#d1d5db',
+                    },
+                    fontFamily: {
+                        heading: ['Inter', 'sans-serif'],
+                        body: ['Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-gray-200 text-text font-body antialiased">
+
+    <header data-section="header" id="header" class="sticky top-0 z-40 bg-gray-200/80 backdrop-blur-sm transition-shadow duration-300">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="flex items-center space-x-3" data-aos="fade-right">
+                    <img src="./logo.png" alt="FRIENDS SYSTEMS Logo" class="h-10 md:h-12">
+                </a>
+
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Home</a>
+                    <a href="about.html" class="font-heading text-gray-600 transition-colors hover:text-primary">About</a>
+                    <a href="services.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Services</a>
+                    <a href="gallery.html" class="font-heading text-gray-600 transition-colors hover:text-primary">Gallery</a>
+                    <a href="contact.html" class="font-heading font-bold text-primary transition-colors hover:text-primary">Contact</a>
+                </nav>
+
+                <div class="flex items-center space-x-4">
+                    <a href="#contact-form" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-heading px-6 py-3 rounded-3xl shadow-[10px_10px_20px_#d1d5db,-10px_-10px_20px_#ffffff] hover:shadow-[inset_10px_10px_20px_#d1d5db,inset_-10px_-10px_20px_#ffffff] active:shadow-[inset_10px_10px_20px_#d1d5db,inset_-10px_-10px_20px_#ffffff] transition-all duration-300" data-aos="fade-left">Get a Quote</a>
+                    <button id="mobile-menu-button" class="lg:hidden p-3 rounded-full shadow-[8px_8px_15px_#d1d5db,-8px_-8px_15px_#ffffff] hover:shadow-[inset_8px_8px_15px_#d1d5db,inset_-8px_-8px_15px_#ffffff] active:shadow-[inset_8px_8px_15px_#d1d5db,inset_-8px_-8px_15px_#ffffff] transition-all duration-300" aria-label="Open Menu">
+                        <i class="fa-solid fa-bars text-gray-700 text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-gray-200 absolute top-full left-0 w-full shadow-lg">
+            <div class="flex flex-col space-y-4 p-6">
+                <a href="index.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Home</a>
+                <a href="about.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">About</a>
+                <a href="services.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Services</a>
+                <a href="gallery.html" class="font-heading text-gray-600 hover:text-primary text-center py-2">Gallery</a>
+                <a href="contact.html" class="font-heading font-bold text-primary text-center py-2">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section data-section="contact-hero" class="py-20 md:py-28 text-center">
+            <div class="container mx-auto px-6">
+                <h1 class="text-4xl md:text-6xl font-bold font-heading text-text mb-4" data-aos="fade-up">Contact Us</h1>
+                <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="100">We're here to help. Reach out to us for any inquiries about our products, rentals, or services.</p>
+            </div>
+        </section>
+
+        <section data-section="contact-main" id="contact-form" class="py-20 bg-gray-200">
+            <div class="container mx-auto px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+                    
+                    <div class="bg-gray-200 rounded-[50px] p-8 md:p-12 shadow-[20px_20px_60px_#d1d5db,-20px_-20px_60px_#ffffff]" data-aos="fade-right">
+                        <h2 class="text-3xl font-bold font-heading text-text mb-8">Get in Touch</h2>
+                        
+                        <div class="space-y-6 text-gray-700">
+                            <div class="flex items-start space-x-4">
+                                <div class="mt-1 p-4 rounded-full bg-gray-200 shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff]">
+                                    <i class="fa-solid fa-location-dot text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg">Our Address</h3>
+                                    <p class="font-body text-gray-600">NO 122, POST OFFICE UPSTAIRS, 7th Cross St W, above POST OFFICE, West Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018, India</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="mt-1 p-4 rounded-full bg-gray-200 shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff]">
+                                    <i class="fa-solid fa-phone text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg">Phone Number</h3>
+                                    <a href="tel:09788704704" class="font-body text-gray-600 hover:text-primary transition-colors">097887 04704</a>
+                                </div>
+                            </div>
+                             <div class="flex items-start space-x-4">
+                                <div class="mt-1 p-4 rounded-full bg-gray-200 shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff]">
+                                    <i class="fa-solid fa-clock text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-heading font-bold text-lg">Opening Hours</h3>
+                                    <ul class="font-body text-gray-600">
+                                        <li><strong>Mon - Sat:</strong> 8:00 AM – 7:00 PM</li>
+                                        <li><strong>Sunday:</strong> 8:00 AM – 3:00 PM</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-10 rounded-3xl h-64 overflow-hidden" data-aos="zoom-in">
+                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.898867912445!2d78.67035187480556!3d10.820253489328827!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3baaf57355555555%3A0x4638c4146e6f1f41!2sFRIENDS%20SYSTEMS!5e0!3m2!1sen!2sin!4v1717765874288!5m2!1sen!2sin" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" class="rounded-3xl shadow-[20px_20px_60px_#d1d5db,-20px_-20px_60px_#ffffff]"></iframe>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-200 rounded-[50px] p-8 md:p-12 shadow-[20px_20px_60px_#d1d5db,-20px_-20px_60px_#ffffff]" data-aos="fade-left">
+                        <h2 class="text-3xl font-bold font-heading text-text mb-8">Send Us a Message</h2>
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                            <div>
+                                <label for="name" class="sr-only">Name</label>
+                                <input type="text" id="name" name="name" placeholder="Your Name" required class="bg-gray-200 rounded-3xl w-full px-6 py-4 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff] transition-shadow">
+                            </div>
+                            <div>
+                                <label for="email" class="sr-only">Email</label>
+                                <input type="email" id="email" name="email" placeholder="Your Email" required class="bg-gray-200 rounded-3xl w-full px-6 py-4 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff] transition-shadow">
+                            </div>
+                            <div>
+                                <label for="phone" class="sr-only">Phone</label>
+                                <input type="tel" id="phone" name="phone" placeholder="Your Phone Number" class="bg-gray-200 rounded-3xl w-full px-6 py-4 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff] transition-shadow">
+                            </div>
+                            <div>
+                                <label for="service" class="sr-only">Service of Interest</label>
+                                <select id="service" name="service" required class="appearance-none bg-gray-200 rounded-3xl w-full px-6 py-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff] transition-shadow">
+                                    <option value="" disabled selected>Select a service...</option>
+                                    <option value="Laptop Sales">Laptop Sales</option>
+                                    <option value="Monitor Sales">Monitor Sales</option>
+                                    <option value="Laptop Rental">Laptop Rental</option>
+                                    <option value="Customer Support">Customer Support</option>
+                                    <option value="Other">Other Inquiry</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="message" class="sr-only">Message</label>
+                                <textarea id="message" name="message" rows="5" placeholder="Your Message" required class="bg-gray-200 rounded-3xl w-full px-6 py-4 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary shadow-[inset_5px_5px_10px_#d1d5db,inset_-5px_-5px_10px_#ffffff] transition-shadow"></textarea>
+                            </div>
+                            <div class="text-center pt-4">
+                                <button type="submit" class="bg-buttonBackground text-buttonText font-heading font-bold px-10 py-4 rounded-full text-lg shadow-[10px_10px_30px_#d1d5db,-10px_-10px_30px_#ffffff] hover:shadow-[inset_10px_10px_30px_#d1d5db,inset_-10px_-10px_30px_#ffffff] active:shadow-[inset_10px_10px_30px_#d1d5db,inset_-10px_-10px_30px_#ffffff] transition-all duration-300 transform hover:scale-105">
+                                    Send Message
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-gray-300/70 pt-20 pb-8">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+                <div class="space-y-4" data-aos="fade-up">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="FRIENDS SYSTEMS Logo" class="h-12">
+                    </a>
+                    <p class="font-body text-gray-600">Your trusted partner for affordable and reliable computer systems in Tiruchirappalli.</p>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="font-body text-gray-600 hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="font-body text-gray-600 hover:text-primary transition-colors">About</a></li>
+                        <li><a href="services.html" class="font-body text-gray-600 hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="gallery.html" class="font-body text-gray-600 hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="contact.html" class="font-body text-gray-600 hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Contact Info</h4>
+                    <ul class="space-y-3 font-body text-gray-600">
+                        <li class="flex items-start"><i class="fa-solid fa-location-dot mt-1 mr-3 text-primary"></i><span>NO 122, POST OFFICE UPSTAIRS, 7th Cross St W, West Thillai Nagar, Tiruchirappalli, Tamil Nadu 620018</span></li>
+                        <li class="flex items-center"><i class="fa-solid fa-phone mr-3 text-primary"></i><a href="tel:09788704704" class="hover:text-primary">097887 04704</a></li>
+                    </ul>
+                </div>
+                 <div data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="font-heading font-bold text-lg text-text mb-4">Opening Hours</h4>
+                    <ul class="space-y-2 font-body text-gray-600 text-sm">
+                        <li><strong>Mon - Sat:</strong> 8:00 AM – 7:00 PM</li>
+                        <li><strong>Sunday:</strong> 8:00 AM – 3:00 PM</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-400/50 pt-8 mt-8 text-center">
+                <p class="font-body text-gray-500">&copy; <span id="current-year"></span> FRIENDS SYSTEMS. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModal()">
+        <div class="bg-gray-200 rounded-[50px] p-8 md:p-12 shadow-[20px_20px_60px_#d1d5db,-20px_-20px_60px_#ffffff] text-center max-w-md mx-4" onclick="event.stopPropagation()">
+            <div class="mx-auto mb-6 flex items-center justify-center h-20 w-20 rounded-full bg-gray-200 shadow-[inset_10px_10px_20px_#d1d5db,inset_-10px_-10px_20px_#ffffff]">
+                <i class="fa-solid fa-check text-primary text-4xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold font-heading text-text mb-3">Thank You!</h3>
+            <p class="text-gray-600 mb-8">Your message has been sent successfully. We will get back to you shortly.</p>
+            <button onclick="closeModal()" class="bg-buttonBackground text-buttonText font-heading font-bold px-8 py-3 rounded-full text-base shadow-[10px_10px_30px_#d1d5db,-10px_-10px_30px_#ffffff] hover:shadow-[inset_10px_10px_30px_#d1d5db,inset_-10px_-10px_30px_#ffffff] active:shadow-[inset_10px_10px_30px_#d1d5db,inset_-10px_-10px_30px_#ffffff] transition-all duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const header = document.getElementById('header');
+
+            // Mobile Menu Toggle
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Header shadow on scroll
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 10) {
+                    header.classList.add('shadow-lg');
+                } else {
+                    header.classList.remove('shadow-lg');
+                }
+            });
+
+            // Set current year in footer
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+        });
+
+        // Form submission handler
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            const successModal = document.getElementById('successModal');
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        // Modal close function
+        function closeModal() {
+            const successModal = document.getElementById('successModal');
+            successModal.classList.add('hidden');
+        }
+    </script>
+
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769319763931',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

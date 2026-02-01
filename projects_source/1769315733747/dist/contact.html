@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jp Digital Studio - contact</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* 
+        This style block is for defining custom properties based on the design system.
+        Tailwind will be configured to use these variables.
+        */
+        :root {
+            --color-primary: #9D1B2B;
+            --color-secondary: #1E3F66;
+            --color-accent: #A7B9CD;
+            --color-background: #121212;
+            --color-text: #EAEAEA;
+            --color-buttonBackground: #9D1B2B;
+            --color-buttonText: #EAEAEA;
+        }
+        .font-heading {
+            font-family: 'Playfair Display', serif;
+        }
+        .font-body {
+            font-family: 'Inter', sans-serif;
+        }
+        .bg-subtle-radial {
+            background-image: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%);
+        }
+    </style>
+    
+    <script>
+        // This is a placeholder for the Tailwind config. 
+        // In a real project, this would be in a tailwind.config.js file.
+        // The HTML should not contain this script.
+        // It is assumed that the build process handles this.
+        // tailwind.config = {
+        //   theme: {
+        //     extend: {
+        //       colors: {
+        //         primary: 'var(--color-primary)',
+        //         secondary: 'var(--color-secondary)',
+        //         accent: 'var(--color-accent)',
+        //         background: 'var(--color-background)',
+        //         text: 'var(--color-text)',
+        //         buttonBackground: 'var(--color-buttonBackground)',
+        //         buttonText: 'var(--color-buttonText)',
+        //       },
+        //       fontFamily: {
+        //         heading: ['Playfair Display', 'serif'],
+        //         body: ['Inter', 'sans-serif'],
+        //       }
+        //     }
+        //   }
+        // }
+    </script>
+    <!-- The above script is a simulation and is not included in the final output as per constraints. -->
+    
+    
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background text-text font-body antialiased">
+
+    <header data-section="header" id="header" class="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-lg shadow-md shadow-black/10">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="index.html" class="flex-shrink-0" aria-label="Jp Digital Studio Home">
+                    <img src="./logo.png" alt="Jp Digital Studio Logo" class="h-12 w-auto">
+                </a>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden lg:flex items-center space-x-8">
+                    <a href="index.html" class="font-body text-lg hover:text-primary transition-colors duration-300">Home</a>
+                    <a href="about.html" class="font-body text-lg hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-body text-lg hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-body text-lg hover:text-primary transition-colors duration-300">Gallery</a>
+                    <a href="contact.html" class="font-body text-lg font-bold text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <div class="flex items-center">
+                    <a href="contact.html" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-body font-bold py-2 px-6 rounded-full hover:opacity-90 transition-opacity duration-300">
+                        Get a Quote
+                    </a>
+                    <!-- Mobile Menu Button -->
+                    <button id="mobile-menu-button" class="lg:hidden ml-4 p-2 rounded-md text-text hover:text-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" aria-label="Open main menu">
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Home</a>
+                <a href="about.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">About</a>
+                <a href="services.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Services</a>
+                <a href="gallery.html" class="text-text hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Gallery</a>
+                <a href="contact.html" class="text-primary block px-3 py-2 rounded-md text-base font-medium">Contact</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section data-section="contact-hero" class="py-20 md:py-32 bg-gray-900 bg-subtle-radial">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 class="text-4xl md:text-6xl font-heading font-bold text-text" data-aos="fade-up">Get in Touch</h1>
+                <p class="mt-4 text-lg md:text-xl text-gray-300 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+                    We're here to help with all your digital needs. Reach out to us for reliable service and expert advice.
+                </p>
+            </div>
+        </section>
+
+        <section data-section="contact-details" class="py-20 md:py-24">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+                    
+                    <!-- Contact Information Column -->
+                    <div class="space-y-8" data-aos="fade-right">
+                        <h2 class="text-3xl font-heading font-bold">Contact Information</h2>
+                        <p class="text-gray-300">
+                            Have a question or want to discuss a project? Use the form or contact us directly through the details below. We look forward to hearing from you.
+                        </p>
+                        
+                        <div class="space-y-6">
+                            <div class="flex items-start">
+                                <i class="fas fa-map-marker-alt text-primary text-xl mt-1 mr-4 w-6 text-center"></i>
+                                <div>
+                                    <h3 class="font-bold text-lg text-text">Our Address</h3>
+                                    <p class="text-gray-400">No: 5 VOC Nagar, 2nd St, Vasantha Nagar, Jayanagar, Karumandapam, Tiruchirappalli, Tamil Nadu 620001, India</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-phone text-primary text-xl mt-1 mr-4 w-6 text-center"></i>
+                                <div>
+                                    <h3 class="font-bold text-lg text-text">Phone</h3>
+                                    <a href="tel:09952338811" class="text-gray-400 hover:text-primary transition-colors">099523 38811</a>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-clock text-primary text-xl mt-1 mr-4 w-6 text-center"></i>
+                                <div>
+                                    <h3 class="font-bold text-lg text-text">Opening Hours</h3>
+                                    <p class="text-gray-400">Monday - Saturday: 10:00 AM – 7:00 PM</p>
+                                    <p class="text-gray-400">Sunday: Closed</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 rounded-lg overflow-hidden shadow-lg" data-aos="zoom-in" data-aos-delay="200">
+                            <div class="w-full h-64 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1613235577937-9ac3eed992fc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NjkzMTU3NTJ8&ixlib=rb-4.1.0&q=80&w=1080');">
+                                 <!-- This is a placeholder for an interactive map -->
+                                 <div class="w-full h-full bg-black/50 flex items-center justify-center">
+                                     <a href="https://www.google.com/maps/search/?api=1&query=No: 5 VOC Nagar, 2nd St, Vasantha Nagar, Jayanagar, Karumandapam, Tiruchirappalli, Tamil Nadu 620001, India" target="_blank" rel="noopener noreferrer" class="bg-buttonBackground text-buttonText font-body font-bold py-3 px-6 rounded-full hover:opacity-90 transition-all duration-300">
+                                         View on Google Maps
+                                     </a>
+                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Form Column -->
+                    <div class="bg-gray-900 p-8 md:p-12 rounded-lg shadow-2xl shadow-black/30" data-aos="fade-left">
+                        <h2 class="text-3xl font-heading font-bold mb-6">Send Us a Message</h2>
+                        <form onsubmit="handleLeadSubmit(event)" class="space-y-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                                <input type="text" id="name" name="name" required class="w-full bg-gray-800 border-2 border-secondary rounded-md py-2 px-4 text-text focus:ring-primary focus:border-primary transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                                <input type="email" id="email" name="email" required class="w-full bg-gray-800 border-2 border-secondary rounded-md py-2 px-4 text-text focus:ring-primary focus:border-primary transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
+                                <input type="tel" id="phone" name="phone" class="w-full bg-gray-800 border-2 border-secondary rounded-md py-2 px-4 text-text focus:ring-primary focus:border-primary transition-colors duration-300">
+                            </div>
+                            <div>
+                                <label for="service" class="block text-sm font-medium text-gray-300 mb-1">Service of Interest</label>
+                                <select id="service" name="service" class="w-full bg-gray-800 border-2 border-secondary rounded-md py-2 px-4 text-text focus:ring-primary focus:border-primary transition-colors duration-300">
+                                    <option>Photography services</option>
+                                    <option>Digital imaging</option>
+                                    <option>Photo editing</option>
+                                    <option>Printing services</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="message" class="block text-sm font-medium text-gray-300 mb-1">Message</label>
+                                <textarea id="message" name="message" rows="5" required class="w-full bg-gray-800 border-2 border-secondary rounded-md py-2 px-4 text-text focus:ring-primary focus:border-primary transition-colors duration-300"></textarea>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full bg-buttonBackground text-buttonText font-body font-bold py-3 px-6 rounded-full hover:opacity-90 transition-opacity duration-300 text-lg">
+                                    Submit Inquiry
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer data-section="footer" class="bg-gray-900/80 border-t border-gray-800">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-2 mb-6 md:mb-0">
+                    <a href="index.html" class="inline-block mb-4">
+                        <img src="./logo.png" alt="Jp Digital Studio Logo" class="h-12 w-auto">
+                    </a>
+                    <p class="text-gray-400 max-w-sm">Your trusted partner for professional digital photography, imaging, and printing services in Tiruchirappalli.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="text-gray-400 hover:text-primary">Home</a></li>
+                        <li><a href="about.html" class="text-gray-400 hover:text-primary">About Us</a></li>
+                        <li><a href="services.html" class="text-gray-400 hover:text-primary">Services</a></li>
+                        <li><a href="gallery.html" class="text-gray-400 hover:text-primary">Gallery</a></li>
+                        <li><a href="contact.html" class="text-gray-400 hover:text-primary">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Contact</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 mr-2 text-primary"></i>
+                            <span>No: 5 VOC Nagar, 2nd St, Tiruchirappalli, TN 620001</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone mr-2 text-primary"></i>
+                            <a href="tel:09952338811" class="hover:text-primary">099523 38811</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-heading text-lg font-bold mb-4 text-text">Follow Us</h4>
+                    <div class="flex space-x-4">
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Facebook"><i class="fab fa-facebook-f fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Instagram"><i class="fab fa-instagram fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="Twitter"><i class="fab fa-twitter fa-lg"></i></a>
+                         <a href="#" class="text-gray-400 hover:text-primary" aria-label="LinkedIn"><i class="fab fa-linkedin-in fa-lg"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-800 pt-8 text-center text-gray-500">
+                <p>&copy; <span id="current-year"></span> Jp Digital Studio. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onclick="closeModal()">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-sm w-full text-center" onclick="event.stopPropagation()">
+            <i class="fas fa-check-circle text-primary text-5xl mb-4"></i>
+            <h2 class="text-2xl font-heading font-bold text-text mb-2">Thank You!</h2>
+            <p class="text-gray-300 mb-6">Your message has been sent successfully. We will get back to you shortly.</p>
+            <button onclick="closeModal()" class="bg-buttonBackground text-buttonText font-body font-bold py-2 px-8 rounded-full hover:opacity-90 transition-opacity duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            const icon = mobileMenuButton.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Form Submission & Modal Handling
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault(); // Prevent actual form submission
+            successModal.classList.remove('hidden');
+            event.target.reset(); // Reset form fields
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+
+        // Close modal on ESC key press
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !successModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769315733747',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

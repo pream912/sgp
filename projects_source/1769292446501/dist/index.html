@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile Care Dental Clinic</title>
+    <meta name="description" content="Smile Care Dental Clinic provides excellent dental treatments in a professional environment. Trusted for quality care and positive patient experiences.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- AOS CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Tailwind CSS (assumed pre-configured) -->
+    
+    
+
+    <style>
+        /* Custom scrollbar for a more branded feel */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1A922C; /* primary color */
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #147523; /* a darker shade of primary */
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background font-body text-text">
+
+    <!-- Header -->
+    <header data-section="header" id="header" class="bg-background/80 backdrop-blur-md sticky top-0 z-40 border-b-4 border-black shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0">
+                    <a href="index.html" aria-label="Smile Care Dental Clinic Home">
+                        <img src="./logo.png" alt="Smile Care Dental Clinic Logo" class="h-12">
+                    </a>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="font-heading font-bold text-primary border-b-2 border-primary">Home</a>
+                    <!-- Add other pages here if they exist in ALL_PAGES -->
+                </nav>
+                <div class="hidden md:block">
+                    <a href="#contact-form" class="bg-primary text-buttonText font-heading font-bold py-3 px-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                        Book Now
+                    </a>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-text p-2" aria-label="Open menu">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-background border-t-2 border-black">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="block px-3 py-2 rounded-md text-base font-medium font-heading text-primary bg-gray-100">Home</a>
+            </div>
+            <div class="p-4 border-t border-gray-200">
+                <a href="#contact-form" class="w-full text-center block bg-primary text-buttonText font-heading font-bold py-3 px-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                    Book Now
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section data-section="hero" class="relative min-h-[80vh] flex items-center justify-center text-center py-20 px-4 sm:px-6 lg:px-8 bg-secondary">
+            <div class="absolute inset-0">
+                <img src="https://pollinations.ai/p/healthy%20smile?width=1600&height=1200&nologo=true&seed=2" alt="A bright, healthy smile" class="w-full h-full object-cover opacity-20">
+            </div>
+            <div class="relative z-10 max-w-4xl mx-auto">
+                <h1 data-aos="fade-up" class="font-heading font-black text-5xl sm:text-6xl md:text-8xl text-white uppercase" style="text-shadow: 4px 4px 0px #000;">
+                    Your Brightest Smile
+                </h1>
+                <p data-aos="fade-up" data-aos-delay="200" class="mt-6 text-xl md:text-2xl font-body text-background max-w-2xl mx-auto">
+                    Experience dedicated dental care with high-quality treatments in a professional, welcoming environment.
+                </p>
+                <div data-aos="fade-up" data-aos-delay="400" class="mt-10">
+                    <a href="#contact-form" class="bg-primary text-buttonText font-heading font-bold py-4 px-10 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none transition-all text-lg">
+                        Schedule Your Visit
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Selling Points Section -->
+        <section data-section="selling-points" class="py-20 sm:py-28 bg-background">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 data-aos="fade-up" class="font-heading font-extrabold text-4xl sm:text-5xl text-text">Why Choose Us?</h2>
+                    <p data-aos="fade-up" data-aos-delay="100" class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">We are committed to providing a dental experience that is both effective and comfortable.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+                    <!-- Point 1 -->
+                    <div data-aos="fade-up" data-aos-delay="200" class="bg-white p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                        <i class="fa-solid fa-star text-4xl text-primary mb-4"></i>
+                        <h3 class="font-heading font-bold text-2xl text-text mb-2">High-Quality Treatment</h3>
+                        <p class="font-body text-gray-600">Utilizing the latest technology and techniques to ensure the best possible outcomes for your dental health.</p>
+                    </div>
+                    <!-- Point 2 -->
+                    <div data-aos="fade-up" data-aos-delay="300" class="bg-white p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                        <i class="fa-solid fa-heart text-4xl text-primary mb-4"></i>
+                        <h3 class="font-heading font-bold text-2xl text-text mb-2">Positive Patient Experiences</h3>
+                        <p class="font-body text-gray-600">Our friendly staff and comfortable clinic are designed to make you feel at ease from start to finish.</p>
+                    </div>
+                    <!-- Point 3 -->
+                    <div data-aos="fade-up" data-aos-delay="400" class="bg-white p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+                        <i class="fa-solid fa-user-doctor text-4xl text-primary mb-4"></i>
+                        <h3 class="font-heading font-bold text-2xl text-text mb-2">Dedicated Dental Care</h3>
+                        <p class="font-body text-gray-600">We provide personalized care plans tailored to your specific needs and goals for a healthy smile.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section data-section="services" class="py-20 sm:py-28 bg-accent">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 data-aos="fade-up" class="font-heading font-extrabold text-4xl sm:text-5xl text-black">Our Core Services</h2>
+                    <p data-aos="fade-up" data-aos-delay="100" class="mt-4 text-lg text-gray-800 max-w-2xl mx-auto">Comprehensive dental services to keep your smile healthy and bright.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div data-aos="zoom-in" data-aos-delay="200" class="bg-background p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-primary mb-2">General Dentistry</h3>
+                        <p class="font-body text-text">Routine care to maintain your oral health for a lifetime.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="300" class="bg-background p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-primary mb-2">Dental Check-ups</h3>
+                        <p class="font-body text-text">Proactive examinations to catch potential issues early.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="400" class="bg-background p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-primary mb-2">Teeth Cleaning</h3>
+                        <p class="font-body text-text">Professional cleaning for a polished, healthy smile.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="200" class="bg-background p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-primary mb-2">Fillings</h3>
+                        <p class="font-body text-text">Durable and aesthetic solutions to restore decayed teeth.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="300" class="bg-background p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-primary mb-2">Preventative Care</h3>
+                        <p class="font-body text-text">Guidance and treatments to prevent dental problems.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="400" class="flex items-center justify-center bg-secondary p-6 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 class="font-heading font-bold text-xl text-white text-center">And Much More!</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" class="py-20 sm:py-28 bg-background">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 data-aos="fade-up" class="font-heading font-extrabold text-4xl sm:text-5xl text-text">Words From Our Patients</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto">
+                    <div data-aos="fade-right" class="bg-white p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <i class="fa-solid fa-quote-left text-3xl text-secondary mb-4"></i>
+                        <p class="font-body text-lg text-text italic mb-4">"Treatment was good....."</p>
+                        <p class="font-heading font-bold text-right">- Satisfied Patient</p>
+                    </div>
+                    <div data-aos="fade-left" data-aos-delay="200" class="bg-white p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <i class="fa-solid fa-quote-left text-3xl text-secondary mb-4"></i>
+                        <p class="font-body text-lg text-text italic mb-4">"Best treatment"</p>
+                        <p class="font-heading font-bold text-right">- Happy Patient</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA / Contact Form Section -->
+        <section data-section="contact-form" id="contact-form" class="py-20 sm:py-28 bg-primary">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto">
+                    <div data-aos="fade-up" class="text-center mb-12">
+                        <h2 class="font-heading font-black text-4xl sm:text-5xl text-white uppercase" style="text-shadow: 2px 2px 0px #000;">Ready for a Healthier Smile?</h2>
+                        <p class="mt-4 text-lg text-buttonText">Fill out the form below to request an appointment. We'll get back to you shortly!</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="200" class="bg-background p-8 sm:p-10 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <form onsubmit="handleLeadSubmit(event)">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="name" class="block font-heading font-bold text-sm mb-1">Name</label>
+                                    <input type="text" id="name" name="name" required class="w-full p-3 bg-white border-2 border-black rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                                </div>
+                                <div>
+                                    <label for="phone" class="block font-heading font-bold text-sm mb-1">Phone</label>
+                                    <input type="tel" id="phone" name="phone" required class="w-full p-3 bg-white border-2 border-black rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                                </div>
+                            </div>
+                            <div class="mt-6">
+                                <label for="email" class="block font-heading font-bold text-sm mb-1">Email</label>
+                                <input type="email" id="email" name="email" required class="w-full p-3 bg-white border-2 border-black rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                            </div>
+                            <div class="mt-6">
+                                <label for="message" class="block font-heading font-bold text-sm mb-1">Message</label>
+                                <textarea id="message" name="message" rows="4" class="w-full p-3 bg-white border-2 border-black rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Tell us how we can help..."></textarea>
+                            </div>
+                            <div class="mt-8 text-center">
+                                <button type="submit" class="w-full sm:w-auto bg-buttonBackground text-buttonText font-heading font-bold py-4 px-12 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all text-lg">
+                                    Send Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-text text-background py-16 border-t-8 border-black">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
+                <!-- Column 1: Logo & Business Info -->
+                <div class="md:col-span-1">
+                    <a href="index.html" class="mb-4 inline-block">
+                        <img src="./logo.png" alt="Smile Care Dental Clinic Logo" class="h-12 bg-white p-1 rounded-md">
+                    </a>
+                    <p class="font-body text-gray-300 text-sm">Providing excellent dental treatments in a professional, caring environment.</p>
+                </div>
+
+                <!-- Column 2: Contact Info -->
+                <div>
+                    <h3 class="font-heading font-bold text-lg text-white uppercase mb-4">Contact Us</h3>
+                    <ul class="space-y-3 font-body text-gray-300">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-location-dot mt-1 mr-3 text-primary"></i>
+                            <span>Kannan Complex, No 1, Convent road, near old bus stand, KPC Nagar, Vellakoil, Tamil Nadu 638111, India</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa-solid fa-phone mr-3 text-primary"></i>
+                            <a href="tel:06383225531" class="hover:text-primary transition-colors">063832 25531</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Opening Hours -->
+                <div>
+                    <h3 class="font-heading font-bold text-lg text-white uppercase mb-4">Opening Hours</h3>
+                    <ul class="space-y-2 font-body text-gray-300 text-sm">
+                        <li><strong>Mon - Sun:</strong> 10:00 AM – 6:00 PM</li>
+                    </ul>
+                </div>
+                
+                <!-- Column 4: Social Media -->
+                <div>
+                    <h3 class="font-heading font-bold text-lg text-white uppercase mb-4">Follow Us</h3>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-300 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-facebook"></i></a>
+                        <a href="#" class="text-gray-300 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="text-gray-300 hover:text-primary transition-colors text-2xl"><i class="fa-brands fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+                <p>&copy; 2024 Smile Care Dental Clinic. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onclick="closeModal()">
+        <div class="bg-background w-full max-w-md p-8 border-4 border-black rounded-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center" onclick="event.stopPropagation()">
+            <div class="text-primary text-6xl mb-4">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <h2 class="font-heading font-bold text-3xl text-text mb-2">Thank You!</h2>
+            <p class="font-body text-lg text-gray-600 mb-6">Your appointment request has been sent. We will contact you soon.</p>
+            <button onclick="closeModal()" class="bg-primary text-buttonText font-heading font-bold py-3 px-8 border-2 border-black rounded-md shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <!-- Custom JS -->
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Form Submission and Modal Handling
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+        
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1769292446501',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>
+</body>
+</html>
