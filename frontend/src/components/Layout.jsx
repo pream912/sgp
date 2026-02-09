@@ -89,6 +89,17 @@ const Layout = ({ children }) => {
                                     <span className={`material-symbols-outlined text-[20px] ${isActive('/leads') ? 'fill-current' : 'group-hover:text-orange-500'}`}>inbox</span>
                                     <p className="text-sm font-medium">Leads</p>
                                 </Link>
+                                <Link 
+                                    to="/credits" 
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                                        isActive('/credits') 
+                                        ? 'bg-orange-500/10 text-orange-500' 
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <span className={`material-symbols-outlined text-[20px] ${isActive('/credits') ? 'fill-current' : 'group-hover:text-orange-500'}`}>account_balance_wallet</span>
+                                    <p className="text-sm font-medium">Credits</p>
+                                </Link>
                             </div>
                         </div>
                     </div>

@@ -63,6 +63,10 @@ const Editor = () => {
           try {
               const token = await auth.currentUser?.getIdToken();
               if (!token) return;
+              
+              // Set cookie for iframe/asset access
+              document.cookie = `access_token=${token}; path=/; max-age=3600; SameSite=Strict`;
+              
               const headers = { Authorization: `Bearer ${token}` };
               axios.get('/api/credits', { headers }).then(res => setCredits(res.data.credits));
               axios.get('/api/projects', { headers }).then(res => {
@@ -259,7 +263,10 @@ const Editor = () => {
         const gcsBase = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/`;
         
         try {
-            const res = await fetch(localUrl);
+            const token = await auth.currentUser?.getIdToken();
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const res = await fetch(localUrl, { headers });
             if (!res.ok) throw new Error('Local not found');
             const html = await res.text();
             const localBase = `${window.location.origin}/sites/${projectId}/`;

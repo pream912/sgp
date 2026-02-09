@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/certificate-manager": "^2.1.1",
+    "@google-cloud/compute": "^6.7.0",
     "@google-cloud/storage": "^7.18.0",
     "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.24.1",
@@ -26,8 +28,10 @@
     "framer-motion": "^12.23.26",
     "fs-extra": "^11.3.3",
     "googleapis": "^169.0.0",
+    "js-yaml": "^4.1.1",
     "lucide-react": "^0.562.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.12",
     "path": "^0.12.7",
     "razorpay": "^2.9.6"

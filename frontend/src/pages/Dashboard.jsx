@@ -5,6 +5,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import LeadsModal from '../components/LeadsModal';
 import BuyCreditsModal from '../components/BuyCreditsModal';
 import DomainConnectModal from '../components/DomainConnectModal';
+import PublishModal from '../components/PublishModal';
 import { useCredits } from '../context/CreditsContext';
 import { Loader } from 'lucide-react';
 
@@ -16,12 +17,16 @@ const Dashboard = () => {
   const [isLeadsModalOpen, setIsLeadsModalOpen] = useState(false);
   const [isBuyCreditsOpen, setIsBuyCreditsOpen] = useState(false);
   
+  // Publish Modal State
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishProjectData, setPublishProjectData] = useState(null);
+
   // Domain Modal State
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [domainModalData, setDomainModalData] = useState({ projectId: null, currentDomain: null });
 
   const navigate = useNavigate();
-  const { fetchCredits } = useCredits();
+  const { credits, fetchCredits } = useCredits();
 
   useEffect(() => {
     let unsubscribe;
@@ -66,6 +71,11 @@ const Dashboard = () => {
   const openDomainModal = (projectId, currentDomain) => {
       setDomainModalData({ projectId, currentDomain });
       setIsDomainModalOpen(true);
+  };
+
+  const openPublishModal = (project) => {
+      setPublishProjectData(project);
+      setIsPublishModalOpen(true);
   };
 
   const LogViewer = ({ logs, projectId }) => {
@@ -220,8 +230,8 @@ const Dashboard = () => {
                                 <div className="overflow-hidden">
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight truncate" title={project.query}>{project.query}</h3>
                                     {project.isPublished && (
-                                        <a href={project.customDomain ? `https://${project.customDomain}` : project.url} target="_blank" rel="noreferrer" className="text-xs text-orange-500 hover:underline mt-1 block truncate max-w-[200px]">
-                                            {project.customDomain || 'genweb.app'}
+                                        <a href={project.customDomain ? `https://${project.customDomain}` : project.deployUrl} target="_blank" rel="noreferrer" className="text-xs text-orange-500 hover:underline mt-1 block truncate max-w-[200px]">
+                                            {project.customDomain || (project.deployUrl ? project.deployUrl.replace(/^https?:\/\//, '') : 'View Site')}
                                         </a>
                                     )}
                                 </div>
@@ -248,13 +258,24 @@ const Dashboard = () => {
                                             <span className="material-symbols-outlined text-[20px]">language</span>
                                         </button>
                                     </div>
-                                    <Link 
-                                        to={`/editor/${project.projectId}?mode=section`}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white rounded-lg text-sm font-semibold transition-all"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                                        Edit
-                                    </Link>
+                                    <div className="flex gap-2">
+                                        {!project.isPublished && (
+                                            <button 
+                                                onClick={() => openPublishModal(project)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500 hover:text-white rounded-lg text-sm font-semibold transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">rocket_launch</span>
+                                                Publish
+                                            </button>
+                                        )}
+                                        <Link 
+                                            to={`/editor/${project.projectId}?mode=section`}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white rounded-lg text-sm font-semibold transition-all"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                                            Edit
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -290,6 +311,17 @@ const Dashboard = () => {
         onClose={() => setIsDomainModalOpen(false)}
         projectId={domainModalData.projectId}
         currentDomain={domainModalData.currentDomain}
+      />
+      <PublishModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        projectId={publishProjectData?.projectId}
+        project={publishProjectData}
+        currentCredits={credits}
+        onSuccess={() => {
+            // Realtime listener will auto-update the UI (isPublished: true)
+            fetchCredits(); // Refresh credits
+        }}
       />
 
     </div>

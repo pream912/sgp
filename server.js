@@ -5,15 +5,16 @@ const fs = require('fs-extra');
 const path = require('path');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 const { buildSite, rebuildSite } = require('./services/builder');
-const { deploySite } = require('./services/deploy');
+const { deploySite, makeBucketPrivate, makeBucketPublic } = require('./services/deploy');
 const { uploadDirectory, downloadDirectory } = require('./services/storage');
 const { createOrder, verifyPayment } = require('./services/payments');
 const { extractFromUrl } = require('./services/business-extractor');
-const { checkAvailability, purchaseDomain, getSuggestions, setupCloudflareDomain, verifyNameservers } = require('./services/domains');
+const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability } = require('./services/domains');
 const { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
-const { getUserCredits, addCredits, deductCredits } = require('./services/credits');
+const { getUserCredits, addCredits, deductCredits, getTransactions } = require('./services/credits');
 const { db, admin, auth } = require('./services/firebase');
 const verifyToken = require('./middleware/auth');
 
@@ -24,6 +25,78 @@ const app = express();
 app.use(cors({ origin: true, credentials: true })); // Enable CORS for all origins with credentials
 app.use(express.json());
 app.use(cookieParser()); // Use cookie-parser
+
+// --- Wildcard Subdomain Routing (*.genweb.in) ---
+app.use(async (req, res, next) => {
+    const host = req.headers.host;
+    // Check if request is for a subdomain of genweb.in (and not www or the root API)
+    // Adjust 'genweb.in' to match your actual domain if different in production
+    const DOMAIN_SUFFIX = '.genweb.in';
+    
+    // Exclude reserved subdomains that shouldn't be routed to GCS
+    // 'app' and 'www' are hosted on Netlify. 'api' is this server itself (direct hit).
+    const RESERVED_SUBDOMAINS = [`www${DOMAIN_SUFFIX}`, `api${DOMAIN_SUFFIX}`, `app${DOMAIN_SUFFIX}`];
+
+    if (host && host.endsWith(DOMAIN_SUFFIX) && !RESERVED_SUBDOMAINS.includes(host)) {
+        const subdomain = host.slice(0, -DOMAIN_SUFFIX.length);
+        
+        try {
+            console.log(`[Wildcard Router] Routing for subdomain: ${subdomain}`);
+            
+            // 1. Lookup Project
+            if (db) {
+                const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).get();
+                
+                if (!snapshot.empty) {
+                    const project = snapshot.docs[0].data();
+                    const projectId = project.projectId;
+                    
+                    // 2. Proxy from GCS
+                    // Url: https://storage.googleapis.com/site-{projectId}/index.html
+                    const bucketName = `site-${projectId}`;
+                    // Simple logic: If request is root, serve index.html. Else try to serve file.
+                    // For SPA/Single file sites, we usually just serve index.html or assets.
+                    
+                    const filePath = req.url === '/' ? '/index.html' : req.url;
+                    const gcsUrl = `https://storage.googleapis.com/${bucketName}${filePath}`;
+                    
+                    const https = require('https');
+                    
+                    return https.get(gcsUrl, (proxyRes) => {
+                        if (proxyRes.statusCode === 404 && req.url !== '/') {
+                             // If asset not found, do we 404 or serve index? 
+                             // For now, let's 404.
+                             res.status(404).send('Not Found');
+                             return;
+                        }
+                        
+                        // Copy headers
+                        res.status(proxyRes.statusCode);
+                        Object.keys(proxyRes.headers).forEach(key => {
+                             // clean up some headers?
+                             res.setHeader(key, proxyRes.headers[key]);
+                        });
+                        
+                        proxyRes.pipe(res);
+                    }).on('error', (e) => {
+                        console.error('Proxy Stream Error:', e);
+                        res.status(502).send('Upstream Error');
+                    });
+                }
+            }
+            
+            // If DB not connected or project not found, fall through to 404 or main app?
+            // If it ends in .genweb.in but we found no project, it's a 404.
+            return res.status(404).send('Site not found');
+            
+        } catch (error) {
+            console.error('Wildcard routing error:', error);
+            return res.status(500).send('Internal Server Error');
+        }
+    }
+    
+    next();
+});
 
 // Configure Multer for file uploads
 const upload = multer({ dest: path.join(__dirname, 'temp/uploads') });
@@ -87,6 +160,24 @@ async function ensureProjectSource(id) {
 // Protect Static Sites
 app.use('/sites/:projectId', async (req, res, next) => {
     const { projectId } = req.params;
+    
+    // Ensure project source and public site files exist (Hydrate from Private Bucket if needed)
+    try {
+        await ensureProjectSource(projectId);
+        
+        // Double check: Ensure public/sites/${projectId} exists (Sync from projects_source if needed)
+        // ensureProjectSource only copies if it downloads. If source exists but public doesn't, we need to copy.
+        const publicSitePath = path.join(__dirname, 'public/sites', projectId);
+        const sourceDistPath = path.join(__dirname, 'projects_source', projectId, 'dist');
+        
+        if (!await fs.pathExists(publicSitePath) && await fs.pathExists(sourceDistPath)) {
+            console.log(`[${projectId}] Syncing dist to public/sites for preview...`);
+            await fs.copy(sourceDistPath, publicSitePath);
+        }
+    } catch (err) {
+        console.error(`[${projectId}] Failed to ensure site files:`, err);
+        // Continue anyway? Or fail? If files are missing, static middleware will 404.
+    }
     
     // Allow if verifying ownership via token or if published
     try {
@@ -759,6 +850,10 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
 
     const id = Date.now().toString();
     
+    // Generate default subdomain (project-id based for uniqueness initially)
+    // Users can customize this later.
+    const defaultSubdomain = `site-${id}`; // e.g. site-176...
+
     // Allow businessUrl or businessQuery to drive the extraction
     const query = businessQuery || businessUrl;
 
@@ -791,6 +886,7 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
                 userId: req.user.uid,
                 query: query || 'Manual Context',
                 status: 'starting',
+                subdomain: defaultSubdomain, // Set default subdomain
                 logs: [],
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 isPublished: false,
@@ -941,6 +1037,16 @@ app.get('/api/credits', verifyToken, async (req, res) => {
     }
 });
 
+// Get Credit History
+app.get('/api/credits/history', verifyToken, async (req, res) => {
+    try {
+        const transactions = await getTransactions(req.user.uid);
+        res.json(transactions);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Buy Credits (Create Order)
 app.post('/api/credits/buy', verifyToken, async (req, res) => {
     const { amount, credits } = req.body; // amount in INR, credits to add
@@ -976,7 +1082,7 @@ app.post('/api/credits/verify', verifyToken, async (req, res) => {
 // Unlock Publishing Plan & Deploy to Cloudflare
 app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
     const { id } = req.params;
-    const { plan } = req.body; // 'basic' (500), 'single' (2000), 'multi' (3000)
+    const { plan, subdomain, years = 1 } = req.body; // 'basic', 'single', 'multi'; years default 1
     
     const COSTS = {
         'basic': 500,
@@ -984,16 +1090,27 @@ app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
         'multi': 3000
     };
     
-    // Allow republishing without cost if already unlocked (client logic usually handles this, but backend should verify)
-    // For now, let's assume we always charge or check "publishedPlan"
-    
     const cost = COSTS[plan];
     if (!cost) {
         return res.status(400).json({ error: 'Invalid plan' });
     }
+
+    const duration = [1, 2, 3].includes(parseInt(years)) ? parseInt(years) : 1;
+    let totalCost = cost * duration;
+
+    // Apply Discounts
+    if (duration === 2) totalCost *= 0.95; // 5% off
+    if (duration === 3) totalCost *= 0.90; // 10% off
+    
+    totalCost = Math.round(totalCost);
     
     try {
         if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+        if (!await fs.pathExists(distPath)) {
+            return res.status(404).json({ error: 'Build artifacts (dist folder) not found. Please rebuild the project.' });
+        }
 
         // 1. Check ownership
         const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
@@ -1005,33 +1122,78 @@ app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
         
         const projectDoc = snapshot.docs[0];
         const projectData = projectDoc.data();
-        
-        // 2. Deduct Credits (if not upgrading or if we charge per publish? Assume one-time unlock per plan level)
-        // Simplified: Always deduct for now as per previous logic, or maybe check if already published?
-        // Let's stick to the previous simple logic: Deduct.
-        // Optimization: Check if projectData.publishedPlan == plan, maybe skip deduction?
-        // User asked for "only when the site is published, it should be pushed".
-        // This endpoint is the trigger.
-        
-        if (projectData.publishedPlan !== plan) {
-             await deductCredits(req.user.uid, cost, `Unlock ${plan} plan for project ${id}`);
+
+        // 2. Update Subdomain if provided (and different)
+        let finalSubdomain = projectData.subdomain;
+        if (subdomain) {
+            const cleanName = subdomain.toLowerCase();
+            if (cleanName !== finalSubdomain) {
+                // Check availability
+                const availability = await checkSubdomainAvailability(cleanName);
+                if (!availability.available) {
+                     const existing = await db.collection('projects').where('subdomain', '==', cleanName).get();
+                     if (!existing.empty && existing.docs[0].data().projectId !== id) {
+                         return res.status(409).json({ error: availability.error });
+                     }
+                }
+                finalSubdomain = cleanName;
+                await projectDoc.ref.update({ subdomain: finalSubdomain });
+            }
         }
         
-        // 3. Deploy to Cloudflare
-        console.log(`Publishing project ${id} to Cloudflare...`);
-        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
-        const deployResult = await deploySite(distPath, id, projectData.netlifySiteId); // netlifySiteId reused as generic siteId
+        // 3. Deduct Credits
+        // Always deduct for renewal or new plan
+        // Note: If user is just changing subdomain without renewal, they shouldn't call this with years?
+        // Assuming client calls this ONLY for payment/publish actions.
+        await deductCredits(req.user.uid, totalCost, `Unlock/Renew ${plan} plan for project ${id} (${duration} years)`);
+        
+        // 4. Calculate Expiry
+        const now = admin.firestore.Timestamp.now();
+        let expiryDate;
+        let startDate = projectData.subscriptionStartDate || now;
 
-        // 4. Update Project Status & URL
+        // Check if currently active
+        const currentExpiry = projectData.subscriptionExpiryDate;
+        const isCurrentlyActive = currentExpiry && currentExpiry.toMillis() > Date.now() && !projectData.isExpired;
+
+        if (isCurrentlyActive) {
+            // Extend
+            const currentExpiryDate = currentExpiry.toDate();
+            currentExpiryDate.setFullYear(currentExpiryDate.getFullYear() + duration);
+            expiryDate = admin.firestore.Timestamp.fromDate(currentExpiryDate);
+        } else {
+            // New or Reactivation
+            const newExpiryDate = new Date();
+            newExpiryDate.setFullYear(newExpiryDate.getFullYear() + duration);
+            expiryDate = admin.firestore.Timestamp.fromDate(newExpiryDate);
+            startDate = now; // Reset start date if expired/new
+        }
+
+        // 5. Deploy to GCP (Ensure bucket is public)
+        console.log(`Publishing project ${id} to GCP (Subdomain: ${finalSubdomain})...`);
+        const deployResult = await deploySite(distPath, id, projectData.netlifySiteId); 
+        
+        // Ensure bucket is public (in case it was private due to expiry)
+        await makeBucketPublic(`site-${id}`);
+
+        // 6. Construct Public URL
+        const publicUrl = `https://${finalSubdomain}.genweb.in`;
+
+        // 7. Update Project Status & URL
         await projectDoc.ref.update({
             publishedPlan: plan,
             isPublished: true,
-            deployUrl: deployResult.url,
+            isExpired: false,
+            subscriptionStartDate: startDate,
+            subscriptionExpiryDate: expiryDate,
+            subscriptionYears: duration, // Store last purchased duration or total? let's store last purchased
+            deployUrl: publicUrl, 
+            bucketUrl: deployResult.url,
             publishedAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        res.json({ success: true, url: deployResult.url });
+        res.json({ success: true, url: publicUrl, expiry: expiryDate.toDate() });
         
     } catch (error) {
         if (error.message === 'Insufficient credits') {
@@ -1122,18 +1284,16 @@ app.post('/api/domains/buy', verifyToken, async (req, res) => {
         // We use a placeholder project ID if none provided, or just init the zone.
         
         try {
-            // true = isManagedByUs (Auto update NS)
-            // If no project ID, we might fail linking, but we can still Add Zone.
-            // Let's rely on setupCloudflareDomain to handle the zone creation.
-            // We pass a dummy project name "pending-setup" if none provided, 
-            // or better, we just Add Zone manually here if no project. 
-            // But consistency is key. Let's ask for projectId or handle it later.
+            // true = isManagedByUs (Auto update DNS)
+            // If no project ID, we might fail linking, but we can still Add DNS if we knew the IP.
+            // But setupGCPDomain requires projectId to know the target bucket.
+            // If no projectId, we can't fully setup the LB mapping, but we can point the A record if we assume a shared LB.
             
             if (projectId) {
-                 cfStatus = await setupCloudflareDomain(domain, projectId, true);
+                 cfStatus = await setupGCPDomain(domain, projectId, true);
             }
         } catch (cfError) {
-            console.error("Auto-Cloudflare setup failed during purchase:", cfError);
+            console.error("Auto-GCP setup failed during purchase:", cfError);
             // Don't fail the purchase response, just log it.
             cfStatus = { status: 'SETUP_FAILED', error: cfError.message };
         }
@@ -1148,13 +1308,75 @@ app.post('/api/domains/buy', verifyToken, async (req, res) => {
                 provider: 'namesilo',
                 status: 'active',
                 autoRenew: true,
-                cloudflare: cfStatus,
-                nameservers: cfStatus?.nameservers || []
+                lbStatus: cfStatus,
+                ip: cfStatus?.ip || null
             });
         }
 
-        res.json({ success: true, order: result, cloudflare: cfStatus });
+        res.json({ success: true, order: result, lbStatus: cfStatus });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Subdomain Management (*.genweb.in) ---
+
+// Check Subdomain Availability
+app.get('/api/subdomain/check', verifyToken, async (req, res) => {
+    const { name } = req.query;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+    
+    try {
+        const result = await checkSubdomainAvailability(name.toLowerCase());
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update Project Subdomain
+app.post('/api/project/:id/subdomain', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { subdomain } = req.body;
+    
+    if (!subdomain) return res.status(400).json({ error: 'Subdomain is required' });
+    
+    const cleanName = subdomain.toLowerCase();
+    
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+        
+        // 1. Check availability
+        const availability = await checkSubdomainAvailability(cleanName);
+        
+        // If it's taken, check if it's taken by THIS project (idempotent)
+        if (!availability.available) {
+             const existing = await db.collection('projects').where('subdomain', '==', cleanName).get();
+             if (!existing.empty && existing.docs[0].data().projectId === id) {
+                 // Same project, do nothing
+                 return res.json({ success: true, subdomain: cleanName });
+             }
+             return res.status(409).json({ error: availability.error });
+        }
+
+        // 2. Verify Ownership
+        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
+        const snapshot = await projectRef.get();
+        
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Project not found or unauthorized' });
+        }
+
+        // 3. Update
+        await snapshot.docs[0].ref.update({
+            subdomain: cleanName,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        res.json({ success: true, subdomain: cleanName });
+
+    } catch (error) {
+        console.error('Update subdomain failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1163,7 +1385,7 @@ app.post('/api/domains/buy', verifyToken, async (req, res) => {
 
 
 
-// Verify Domain DNS Setup (Cloudflare NS Check)
+// Verify Domain DNS Setup (GCP LB Check)
 app.get('/api/domains/verify-setup', verifyToken, async (req, res) => {
     const { domain } = req.query;
 
@@ -1172,14 +1394,14 @@ app.get('/api/domains/verify-setup', verifyToken, async (req, res) => {
     }
 
     try {
-        const result = await verifyNameservers(domain);
+        const result = await verifyDomainDNS(domain);
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Assign Custom Domain to Project (Cloudflare)
+// Assign Custom Domain to Project (GCP LB)
 app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { domain } = req.body; 
@@ -1215,7 +1437,7 @@ app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
 
         const projectDoc = snapshot.docs[0];
 
-        // 3. Setup Cloudflare
+        // 3. Setup GCP Domain
         // Check if we manage this domain in our 'domains' collection to set isManagedByUs
         let isManaged = false;
         const domainDoc = await db.collection('domains').where('domain', '==', cleanDomain).where('userId', '==', req.user.uid).get();
@@ -1223,26 +1445,83 @@ app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
             isManaged = true;
         }
 
-        const cfResult = await setupCloudflareDomain(cleanDomain, id, isManaged);
+        const cfResult = await setupGCPDomain(cleanDomain, id, isManaged);
 
         // 4. Update Project
         await projectDoc.ref.update({
             customDomain: cleanDomain,
             domainUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            nameservers: cfResult.nameservers, // Array of NS for user to configure
+            lbIp: cfResult.ip, // Store the IP
             domainStatus: cfResult.status // 'CONFIGURED' or 'ACTION_REQUIRED'
         });
 
         res.json({ 
             success: true, 
             domain: cleanDomain,
-            nameservers: cfResult.nameservers,
+            ip: cfResult.ip,
+            message: cfResult.message,
             managed: isManaged
         });
 
     } catch (error) {
         console.error('Assign domain failed:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Cron Jobs ---
+// Check for expired sites daily at 1 AM
+cron.schedule('0 1 * * *', async () => {
+    console.log('[Cron] Checking for expired subscriptions...');
+    if (!db) return;
+
+    try {
+        const now = admin.firestore.Timestamp.now();
+        
+        // Query projects that are published and have passed expiry date
+        // Note: Projects without subscriptionExpiryDate (legacy) will be ignored by the '<' filter
+        const snapshot = await db.collection('projects')
+            .where('isPublished', '==', true)
+            .where('subscriptionExpiryDate', '<', now)
+            .get();
+
+        if (snapshot.empty) {
+            console.log('[Cron] No expired subscriptions found.');
+            return;
+        }
+
+        let expiredCount = 0;
+
+        for (const doc of snapshot.docs) {
+            const project = doc.data();
+            
+            // Skip if already marked expired
+            if (project.isExpired === true) continue;
+
+            const projectId = project.projectId;
+            console.log(`[Cron] Expiring project ${projectId}...`);
+            
+            try {
+                // 1. Make Bucket Private
+                // This will remove public access
+                await makeBucketPrivate(`site-${projectId}`);
+                
+                // 2. Update Firestore
+                await doc.ref.update({ 
+                    isExpired: true, 
+                    expiredAt: now 
+                });
+                
+                expiredCount++;
+            } catch (err) {
+                console.error(`[Cron] Failed to expire project ${projectId}:`, err);
+            }
+        }
+        
+        console.log(`[Cron] Expiry check complete. Expired ${expiredCount} sites.`);
+
+    } catch (error) {
+        console.error('[Cron] Expiry check failed:', error);
     }
 });
 

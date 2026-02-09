@@ -34,3 +34,11 @@ We had a truly excellent dental experience at this clinic recently for a cavity 
 "The treatment was really good, and the doctor explained everything patiently Also staffs are so friendly" - Daya Anandhi Jayaraman
 
 "I chose this clinic after reading the reviews and because I was in a hurry, as my tooth was aching badly. I had considered going to Apollo, but since it was too far, I decided to c..." - UNNATI KISHOR
+
+
+
+gcloud run deploy sgp1-backend \
+      --source . \
+      --region aasia-south1 \
+      --allow-unauthenticated \
+      --env-vars-file env.yaml

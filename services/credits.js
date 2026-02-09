@@ -89,4 +89,26 @@ async function deductCredits(userId, amount, description) {
     }
 }
 
-module.exports = { getUserCredits, addCredits, deductCredits };
+// Get Transactions History
+async function getTransactions(userId) {
+    if (!db) return [];
+
+    try {
+        const snapshot = await db.collection('transactions')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+            
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
+        }));
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+    }
+}
+
+module.exports = { getUserCredits, addCredits, deductCredits, getTransactions };
