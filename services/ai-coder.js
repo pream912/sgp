@@ -196,6 +196,14 @@ const BASE_PROMPT_END = `
     - You must generate the FULL file. Do not stop in the middle.
     - If the file is long, ensure you close all tags properly.
 
+13. MANDATORY FOOTER ATTRIBUTION:
+    - In the Footer section, adjacent to the copyright notice ("All rights reserved"), you **MUST** include a "Powered By GenWeb" link.
+    - **Link Text:** "Powered By GenWeb"
+    - **URL:** "https://genweb.in"
+    - **Attributes:** target="_blank" rel="noopener noreferrer"
+    - **Styling:** Subtle but visible (e.g., 'text-sm', 'opacity-80', 'hover:opacity-100', 'hover:text-primary').
+    - **Example:** <span>&copy; 2024 Business. All rights reserved.</span> <span class="mx-2">|</span> <a href="https://genweb.in" target="_blank" class="hover:text-primary">Powered By GenWeb</a>
+
 DESIGN INTERPRETATION:
 - VARY THE LAYOUTS. Do not just stack centered text. Use grids, varying alignment, and asymmetry where appropriate.
 - HEADER: Implement the requested 'headerStyle' (e.g., 'sidebar', 'transparent', 'centered').
@@ -292,6 +300,12 @@ async function regenerateSection(code, sectionId, instruction) {
     3. Use the same Tailwind theme and design system.
     4. RETURN THE FULL UPDATED 'index.html' FILE.
     
+    ${sectionId === 'footer' ? `
+    IMPORTANT:
+    - You MUST include a "Powered By GenWeb" link (https://genweb.in) in the footer, near "All rights reserved".
+    - Use subtle styling (e.g., text-sm, opacity-80).
+    ` : ''}
+
     STRICT CONSTRAINTS:
     - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
     `;
@@ -322,6 +336,9 @@ async function regeneratePage(code, instruction) {
     3. Use the same Tailwind theme and design system.
     4. RETURN THE FULL UPDATED 'index.html' FILE.
     
+    IMPORTANT:
+    - Ensure the Footer (data-section="footer") contains a "Powered By GenWeb" link (https://genweb.in) near the copyright notice.
+
     STRICT CONSTRAINTS:
     - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
     `;

@@ -14,7 +14,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const [domain, setDomain] = useState('');
     const [status, setStatus] = useState('idle'); // idle, verifying, verified, linking, success, error
     const [error, setError] = useState(null);
-    const [dnsIp, setDnsIp] = useState(null);
+
 
     // Subdomain State
     const [subdomain, setSubdomain] = useState('');
@@ -27,6 +27,13 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const [planType, setPlanType] = useState('single'); // 'single' or 'multi'
     const [planCost, setPlanCost] = useState(2000);
 
+    // Claim Free Domain State
+    const [view, setView] = useState('setup'); // 'setup' | 'claim'
+    const [claimDomain, setClaimDomain] = useState('');
+    const [claimStatus, setClaimStatus] = useState('idle'); // idle, checking, available, unavailable, claiming, success
+    const [claimError, setClaimError] = useState(null);
+
+
     useEffect(() => {
         if (isOpen && projectId) {
             fetchProjectDetails();
@@ -36,6 +43,9 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
             setDomain('');
             setSubdomain('');
             setSelectedYears(1);
+            setView('setup');
+            setClaimDomain('');
+            setClaimStatus('idle');
         }
     }, [isOpen, projectId]);
 
@@ -145,7 +155,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                 setSubdomainStatus('unavailable');
                 setSubdomainError('Subdomain is taken');
             }
-        } catch (error) {
+        } catch {
             setSubdomainStatus('unavailable');
             setSubdomainError('Error checking availability');
         }
@@ -184,7 +194,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
         if (!domain) return;
         setStatus('verifying');
         setError(null);
-        setDnsIp(null);
+
 
         try {
             const token = await auth.currentUser.getIdToken();
@@ -194,7 +204,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
             });
 
             const { verified, currentIp } = response.data;
-            setDnsIp(currentIp);
+
 
             if (verified) {
                 setStatus('verified');
@@ -228,6 +238,73 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
         }
     };
 
+    // --- Claim Logic ---
+    const handleCheckClaim = async () => {
+        if (!claimDomain) return;
+        
+        // Validate TLD
+        const allowed = ['.com', '.in'];
+        const isValid = allowed.some(tld => claimDomain.toLowerCase().endsWith(tld));
+        if (!isValid) {
+            setClaimStatus('unavailable');
+            setClaimError('Only .in and .com domains are allowed.');
+            return;
+        }
+
+        setClaimStatus('checking');
+        setClaimError(null);
+
+
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await axios.get(`/api/domains/check?domain=${claimDomain}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            const { available, priceDisplay } = response.data;
+            
+            if (!available) {
+                setClaimStatus('unavailable');
+                setClaimError('Domain is already taken.');
+                return;
+            }
+
+            const price = priceDisplay ? priceDisplay.amount : 99999;
+
+
+            if (price > 1000) {
+                 setClaimStatus('unavailable');
+                 setClaimError(`Domain is too expensive for free claim (₹${price}).`);
+            } else {
+                setClaimStatus('available');
+            }
+
+        } catch (err) {
+            console.error(err);
+            setClaimStatus('unavailable');
+            setClaimError('Failed to check availability.');
+        }
+    };
+
+    const handleClaim = async () => {
+        setClaimStatus('claiming');
+        try {
+            const token = await auth.currentUser.getIdToken();
+            await axios.post(`/api/domains/claim`, {
+                domain: claimDomain,
+                projectId
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            
+            setClaimStatus('success');
+            if (onDomainUpdated) onDomainUpdated(claimDomain);
+            // Don't close immediately, show success message
+        } catch (err) {
+            console.error(err);
+            setClaimStatus('unavailable'); // Go back to error state
+            setClaimError(err.response?.data?.error || 'Claim failed.');
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -243,45 +320,155 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                                 <span className="material-symbols-outlined text-[16px]">language</span>
                             </div>
                             <h2 className="text-xl font-bold tracking-tight text-[#333333] dark:text-white">
-                                Domain Settings
+                                {view === 'claim' ? 'Claim Free Domain' : 'Domain Settings'}
                             </h2>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Manage your website's address.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                             {view === 'claim' ? 'Find and claim your free domain.' : 'Manage your website\'s address.'}
+                        </p>
                     </div>
                     <button onClick={onClose} className="group flex items-center justify-center w-8 h-8 -mr-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-orange-500/50">
                         <span className="material-symbols-outlined text-[20px]">close</span>
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-slate-100 dark:border-slate-800">
-                    <button 
-                        onClick={() => setActiveTab('subdomain')}
-                        className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
-                            activeTab === 'subdomain' 
-                                ? 'border-orange-500 text-orange-500' 
-                                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                        }`}
-                    >
-                        Free Subdomain
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('custom')}
-                        className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
-                            activeTab === 'custom' 
-                                ? 'border-orange-500 text-orange-500' 
-                                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                        }`}
-                    >
-                        Custom Domain
-                    </button>
-                </div>
+                {/* Tabs (Hidden in Claim Mode) */}
+                {view !== 'claim' && (
+                    <div className="flex border-b border-slate-100 dark:border-slate-800">
+                        <button 
+                            onClick={() => setActiveTab('subdomain')}
+                            className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
+                                activeTab === 'subdomain' 
+                                    ? 'border-orange-500 text-orange-500' 
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                            }`}
+                        >
+                            Free Subdomain
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('custom')}
+                            className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
+                                activeTab === 'custom' 
+                                    ? 'border-orange-500 text-orange-500' 
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                            }`}
+                        >
+                            Custom Domain
+                        </button>
+                    </div>
+                )}
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                     {loadingProject ? (
                         <div className="flex justify-center py-10">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        </div>
+                    ) : view === 'claim' ? (
+                        /* Claim Domain View */
+                        <div className="space-y-6">
+                            {claimStatus === 'success' ? (
+                                <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in zoom-in duration-300">
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4 text-green-600 dark:text-green-400">
+                                        <span className="material-symbols-outlined text-3xl">check_circle</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Domain Claimed!</h3>
+                                    <p className="text-slate-600 dark:text-slate-400 max-w-sm mx-auto mb-6">
+                                        <strong>{claimDomain}</strong> has been purchased and added to your project. Please wait 5-10 minutes for DNS propagation.
+                                    </p>
+                                    <button 
+                                        onClick={onClose}
+                                        className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-medium"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-900 dark:text-slate-200 mb-2">
+                                            Search for a Domain
+                                        </label>
+                                        <div className="relative flex items-center gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={claimDomain}
+                                                onChange={(e) => {
+                                                    setClaimDomain(e.target.value.toLowerCase());
+                                                    setClaimStatus('idle');
+                                                    setClaimError(null);
+                                                }}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleCheckClaim()}
+                                                className="block w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-slate-900 dark:text-white shadow-sm py-3 px-4 text-base focus:border-orange-500 focus:ring-orange-500"
+                                                placeholder="mybusiness.com"
+                                                disabled={claimStatus === 'claiming'}
+                                            />
+                                            <button 
+                                                onClick={handleCheckClaim}
+                                                disabled={!claimDomain || claimStatus === 'checking' || claimStatus === 'claiming'}
+                                                className="px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 font-medium shrink-0"
+                                            >
+                                                {claimStatus === 'checking' ? 'Checking...' : 'Check'}
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">Only .com and .in domains are eligible for free claim.</p>
+                                    </div>
+
+                                    {/* Results */}
+                                    <div className="min-h-[100px]">
+                                        {claimError && (
+                                            <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg flex items-start gap-3">
+                                                <span className="material-symbols-outlined text-red-500 mt-0.5">error</span>
+                                                <div>
+                                                    <p className="font-semibold text-red-800 dark:text-red-300">Unavailable</p>
+                                                    <p className="text-sm text-red-700 dark:text-red-400">{claimError}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {claimStatus === 'available' && (
+                                            <div className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-green-500">check_circle</span>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900 dark:text-white text-lg">{claimDomain}</p>
+                                                            <p className="text-sm text-green-700 dark:text-green-400">Available & Eligible!</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-900/30 flex justify-end">
+                                                    <button 
+                                                        onClick={handleClaim}
+                                                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow-md shadow-green-500/20 flex items-center gap-2"
+                                                    >
+                                                        Claim this domain name
+                                                        <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {claimStatus === 'claiming' && (
+                                            <div className="text-center py-4">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                                                <p className="text-slate-600 dark:text-slate-400">Purchasing and configuring domain...</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                                        <button 
+                                            onClick={() => setView('setup')}
+                                            disabled={claimStatus === 'claiming'}
+                                            className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium flex items-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                                            Back to Settings
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : activeTab === 'subdomain' ? (
                         /* Subdomain Tab Content */
@@ -390,36 +577,75 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                         </div>
                     ) : (
                         /* Custom Domain Tab Content */
-                        <div className="space-y-3">
-                            <label className="block text-sm font-medium text-slate-900 dark:text-slate-200" htmlFor="domain-input">Custom Domain Name</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                                    <span className="material-symbols-outlined text-slate-400 group-focus-within:text-orange-500 transition-colors text-[20px]">language</span>
-                                </div>
-                                <input 
-                                    className="block w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-slate-900 dark:text-white shadow-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 py-3.5 pl-11 pr-10 text-base transition-all" 
-                                    id="domain-input" 
-                                    placeholder="example.com" 
-                                    type="text"
-                                    value={domain}
-                                    onChange={(e) => setDomain(e.target.value)}
-                                    disabled={status === 'success'}
-                                />
-                                {status === 'verified' && (
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <span className="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+                        <div className="space-y-6">
+                            
+                            {/* Option 1: Claim New */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-orange-500 text-[20px]">shopping_cart</span>
+                                    Get a New Domain
+                                </h3>
+                                {/* Add Claim Free Domain Button */}
+                                <button 
+                                    onClick={() => setView('claim')}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 border border-orange-500/20 rounded-lg transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-md shadow-orange-500/30">
+                                            <span className="material-symbols-outlined text-[18px]">redeem</span>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-bold text-slate-900 dark:text-white text-sm">Claim Free Domain</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">Get a .com or .in domain on us!</p>
+                                        </div>
                                     </div>
-                                )}
+                                    <span className="material-symbols-outlined text-orange-500">arrow_forward_ios</span>
+                                </button>
                             </div>
 
-                            <div className="relative py-6">
-                                <div aria-hidden="true" className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
-                                </div>
-                                <div className="relative flex justify-center">
-                                    <span className="px-3 bg-white dark:bg-[#1a192b] text-xs font-semibold text-slate-400 uppercase tracking-wider">Required Configuration</span>
-                                </div>
+                            {/* Divider */}
+                            <div className="relative flex items-center py-2">
+                                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                                <span className="flex-shrink-0 mx-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">OR</span>
+                                <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
                             </div>
+
+                            {/* Option 2: Connect Existing */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-blue-500 text-[20px]">link</span>
+                                    Connect Existing Domain
+                                </h3>
+                                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" htmlFor="domain-input">Enter your domain name</label>
+                                
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                        <span className="material-symbols-outlined text-slate-400 group-focus-within:text-orange-500 transition-colors text-[20px]">language</span>
+                                    </div>
+                                    <input 
+                                        className="block w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-slate-900 dark:text-white shadow-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 py-3.5 pl-11 pr-10 text-base transition-all" 
+                                        id="domain-input" 
+                                        placeholder="example.com" 
+                                        type="text"
+                                        value={domain}
+                                        onChange={(e) => setDomain(e.target.value)}
+                                        disabled={status === 'success'}
+                                    />
+                                    {status === 'verified' && (
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <span className="material-symbols-outlined text-green-500 text-[20px]">check_circle</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="relative py-6">
+                                    <div aria-hidden="true" className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="px-3 bg-white dark:bg-[#1a192b] text-xs font-semibold text-slate-400 uppercase tracking-wider">Required Configuration</span>
+                                    </div>
+                                </div>
 
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2">
@@ -522,13 +748,11 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                                 </div>
                             </div>
                         </div>
+                    </div>
                     )}
                 </div>
 
-                {/* Footer only for Custom tab if needed, but I moved buttons inside. Let's keep a minimal footer or remove it if buttons are inside. 
-                    I'll keep a minimal footer for the Cancel button if needed, or rely on the header Close.
-                    Actually, the original design had a footer. I'll put a simple close there if not in the tabs.
-                */}
+
             </div>
         </div>
     );

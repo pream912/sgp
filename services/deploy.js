@@ -94,4 +94,28 @@ async function makeBucketPublic(bucketName) {
     }
 }
 
-module.exports = { deploySite, makeBucketPrivate, makeBucketPublic };
+async function deleteSiteBucket(projectId) {
+    const bucketName = `site-${projectId}`;
+    console.log(`Deleting bucket ${bucketName}...`);
+    
+    try {
+        const bucket = storage.bucket(bucketName);
+        const [exists] = await bucket.exists();
+        
+        if (exists) {
+            // Buckets must be empty before deletion
+            await bucket.deleteFiles({ force: true }); // Delete all files
+            await bucket.delete(); // Delete the bucket itself
+            console.log(`Bucket ${bucketName} deleted successfully.`);
+        } else {
+            console.log(`Bucket ${bucketName} does not exist, skipping.`);
+        }
+    } catch (error) {
+        console.error(`Failed to delete bucket ${bucketName}:`, error);
+        // We throw so the caller knows, but maybe we shouldn't block the whole project delete?
+        // Let's throw for now so we see the error.
+        throw error;
+    }
+}
+
+module.exports = { deploySite, makeBucketPrivate, makeBucketPublic, deleteSiteBucket };

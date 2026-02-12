@@ -1,7 +1,7 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
 const CreditsContext = createContext();
 
@@ -11,46 +11,39 @@ export const CreditsProvider = ({ children }) => {
     const [credits, setCredits] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    const fetchCredits = useCallback(async () => {
-        try {
-            const user = auth.currentUser;
-            if (!user) {
-                return;
-            }
-            
-            const token = await user.getIdToken();
-            const response = await axios.get('/api/credits', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setCredits(response.data.credits);
-        } catch (error) {
-            console.error('Error fetching credits:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
-        // Listen for auth state changes to trigger initial fetch
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        let unsubscribeCredits = null;
+
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user) {
-                fetchCredits();
+                // Real-time listener for user credits
+                const userRef = doc(db, 'users', user.uid);
+                unsubscribeCredits = onSnapshot(userRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setCredits(docSnap.data().credits || 0);
+                    } else {
+                        setCredits(0);
+                    }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error listening to credits:", error);
+                    setLoading(false);
+                });
             } else {
                 setCredits(0);
                 setLoading(false);
+                if (unsubscribeCredits) unsubscribeCredits();
             }
         });
-        
-        // Poll every 30s
-        const interval = setInterval(() => {
-            if (auth.currentUser) fetchCredits();
-        }, 30000);
 
         return () => {
-            unsubscribe();
-            clearInterval(interval);
+            unsubscribeAuth();
+            if (unsubscribeCredits) unsubscribeCredits();
         };
-    }, [fetchCredits]);
+    }, []);
+
+    // Real-time listener handles updates automatically.
+    const fetchCredits = () => {};
 
     return (
         <CreditsContext.Provider value={{ credits, loading, fetchCredits }}>

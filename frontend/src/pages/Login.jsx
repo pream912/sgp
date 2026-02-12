@@ -51,7 +51,7 @@ const Login = () => {
     // 3. Create fresh instance
     auth.useDeviceLanguage(); // Ensure language is set
     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'normal',
+      'size': 'invisible',
       'callback': (response) => {
         // reCAPTCHA solved - response is the token
         console.log("Recaptcha Solved");
@@ -208,7 +208,7 @@ const Login = () => {
                   </div>
                 </div>
 
-                <div id="recaptcha-container" className="my-2"></div>
+                <div id="recaptcha-container"></div>
 
                 <button 
                   disabled={loading || phoneNumber.length < 10}

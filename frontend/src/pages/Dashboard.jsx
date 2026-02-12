@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { auth, db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import LeadsModal from '../components/LeadsModal';
@@ -25,8 +26,39 @@ const Dashboard = () => {
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [domainModalData, setDomainModalData] = useState({ projectId: null, currentDomain: null });
 
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
+
   const navigate = useNavigate();
   const { credits, fetchCredits } = useCredits();
+
+  useEffect(() => {
+    // Click outside to close dropdown
+    const handleClickOutside = (event) => {
+        if (activeDropdownId && !event.target.closest('.project-menu')) {
+            setActiveDropdownId(null);
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdownId]);
+
+  const handleDeleteProject = async (projectId) => {
+      if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone and will remove all associated resources.")) {
+          return;
+      }
+
+      try {
+          const token = await auth.currentUser.getIdToken();
+          await axios.delete(`/api/projects/${projectId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          // Optimistic update handled by realtime listener, but we can clear dropdown
+          setActiveDropdownId(null);
+      } catch (error) {
+          console.error("Delete failed:", error);
+          alert("Failed to delete project: " + (error.response?.data?.error || error.message));
+      }
+  };
 
   useEffect(() => {
     let unsubscribe;
@@ -183,7 +215,7 @@ const Dashboard = () => {
                     }
 
                     return (
-                    <div key={project.id} className="group bg-white dark:bg-[#1e1c2e] rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-[360px]">
+                    <div key={project.id} className="group bg-white dark:bg-[#1e1c2e] rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-200 dark:border-slate-800 flex flex-col h-[360px]">
                         
                         {/* Card Image */}
                         <div className="relative aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
@@ -235,9 +267,72 @@ const Dashboard = () => {
                                         </a>
                                     )}
                                 </div>
-                                <button className="text-slate-400 hover:text-orange-500 transition-colors">
-                                    <span className="material-symbols-outlined">more_vert</span>
-                                </button>
+                                <div className="relative project-menu">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveDropdownId(activeDropdownId === project.id ? null : project.id);
+                                        }}
+                                        className="p-1 text-slate-400 hover:text-orange-500 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined">more_vert</span>
+                                    </button>
+                                    
+                                    {activeDropdownId === project.id && (
+                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#1e1c2e] rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden text-left py-1">
+                                            {!project.isPublished && (
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveDropdownId(null);
+                                                        openPublishModal(project);
+                                                    }}
+                                                    className="w-full px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px] text-green-500">rocket_launch</span>
+                                                    Publish
+                                                </button>
+                                            )}
+                                            
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveDropdownId(null);
+                                                    openLeads(project.projectId);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">contacts</span>
+                                                Leads
+                                            </button>
+
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveDropdownId(null);
+                                                    openDomainModal(project.projectId, project.customDomain);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">language</span>
+                                                Domain Settings
+                                            </button>
+                                            
+                                            <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
+
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteProject(project.projectId);
+                                                }}
+                                                className="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2 transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                Delete Project
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             
                             <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
@@ -249,33 +344,14 @@ const Dashboard = () => {
                                     </div> */}
                                 </div>
                                 
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex gap-1">
-                                        <button onClick={() => openLeads(project.projectId)} className="p-2 text-slate-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors tooltip" title="Leads">
-                                            <span className="material-symbols-outlined text-[20px]">contacts</span>
-                                        </button>
-                                        <button onClick={() => openDomainModal(project.projectId, project.customDomain)} className="p-2 text-slate-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors tooltip" title="Domain Settings">
-                                            <span className="material-symbols-outlined text-[20px]">language</span>
-                                        </button>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {!project.isPublished && (
-                                            <button 
-                                                onClick={() => openPublishModal(project)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500 hover:text-white rounded-lg text-sm font-semibold transition-all"
-                                            >
-                                                <span className="material-symbols-outlined text-[16px]">rocket_launch</span>
-                                                Publish
-                                            </button>
-                                        )}
-                                        <Link 
-                                            to={`/editor/${project.projectId}?mode=section`}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white rounded-lg text-sm font-semibold transition-all"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">edit</span>
-                                            Edit
-                                        </Link>
-                                    </div>
+                                <div className="flex items-center justify-end gap-2 w-full">
+                                    <Link 
+                                        to={`/editor/${project.projectId}?mode=section`}
+                                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded-xl text-sm font-bold transition-all w-full shadow-lg shadow-orange-500/20"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                                        Edit Site
+                                    </Link>
                                 </div>
                             </div>
                         </div>

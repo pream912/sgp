@@ -10,7 +10,7 @@ async function fetchImages(keywords, count = 10) {
             images = await fetchUnsplashImages(keywords, count);
             if (images.length > 0) return images;
         } catch (e) {
-            console.warn(`[Images] Unsplash failed:`, e.message);
+            console.warn(`[Images] Unsplash failed for keywords [${keywords.join(', ')}]:`, e.message);
         }
     } else {
         console.warn('[Images] No UNSPLASH_ACCESS_KEY found. Skipping.');
@@ -36,12 +36,13 @@ async function fetchImages(keywords, count = 10) {
 
 async function fetchUnsplashImages(keywords, count) {
     const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-    const query = keywords.join(' ');
+    const query = (Array.isArray(keywords) ? keywords : [keywords]).join(' ');
     const url = `https://api.unsplash.com/photos/random?client_id=${accessKey}&query=${encodeURIComponent(query)}&count=${count}&orientation=landscape`;
 
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`Unsplash API Error: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Unsplash API Error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -51,7 +52,7 @@ async function fetchUnsplashImages(keywords, count) {
 async function fetchPexelsImages(keywords, count) {
     const apiKey = process.env.PEXELS_API_KEY;
     // Pexels search query
-    const query = keywords.join(' ');
+    const query = (Array.isArray(keywords) ? keywords : [keywords]).join(' ');
     const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`;
 
     const response = await fetch(url, {

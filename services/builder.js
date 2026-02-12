@@ -1,6 +1,6 @@
 const fs = require('fs-extra');
 const path = require('path');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
@@ -59,16 +59,19 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         const msgSkeleton = `[${id}] Copying skeleton...`;
         console.log(msgSkeleton);
         onProgress(msgSkeleton);
-        // Copy everything EXCEPT node_modules
+        
+        // Copy everything EXCEPT node_modules AND src (we will use src/input.css from skeleton directly)
         await fs.copy(skeletonDir, tempDir, {
-            filter: (src) => !src.includes('node_modules')
+            filter: (src) => {
+                 // Check if it's node_modules or src (we only need src/input.css which we use directly)
+                 // Actually we do need src if we had JS files there, but we only have input.css.
+                 // Let's copy non-node_modules files.
+                 return !src.includes(`${path.sep}node_modules${path.sep}`) && !src.endsWith(`${path.sep}node_modules`);
+            }
         });
         
-        // Symlink node_modules to save time/space
-        await fs.ensureSymlink(
-            path.join(skeletonDir, 'node_modules'),
-            path.join(tempDir, 'node_modules')
-        );
+        // NO SYMLINK, NO COPY of node_modules.
+        // We will run Tailwind from the skeleton directory directly.
 
         await fs.ensureDir(distDir); // Ensure dist exists
         
@@ -193,8 +196,13 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
             await setupConfig(tempDir, distDir, designSystem, id);
             
             // Try build (Tailwind CLI)
+            // We run FROM skeletonDir, pointing input/output/config to tempDir via absolute paths
+            const configPath = path.join(tempDir, 'tailwind.config.js');
+            const inputPath = path.join(skeletonDir, 'src/input.css'); // Use original input.css
+            const outputPath = path.join(distDir, 'style.css');
+
             try {
-                await runBuild(tempDir);
+                await runBuild(skeletonDir, configPath, inputPath, outputPath);
                 success = true;
             } catch (error) {
                 console.error(`[${id}] Build Failed:`, error.message);
@@ -349,10 +357,11 @@ async function setupConfig(rootDir, distDir, designSystem, id) {
 
     // 4. Update tailwind.config.js
     const configPath = path.join(rootDir, 'tailwind.config.js');
+    const absDistDir = path.resolve(distDir); // Ensure absolute paths in config
     const newConfig = `
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./dist/*.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: ["${absDistDir}/*.html", "${rootDir}/src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       fontFamily: {
@@ -379,15 +388,26 @@ module.exports = {
 async function rebuildSite(id) {
     const sourceDir = path.join(__dirname, '../projects_source', id);
     const publicSiteDir = path.join(__dirname, '../public/sites', id);
+    // For rebuild, we assume node_modules are INSIDE project folder (legacy) or we use shared skeleton?
+    // The current logic assumes project source HAS node_modules because it was moved from temp.
+    // BUT we changed buildSite to NOT copy node_modules.
+    // So sourceDir will NOT have node_modules.
+    // We must run rebuild using the skeleton strategy too.
+    
+    const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
 
     if (!await fs.pathExists(sourceDir)) {
         throw new Error(`Project source not found: ${id}`);
     }
 
-    console.log(`[${id}] Re-building site (Tailwind)...`);
+    console.log(`[${id}] Re-building site (Tailwind) using skeleton modules...`);
     
     try {
-        await runBuild(sourceDir);
+        const configPath = path.join(sourceDir, 'tailwind.config.js');
+        const inputPath = path.join(skeletonDir, 'src/input.css');
+        const outputPath = path.join(sourceDir, 'dist/style.css');
+        
+        await runBuild(skeletonDir, configPath, inputPath, outputPath);
         
         // Move dist contents to public (Actually, dist IS the content now, but we need to ensure structure)
         // sourceDir contains 'dist'.
@@ -402,24 +422,67 @@ async function rebuildSite(id) {
     }
 }
 
-function runBuild(dir) {
+function runBuild(cwd, configPath, inputPath, outputPath) {
     return new Promise((resolve, reject) => {
-        // Run Tailwind CLI
-        // Input: src/input.css (relative to dir)
-        // Output: dist/style.css (relative to dir)
-        // Use local binary directly to avoid npx path issues with symlinks
-        // Ensure binary is executable first
-        const command = 'chmod +x ./node_modules/.bin/tailwindcss && ./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify';
+        // Command parts
+        // Use absolute paths for arguments.
+        // Run FROM skeleton directory where node_modules is guaranteed to be correct.
+        const command = `chmod +x ./node_modules/.bin/tailwindcss && ./node_modules/.bin/tailwindcss -i "${inputPath}" -o "${outputPath}" -c "${configPath}" --minify`;
         
-        exec(command, { cwd: dir }, (error, stdout, stderr) => {
-            if (error) {
-                const output = `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
-                reject({ message: error.message, stderr: output }); 
-            } else {
+        console.log(`[Builder] Spawning build command in ${cwd}...`);
+        
+        // Log memory usage before build
+        const used = process.memoryUsage();
+        console.log(`[Builder] Memory before spawn: RSS ${Math.round(used.rss / 1024 / 1024)}MB`);
+
+        const child = spawn(command, { 
+            cwd: cwd, // Important: Run inside skeleton
+            shell: true,
+            stdio: ['ignore', 'pipe', 'pipe'] // Ignore stdin, pipe stdout/stderr
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+            const chunk = data.toString();
+            stdout += chunk;
+        });
+
+        child.stderr.on('data', (data) => {
+            const chunk = data.toString();
+            stderr += chunk;
+            console.warn(`[Builder STDERR] ${chunk}`); 
+        });
+
+        const timeout = setTimeout(() => {
+            child.kill('SIGTERM');
+            reject(new Error('Build timed out after 180 seconds'));
+        }, 180000); // 180s timeout
+
+        child.on('close', (code) => {
+            clearTimeout(timeout);
+            if (code === 0) {
+                console.log(`[Builder] Build completed successfully.`);
                 resolve();
+            } else {
+                console.error(`[Builder] Build process exited with code ${code}`);
+                // Log final memory
+                const usedEnd = process.memoryUsage();
+                console.log(`[Builder] Memory on failure: RSS ${Math.round(usedEnd.rss / 1024 / 1024)}MB`);
+                
+                reject({ 
+                    message: `Build failed with code ${code}`, 
+                    stderr: stderr,
+                    stdout: stdout
+                });
             }
+        });
+
+        child.on('error', (err) => {
+            clearTimeout(timeout);
+            console.error(`[Builder] Spawn error:`, err);
+            reject(err);
         });
     });
 }
-
-module.exports = { buildSite, rebuildSite };

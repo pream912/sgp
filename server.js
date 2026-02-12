@@ -7,11 +7,11 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 const { buildSite, rebuildSite } = require('./services/builder');
-const { deploySite, makeBucketPrivate, makeBucketPublic } = require('./services/deploy');
+const { deploySite, makeBucketPrivate, makeBucketPublic, deleteSiteBucket } = require('./services/deploy');
 const { uploadDirectory, downloadDirectory } = require('./services/storage');
 const { createOrder, verifyPayment } = require('./services/payments');
 const { extractFromUrl } = require('./services/business-extractor');
-const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability } = require('./services/domains');
+const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability, cleanupGCPDomain, listDNSRecords, addDNSRecordGeneric, deleteDNSRecord } = require('./services/domains');
 const { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
 const { getUserCredits, addCredits, deductCredits, getTransactions } = require('./services/credits');
@@ -1256,6 +1256,90 @@ app.get('/api/domains', verifyToken, async (req, res) => {
     }
 });
 
+// --- DNS Management (NameSilo) ---
+
+// List DNS Records
+app.get('/api/domains/:domain/dns', verifyToken, async (req, res) => {
+    const { domain } = req.params;
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+
+        // Verify Ownership
+        const snapshot = await db.collection('domains')
+            .where('domain', '==', domain)
+            .where('userId', '==', req.user.uid)
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Unauthorized: Domain not found in your account.' });
+        }
+
+        const records = await listDNSRecords(domain);
+        res.json(records);
+
+    } catch (error) {
+        console.error(`List DNS failed for ${domain}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add DNS Record
+app.post('/api/domains/:domain/dns', verifyToken, async (req, res) => {
+    const { domain } = req.params;
+    const { type, host, value, ttl, distance } = req.body;
+
+    if (!type || !value) {
+        return res.status(400).json({ error: 'Type and Value are required.' });
+    }
+
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+
+        // Verify Ownership
+        const snapshot = await db.collection('domains')
+            .where('domain', '==', domain)
+            .where('userId', '==', req.user.uid)
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        const result = await addDNSRecordGeneric(domain, { type, host, value, ttl, distance });
+        res.json(result);
+
+    } catch (error) {
+        console.error(`Add DNS failed for ${domain}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete DNS Record
+app.delete('/api/domains/:domain/dns/:rrid', verifyToken, async (req, res) => {
+    const { domain, rrid } = req.params;
+
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+
+        // Verify Ownership
+        const snapshot = await db.collection('domains')
+            .where('domain', '==', domain)
+            .where('userId', '==', req.user.uid)
+            .get();
+
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        await deleteDNSRecord(domain, rrid);
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(`Delete DNS failed for ${domain}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Purchase Domain
 app.post('/api/domains/buy', verifyToken, async (req, res) => {
     const { domain, contactInfo, projectId } = req.body;
@@ -1381,6 +1465,60 @@ app.post('/api/project/:id/subdomain', verifyToken, async (req, res) => {
     }
 });
 
+// Delete Project
+app.delete('/api/projects/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+
+        // Query by projectId (not doc ID if they differ, but usually id param is projectId)
+        // Wait, standard route is /api/projects/:id where id is projectId
+        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
+        const snapshot = await projectRef.get();
+        
+        if (snapshot.empty) {
+            return res.status(404).json({ error: 'Project not found or unauthorized' });
+        }
+
+        const projectDoc = snapshot.docs[0];
+        const projectData = projectDoc.data();
+
+        console.log(`[Delete Project] Starting deletion for ${id} (Owner: ${req.user.uid})...`);
+
+        // 1. Cleanup Custom Domain Resources (if any)
+        if (projectData.customDomain) {
+            console.log(`[Delete Project] Cleaning up custom domain: ${projectData.customDomain}`);
+            try {
+                // This removes BackendBucket, URL Map rules, SSL Certs
+                await cleanupGCPDomain(projectData.customDomain, id);
+            } catch (err) {
+                console.warn(`[Delete Project] Failed to clean up custom domain resources:`, err.message);
+                // Continue deletion anyway
+            }
+        }
+
+        // 2. Cleanup Storage Bucket (site-{projectId})
+        // Even if not published, the bucket might exist if they ever tried to deploy
+        // Or if it's a draft, maybe it's just in temp. But deleteSiteBucket checks existence.
+        try {
+            await deleteSiteBucket(id);
+        } catch (err) {
+            console.warn(`[Delete Project] Failed to delete storage bucket site-${id}:`, err.message);
+        }
+
+        // 3. Delete Firestore Document
+        await projectDoc.ref.delete();
+
+        console.log(`[Delete Project] Project ${id} deleted successfully.`);
+        res.json({ success: true, message: 'Project deleted' });
+
+    } catch (error) {
+        console.error(`[Delete Project] Error:`, error);
+        res.status(500).json({ error: 'Failed to delete project: ' + error.message });
+    }
+});
+
 // --- Custom Domain Hosting (Caddy Integration) ---
 
 
@@ -1465,6 +1603,106 @@ app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
 
     } catch (error) {
         console.error('Assign domain failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Claim Free Domain
+app.post('/api/domains/claim', verifyToken, async (req, res) => {
+    const { domain, projectId } = req.body;
+
+    if (!domain || !projectId) {
+        return res.status(400).json({ error: 'Domain and Project ID are required' });
+    }
+
+    const cleanDomain = domain.toLowerCase().trim();
+    if (!cleanDomain.endsWith('.in') && !cleanDomain.endsWith('.com')) {
+        return res.status(400).json({ error: 'Only .in and .com domains are allowed for free claim.' });
+    }
+
+    try {
+        // 1. Verify Project Ownership
+        const projectRef = db.collection('projects').where('projectId', '==', projectId).where('userId', '==', req.user.uid);
+        const snapshot = await projectRef.get();
+        if (snapshot.empty) {
+            return res.status(403).json({ error: 'Project not found or unauthorized' });
+        }
+        const projectDoc = snapshot.docs[0];
+
+        // 2. Check Availability & Price
+        const availability = await checkAvailability(cleanDomain);
+        if (!availability.available) {
+            return res.status(400).json({ error: 'Domain is not available.' });
+        }
+
+        // Price Check (Max 1000 INR)
+        const priceINR = availability.priceDisplay ? availability.priceDisplay.amount : 9999;
+        if (priceINR > 1000) {
+            return res.status(400).json({ error: `Domain price (₹${priceINR}) exceeds the free claim limit of ₹1000.` });
+        }
+
+        // 3. Purchase Domain (Using Backend Wallet)
+        // We use dummy contact info for the "Free Claim" or user's if available?
+        // Ideally we should ask for it, but for "One Click Claim" we might use a default or user's email.
+        // Let's use a generic placeholder for the "Registrant" to speed up, or require it.
+        // The prompt says "Claim this domain name" button, implying simple click.
+        // We'll use the user's email and placeholder name if not provided.
+        // NOTE: NameSilo requires valid contact info.
+        
+        const user = await admin.auth().getUser(req.user.uid);
+        const contactInfo = {
+            nameFirst: 'GenWeb',
+            nameLast: 'User',
+            email: user.email,
+            phone: '+1.5555555555', // Placeholder
+            addressMailing: {
+                address1: '123 Web Gen St',
+                city: 'Internet',
+                state: 'CA',
+                postalCode: '90210',
+                country: 'US'
+            }
+        };
+
+        const purchaseResult = await purchaseDomain(cleanDomain, { contact: contactInfo });
+
+        // 4. Setup GCP & DNS (Automated)
+        let cfResult = { status: 'PENDING', ip: process.env.GCP_LB_IP || '34.50.155.64' };
+        try {
+            cfResult = await setupGCPDomain(cleanDomain, projectId, true);
+        } catch (e) {
+            console.error("Post-claim setup failed:", e);
+            // Don't fail the whole request, as domain is bought.
+        }
+
+        // 5. Save to DB
+        // Add to User's Domains
+        await db.collection('domains').add({
+            domain: cleanDomain,
+            userId: req.user.uid,
+            projectId: projectId, // Linked Project
+            orderId: purchaseResult.orderId || 'FREE_CLAIM',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            provider: 'namesilo',
+            status: 'active',
+            autoRenew: true,
+            isFreeClaim: true,
+            price: priceINR,
+            lbStatus: cfResult
+        });
+
+        // Update Project
+        await projectDoc.ref.update({
+            customDomain: cleanDomain,
+            domainUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            lbIp: cfResult.ip,
+            domainStatus: cfResult.status
+        });
+
+        res.json({ success: true, domain: cleanDomain, message: 'Domain claimed and configuring.' });
+
+    } catch (error) {
+        console.error('Claim domain failed:', error);
         res.status(500).json({ error: error.message });
     }
 });

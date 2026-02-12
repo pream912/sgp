@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smile Dental Care</title>
+    <meta name="description" content="Smile Dental Care offers exceptional and painless dental procedures, including advanced low-level laser treatments. Our skilled and caring doctors provide free consultations in a clean, peaceful, and friendly atmosphere.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    
+    
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Lato:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<link rel="icon" type="image/png" href="./logo.png" />
+</head>
+<body class="bg-background font-body text-text antialiased">
+
+    <!-- Header -->
+    <header data-section="header" id="header" class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 shadow-sm transition-all duration-300">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="index.html" class="flex-shrink-0">
+                    <img src="./logo.png" alt="Smile Dental Care Logo" class="h-12 w-auto">
+                </a>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="font-body text-base font-bold text-primary border-b-2 border-primary pb-1">Home</a>
+                    <a href="about.html" class="font-body text-base text-text hover:text-primary transition-colors duration-300">About</a>
+                    <a href="services.html" class="font-body text-base text-text hover:text-primary transition-colors duration-300">Services</a>
+                    <a href="gallery.html" class="font-body text-base text-text hover:text-primary transition-colors duration-300">Gallery</a>
+                    <a href="contact.html" class="font-body text-base text-text hover:text-primary transition-colors duration-300">Contact</a>
+                </nav>
+
+                <!-- CTA & Mobile Menu Button -->
+                <div class="flex items-center space-x-4">
+                     <a href="#contact" class="hidden sm:inline-block bg-buttonBackground text-buttonText font-body font-bold py-3 px-6 rounded-lg shadow-md hover:bg-primary/90 hover:shadow-lg transition-all duration-300">
+                        Book Consultation
+                    </a>
+                    <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-text hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
+                        <span class="sr-only">Open main menu</span>
+                        <i class="fas fa-bars fa-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="bg-secondary text-primary block px-3 py-2 rounded-md text-base font-medium">Home</a>
+                <a href="about.html" class="text-text hover:bg-secondary hover:text-primary block px-3 py-2 rounded-md text-base font-medium">About</a>
+                <a href="services.html" class="text-text hover:bg-secondary hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Services</a>
+                <a href="gallery.html" class="text-text hover:bg-secondary hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Gallery</a>
+                <a href="contact.html" class="text-text hover:bg-secondary hover:text-primary block px-3 py-2 rounded-md text-base font-medium">Contact</a>
+                 <a href="#contact" class="w-full mt-4 text-center bg-buttonBackground text-buttonText font-body font-bold py-3 px-6 rounded-lg shadow-md hover:bg-primary/90 transition-all duration-300 block">
+                    Book Consultation
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Hero Section -->
+        <section data-section="hero" class="bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div data-aos="fade-right">
+                        <span class="font-heading font-semibold text-primary uppercase tracking-wider">Welcome to Smile Dental Care</span>
+                        <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-text mt-4 mb-6 leading-tight">
+                            Exceptional Care for Your Brightest Smile.
+                        </h1>
+                        <p class="font-body text-lg text-text/80 mb-8">
+                            Experience painless dental procedures with our advanced low-level laser technology. Our highly skilled and caring team is dedicated to your comfort and oral health.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <a href="#contact" class="bg-buttonBackground text-buttonText font-body font-bold py-4 px-8 rounded-lg shadow-lg hover:bg-primary/90 transform hover:-translate-y-1 transition-all duration-300 text-center">
+                                Get a Free Consultation
+                            </a>
+                            <a href="#features" class="bg-secondary text-primary font-body font-bold py-4 px-8 rounded-lg hover:bg-secondary/80 transition-all duration-300 text-center">
+                                Learn More
+                            </a>
+                        </div>
+                    </div>
+                    <div data-aos="fade-left" class="relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl -z-10"></div>
+                        <img src="https://images.pexels.com/photos/5355901/pexels-photo-5355901.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Patient smiling after dental treatment" class="rounded-xl shadow-2xl w-full h-auto object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section data-section="features" id="features" class="py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto" data-aos="fade-up">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text">Why Choose Smile Dental Care?</h2>
+                    <p class="mt-4 font-body text-lg text-text/70">
+                        We prioritize your comfort and health with state-of-the-art technology and a patient-first approach.
+                    </p>
+                </div>
+
+                <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Feature Card 1 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="100">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-hand-sparkles fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Painless Procedures</h3>
+                        <p class="font-body text-text/70">Our use of advanced technology ensures your treatment is as comfortable and pain-free as possible.</p>
+                    </div>
+                    <!-- Feature Card 2 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-microchip fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Advanced Laser Tech</h3>
+                        <p class="font-body text-text/70">We utilize cutting-edge low-level laser technology for precision, faster healing, and superior results.</p>
+                    </div>
+                    <!-- Feature Card 3 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-user-doctor fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Skilled & Caring Doctors</h3>
+                        <p class="font-body text-text/70">Our experienced doctors take the time to explain every step, ensuring you feel informed and at ease.</p>
+                    </div>
+                    <!-- Feature Card 4 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="100">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-gift fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Free Consultation</h3>
+                        <p class="font-body text-text/70">We offer a complimentary initial consultation, focusing on your needs and providing honest advice.</p>
+                    </div>
+                    <!-- Feature Card 5 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="200">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-pump-soap fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Clean & Peaceful Clinic</h3>
+                        <p class="font-body text-text/70">Our clinic is designed to be a calm, clean, and welcoming space for all our patients.</p>
+                    </div>
+                    <!-- Feature Card 6 -->
+                    <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100 text-center" data-aos="fade-up" data-aos-delay="300">
+                        <div class="bg-secondary text-primary h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-people-group fa-2x"></i>
+                        </div>
+                        <h3 class="font-heading text-xl font-bold text-text mb-3">Friendly Staff</h3>
+                        <p class="font-body text-text/70">From the moment you walk in, our friendly staff will make you feel right at home.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bento Grid Services Section -->
+        <section data-section="bento-services" class="bg-white py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-left max-w-3xl mb-12" data-aos="fade-up">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text">Our Modern Approach to Dentistry</h2>
+                    <p class="mt-4 font-body text-lg text-text/70">
+                        Discover how our innovative services and state-of-the-art facilities redefine the dental experience.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 grid-rows-2 gap-6 h-[600px] md:h-[700px]">
+                    <!-- Large Card: Laser Treatment -->
+                    <div class="md:col-span-2 lg:col-span-2 row-span-2 bg-primary text-white p-8 rounded-xl shadow-lg flex flex-col justify-end" data-aos="zoom-in" style="background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url('https://images.pexels.com/photos/5622232/pexels-photo-5622232.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'); background-size: cover; background-position: center;">
+                        <h3 class="font-heading text-2xl font-bold">Low-Level Laser Treatment</h3>
+                        <p class="font-body mt-2 opacity-90">A revolutionary, painless method for treating cavities and other dental issues, promoting faster healing and enhanced comfort.</p>
+                    </div>
+                    <!-- Small Card: General Work -->
+                    <div class="bg-secondary p-8 rounded-xl shadow-lg flex flex-col justify-center items-center text-center" data-aos="fade-left" data-aos-delay="100">
+                        <i class="fas fa-tooth fa-3x text-primary mb-4"></i>
+                        <h3 class="font-heading text-xl font-bold text-text">General Dentistry</h3>
+                        <p class="font-body text-sm text-text/80 mt-1">Comprehensive care for your everyday oral health needs.</p>
+                    </div>
+                    <!-- Small Card: Image -->
+                    <div class="hidden lg:block bg-gray-200 rounded-xl shadow-lg overflow-hidden" data-aos="fade-down" data-aos-delay="200">
+                        <img src="https://images.pexels.com/photos/5622023/pexels-photo-5622023.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Modern dental equipment" class="w-full h-full object-cover">
+                    </div>
+                    <!-- Small Card: Image -->
+                    <div class="md:col-span-1 lg:col-span-2 bg-gray-200 rounded-xl shadow-lg overflow-hidden" data-aos="fade-up" data-aos-delay="300">
+                        <img src="https://images.pexels.com/photos/6627533/pexels-photo-6627533.jpeg?auto=compress&cs=tinysrgb&h=650&w=940" alt="Clean dental office interior" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section data-section="testimonials" class="py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto" data-aos="fade-up">
+                    <h2 class="font-heading text-3xl md:text-4xl font-bold text-text">What Our Patients Say</h2>
+                    <p class="mt-4 font-body text-lg text-text/70">
+                        We're proud of the trust our patients place in us. Here's what they have to share about their experiences.
+                    </p>
+                </div>
+
+                <div class="mt-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Testimonial 1 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100" data-aos="fade-up" data-aos-delay="100">
+                        <div class="flex text-accent mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="font-body text-text/80 italic">"🤩 Exceptional Dental Care & Smooth Procedure! ... The doctor is genuinely exceptional—possessing high skill and a wonderful, caring demeanor. ... Visit them once; you'll never consider going anywhere else!"</p>
+                        <p class="font-heading font-semibold mt-6 text-text">- Happy Patient</p>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100" data-aos="fade-up" data-aos-delay="200">
+                        <div class="flex text-accent mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="font-body text-text/80 italic">"The treatment was really good, and the doctor explained everything patiently. Also the staffs are so friendly."</p>
+                        <p class="font-heading font-semibold mt-6 text-text">- Satisfied Patient</p>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100" data-aos="fade-up" data-aos-delay="300">
+                        <div class="flex text-accent mb-4">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="font-body text-text/80 italic">"Used advanced technology to make process.... Please visit for your bright smile ..."</p>
+                        <p class="font-heading font-semibold mt-6 text-text">- Grateful Patient</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA / Contact Form Section -->
+        <section data-section="cta" id="contact" class="bg-white py-20 md:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-secondary rounded-2xl p-8 md:p-12 lg:p-16" data-aos="zoom-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <h2 class="font-heading text-3xl md:text-4xl font-bold text-text">Book Your Free Consultation Today!</h2>
+                            <p class="mt-4 font-body text-lg text-text/80">
+                                Take the first step towards a healthier, brighter smile. Fill out the form and our team will get in touch with you shortly to schedule your appointment.
+                            </p>
+                            <div class="mt-8 space-y-4 text-text/90">
+                                <div class="flex items-start gap-4">
+                                    <i class="fas fa-map-marker-alt text-primary mt-1.5 fa-lg"></i>
+                                    <p class="font-body">Basement, Joshi & Joshi Complex, opp. Kailash Nagar, Tiruchirappalli, Tamil Nadu 620019</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <i class="fas fa-phone text-primary fa-lg"></i>
+                                    <a href="tel:09791765077" class="font-body hover:text-primary">097917 65077</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-8 rounded-xl shadow-lg">
+                            <form onsubmit="handleLeadSubmit(event)">
+                                <div class="space-y-5">
+                                    <div>
+                                        <label for="name" class="font-body font-semibold text-sm text-text/80">Full Name</label>
+                                        <input type="text" id="name" name="name" required class="mt-1 block w-full px-4 py-3 bg-background border border-gray-200 rounded-lg focus:ring-primary focus:border-primary transition-colors">
+                                    </div>
+                                    <div>
+                                        <label for="email" class="font-body font-semibold text-sm text-text/80">Email Address</label>
+                                        <input type="email" id="email" name="email" required class="mt-1 block w-full px-4 py-3 bg-background border border-gray-200 rounded-lg focus:ring-primary focus:border-primary transition-colors">
+                                    </div>
+                                    <div>
+                                        <label for="phone" class="font-body font-semibold text-sm text-text/80">Phone Number</label>
+                                        <input type="tel" id="phone" name="phone" required class="mt-1 block w-full px-4 py-3 bg-background border border-gray-200 rounded-lg focus:ring-primary focus:border-primary transition-colors">
+                                    </div>
+                                    <div>
+                                        <label for="message" class="font-body font-semibold text-sm text-text/80">Message (Optional)</label>
+                                        <textarea id="message" name="message" rows="3" class="mt-1 block w-full px-4 py-3 bg-background border border-gray-200 rounded-lg focus:ring-primary focus:border-primary transition-colors"></textarea>
+                                    </div>
+                                    <button type="submit" class="w-full bg-buttonBackground text-buttonText font-body font-bold py-4 px-8 rounded-lg shadow-md hover:bg-primary/90 transform hover:-translate-y-0.5 transition-all duration-300">
+                                        Request Appointment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer data-section="footer" class="bg-text text-white">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Column 1: Logo & Summary -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                    <a href="index.html">
+                        <img src="./logo.png" alt="Smile Dental Care Logo" class="h-12 w-auto mb-4 bg-white p-2 rounded-md">
+                    </a>
+                    <p class="font-body text-white/70 text-sm">
+                        Providing exceptional, painless dental care with advanced technology in a friendly and professional environment.
+                    </p>
+                </div>
+
+                <!-- Column 2: Quick Links -->
+                <div>
+                    <h4 class="font-heading font-bold text-lg mb-4 tracking-wide">Quick Links</h4>
+                    <ul class="space-y-3 font-body">
+                        <li><a href="index.html" class="text-white/70 hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="about.html" class="text-white/70 hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="services.html" class="text-white/70 hover:text-primary transition-colors">Services</a></li>
+                        <li><a href="gallery.html" class="text-white/70 hover:text-primary transition-colors">Gallery</a></li>
+                        <li><a href="contact.html" class="text-white/70 hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact Info -->
+                <div>
+                    <h4 class="font-heading font-bold text-lg mb-4 tracking-wide">Contact Us</h4>
+                    <ul class="space-y-3 font-body text-white/70">
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-map-marker-alt mt-1.5 text-primary"></i>
+                            <span>Basement, Joshi & Joshi Complex, Tiruchirappalli, Tamil Nadu 620019</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <i class="fas fa-phone text-primary"></i>
+                            <a href="tel:09791765077" class="hover:text-primary">097917 65077</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 4: Opening Hours -->
+                <div>
+                    <h4 class="font-heading font-bold text-lg mb-4 tracking-wide">Opening Hours</h4>
+                    <ul class="space-y-2 font-body text-sm text-white/70">
+                        <li><span class="font-semibold text-white/90">Mon - Sat:</span> 11am-2:30pm, 6pm-9pm</li>
+                        <li><span class="font-semibold text-white/90">Sunday:</span> 6pm - 8:30pm</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-12 pt-8 border-t border-white/20 text-center text-sm text-white/60 flex flex-col sm:flex-row justify-center items-center gap-2">
+                <span>&copy; 2024 Smile Dental Care. All rights reserved.</span>
+                <span class="hidden sm:inline mx-1">|</span>
+                <a href="https://genweb.in" target="_blank" rel="noopener noreferrer" class="hover:text-primary opacity-80 hover:opacity-100 transition-colors">Powered By GenWeb</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onclick="closeModal()">
+        <div class="bg-background rounded-xl shadow-2xl w-full max-w-md text-center p-8" onclick="event.stopPropagation()">
+            <div class="mx-auto bg-primary/20 h-20 w-20 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle fa-4x text-primary"></i>
+            </div>
+            <h2 class="font-heading text-2xl font-bold mt-6 text-text">Thank You!</h2>
+            <p class="font-body text-text/80 mt-2">Your consultation request has been sent successfully. We will contact you shortly.</p>
+            <button onclick="closeModal()" class="mt-8 bg-buttonBackground text-buttonText font-body font-bold py-3 px-8 rounded-lg shadow-md hover:bg-primary/90 transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+
+        // Mobile Menu Toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            const icon = mobileMenuButton.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Sticky Header Shrink
+        const header = document.getElementById('header');
+        window.onscroll = function() {
+            if (window.scrollY > 50) {
+                header.classList.add('h-16');
+                header.classList.remove('h-20');
+            } else {
+                header.classList.add('h-20');
+                header.classList.remove('h-16');
+            }
+        };
+
+        // Form Submission & Modal
+        const successModal = document.getElementById('successModal');
+
+        function handleLeadSubmit(event) {
+            event.preventDefault();
+            successModal.classList.remove('hidden');
+            event.target.reset();
+        }
+
+        function closeModal() {
+            successModal.classList.add('hidden');
+        }
+
+    </script>
+
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script>
+        // Initialize Animations
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    
+        async function handleLeadSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Find submit button to show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+    
+            try {
+                const response = await fetch('/api/submit-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        projectId: '1770890184932',
+                        formData: data
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Thank you! Your message has been sent.');
+                    form.reset();
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Error submitting form. Please check your connection.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
+        }
+        </script>
+        
+</body>
+</html>

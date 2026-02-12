@@ -111,13 +111,28 @@ async function getSuggestions(query, limit = 5) {
 async function purchaseDomain(domain, details) {
     console.log(`Purchasing domain: ${domain}...`);
     try {
-        // We purchase it first. Setup happens later or via webhooks/next step.
-        const data = await callNameSilo('registerDomain', {
+        const contact = details.contact || {};
+        const params = {
             domain: domain,
             years: 1,
             private: 1,
-            auto_renew: 1
-        });
+            auto_renew: 1,
+            // Contact Info Mapping
+            fn: contact.nameFirst,
+            ln: contact.nameLast,
+            ad: contact.addressMailing?.address1,
+            city: contact.addressMailing?.city,
+            st: contact.addressMailing?.state,
+            zip: contact.addressMailing?.postalCode,
+            ct: contact.addressMailing?.country || 'US',
+            em: contact.email,
+            ph: contact.phone
+        };
+
+        // Filter out undefined
+        Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+        const data = await callNameSilo('registerDomain', params);
         return {
             orderId: data.message || 'SUCCESS',
             domain: domain,
@@ -179,6 +194,57 @@ async function addDNSRecord(domain, ip) {
         }
 
         return true;
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * List DNS Records (Generic)
+ */
+async function listDNSRecords(domain) {
+    try {
+        console.log(`Listing DNS records for ${domain}...`);
+        const data = await callNameSilo('dnsListRecords', { domain });
+        const records = data.resource_record || [];
+        // NameSilo returns a single object if only 1 record, or array if multiple.
+        return Array.isArray(records) ? records : [records];
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Add DNS Record (Generic)
+ */
+async function addDNSRecordGeneric(domain, record) {
+    console.log(`Adding DNS Record for ${domain}:`, record);
+    // record: { type, host, value, ttl, distance }
+    try {
+        const params = {
+            domain: domain,
+            rrtype: record.type,
+            rrhost: record.host,
+            rrvalue: record.value,
+            rrttl: record.ttl || 3600
+        };
+        if (record.distance) params.rrdistance = record.distance; // Priority for MX
+
+        const data = await callNameSilo('dnsAddRecord', params);
+        return { success: true, id: data.record_id };
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Delete DNS Record (Generic)
+ */
+async function deleteDNSRecord(domain, rrid) {
+    console.log(`Deleting DNS Record ${rrid} for ${domain}...`);
+    try {
+        await callNameSilo('dnsDeleteRecord', { domain, rrid });
+        return { success: true };
     } catch (error) {
         throw error;
     }
@@ -490,7 +556,11 @@ module.exports = {
     changeNameServers, 
     verifyDomainDNS,
     setupGCPDomain,
-    checkSubdomainAvailability
+    checkSubdomainAvailability,
+    cleanupGCPDomain,
+    listDNSRecords,
+    addDNSRecordGeneric,
+    deleteDNSRecord
 };
 
 const { db } = require('./firebase');
