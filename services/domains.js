@@ -108,29 +108,65 @@ async function getSuggestions(query, limit = 5) {
     }
 }
 
+const indianStates = {
+    'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam', 'BR': 'Bihar',
+    'CG': 'Chhattisgarh', 'CH': 'Chandigarh', 'DN': 'Dadra and Nagar Haveli',
+    'DD': 'Daman and Diu', 'DL': 'Delhi', 'GA': 'Goa', 'GJ': 'Gujarat',
+    'HR': 'Haryana', 'HP': 'Himachal Pradesh', 'JK': 'Jammu and Kashmir',
+    'JH': 'Jharkhand', 'KA': 'Karnataka', 'KL': 'Kerala', 'LA': 'Ladakh',
+    'LD': 'Lakshadweep', 'MP': 'Madhya Pradesh', 'MH': 'Maharashtra',
+    'MN': 'Manipur', 'ML': 'Meghalaya', 'MZ': 'Mizoram', 'NL': 'Nagaland',
+    'OR': 'Odisha', 'PY': 'Puducherry', 'PB': 'Punjab', 'RJ': 'Rajasthan',
+    'SK': 'Sikkim', 'TN': 'Tamil Nadu', 'TS': 'Telangana', 'TR': 'Tripura',
+    'UP': 'Uttar Pradesh', 'UK': 'Uttarakhand', 'WB': 'West Bengal'
+};
+
+function sanitizeForRegistry(str) {
+    if (!str) return str;
+    // Replace non-alphanumeric characters with space, then trim and collapse multiple spaces.
+    // This removes symbols like /, -, , . which registries like .in often reject.
+    return str.toString().replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 async function purchaseDomain(domain, details) {
     console.log(`Purchasing domain: ${domain}...`);
     try {
+        const isPrivacyAllowed = !domain.toLowerCase().endsWith('.in') && !domain.toLowerCase().endsWith('.us');
         const contact = details.contact || {};
+        
+        let state = contact.addressMailing?.state?.trim();
+        const country = contact.addressMailing?.country?.trim() || 'US';
+        
+        // Fix for non-US/CA state length requirement (must be > 2 chars, usually full name)
+        if (country.toUpperCase() === 'IN' && state && state.length === 2) {
+            state = indianStates[state.toUpperCase()] || state;
+        }
+
         const params = {
             domain: domain,
             years: 1,
-            private: 1,
+            private: isPrivacyAllowed ? 1 : 0,
             auto_renew: 1,
-            // Contact Info Mapping
-            fn: contact.nameFirst,
-            ln: contact.nameLast,
-            ad: contact.addressMailing?.address1,
-            city: contact.addressMailing?.city,
-            st: contact.addressMailing?.state,
-            zip: contact.addressMailing?.postalCode,
-            ct: contact.addressMailing?.country || 'US',
-            em: contact.email,
-            ph: contact.phone
+            // Contact Info Mapping (Sanitized for registry constraints)
+            fn: sanitizeForRegistry(contact.nameFirst),
+            ln: sanitizeForRegistry(contact.nameLast),
+            ad: sanitizeForRegistry(contact.addressMailing?.address1),
+            cy: sanitizeForRegistry(contact.addressMailing?.city),
+            st: sanitizeForRegistry(state),
+            zp: sanitizeForRegistry(contact.addressMailing?.postalCode),
+            ct: country, // Should be 2 letter code
+            em: contact.email?.trim(),
+            ph: contact.phone?.trim()
         };
 
         // Filter out undefined
         Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+        // Safe logging
+        const safeParams = { ...params };
+        if (safeParams.em) safeParams.em = '***@***.***';
+        if (safeParams.ph) safeParams.ph = '***';
+        console.log(`[NameSilo] registerDomain Payload:`, safeParams);
 
         const data = await callNameSilo('registerDomain', params);
         return {
@@ -166,13 +202,33 @@ async function changeNameServers(domain, nsArray) {
  * Add A Record to NameSilo
  */
 async function addDNSRecord(domain, ip) {
-    console.log(`Adding A Record for ${domain} -> ${ip}`);
+    console.log(`Setting up A Record for ${domain} -> ${ip}`);
     try {
-        // NameSilo API: dnsAddRecord
-        // rrhost: Subdomain (empty for root?) NameSilo uses '' or '@'? 
-        // Docs say: rrhost (optional) - The hostname to prepend to the domain. 
-        // To set root, we usually leave it empty or don't send it.
-        
+        // 1. Fetch existing records to clear NameSilo default parking/forwarding records
+        try {
+            const existingRecords = await callNameSilo('dnsListRecords', { domain });
+            // NameSilo returns single object or array depending on count
+            let recordsArray = [];
+            if (existingRecords.resource_record) {
+                 recordsArray = Array.isArray(existingRecords.resource_record) ? existingRecords.resource_record : [existingRecords.resource_record];
+            }
+            
+            for (const record of recordsArray) {
+                // If it's an A record pointing to NameSilo parking IPs, or a WWW record, delete it to prevent conflict
+                if (record.type === 'A' && record.value !== ip && (record.host === '@' || record.host === 'www' || record.host === '')) {
+                     console.log(`Deleting conflicting A record: ${record.record_id} (${record.value})`);
+                     await callNameSilo('dnsDeleteRecord', { domain, rrid: record.record_id });
+                }
+                if (record.type === 'CNAME' && record.host === 'www') {
+                     console.log(`Deleting conflicting CNAME record: ${record.record_id}`);
+                     await callNameSilo('dnsDeleteRecord', { domain, rrid: record.record_id });
+                }
+            }
+        } catch (fetchErr) {
+            console.warn(`Failed to fetch/clean existing DNS records before adding A record: ${fetchErr.message}`);
+        }
+
+        // 2. Add our Load Balancer A Record
         await callNameSilo('dnsAddRecord', {
             domain: domain,
             rrtype: 'A',
@@ -180,7 +236,7 @@ async function addDNSRecord(domain, ip) {
             rrttl: 3600
         });
         
-        // Also add www?
+        // 3. Add www CNAME pointing to root
         try {
             await callNameSilo('dnsAddRecord', {
                 domain: domain,

@@ -14,6 +14,7 @@ const { extractFromUrl } = require('./services/business-extractor');
 const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability, cleanupGCPDomain, listDNSRecords, addDNSRecordGeneric, deleteDNSRecord } = require('./services/domains');
 const { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
+const { captureScreenshot } = require('./services/screenshot');
 const { getUserCredits, addCredits, deductCredits, getTransactions } = require('./services/credits');
 const { db, admin, auth } = require('./services/firebase');
 const verifyToken = require('./middleware/auth');
@@ -26,73 +27,92 @@ app.use(cors({ origin: true, credentials: true })); // Enable CORS for all origi
 app.use(express.json());
 app.use(cookieParser()); // Use cookie-parser
 
-// --- Wildcard Subdomain Routing (*.genweb.in) ---
+// --- Wildcard Subdomain & Custom Domain Routing ---
 app.use(async (req, res, next) => {
     const host = req.headers.host;
-    // Check if request is for a subdomain of genweb.in (and not www or the root API)
-    // Adjust 'genweb.in' to match your actual domain if different in production
     const DOMAIN_SUFFIX = '.genweb.in';
     
-    // Exclude reserved subdomains that shouldn't be routed to GCS
-    // 'app' and 'www' are hosted on Netlify. 'api' is this server itself (direct hit).
-    const RESERVED_SUBDOMAINS = [`www${DOMAIN_SUFFIX}`, `api${DOMAIN_SUFFIX}`, `app${DOMAIN_SUFFIX}`];
+    // Exclude reserved subdomains/hosts
+    const RESERVED_HOSTS = [`www${DOMAIN_SUFFIX}`, `api${DOMAIN_SUFFIX}`, `app${DOMAIN_SUFFIX}`, `localhost:${PORT}`];
 
-    if (host && host.endsWith(DOMAIN_SUFFIX) && !RESERVED_SUBDOMAINS.includes(host)) {
-        const subdomain = host.slice(0, -DOMAIN_SUFFIX.length);
-        
-        try {
-            console.log(`[Wildcard Router] Routing for subdomain: ${subdomain}`);
+    // Bypass routing for API, Sites, Reserved Hosts, and Cloud Run default domains
+    if (!host || RESERVED_HOSTS.includes(host) || host.includes('run.app') || req.path.startsWith('/api/') || req.path.startsWith('/sites/')) {
+        return next();
+    }
+
+    try {
+        let projectId = null;
+
+        // 1. Check if it's a *.genweb.in subdomain
+        if (host.endsWith(DOMAIN_SUFFIX)) {
+            const subdomain = host.slice(0, -DOMAIN_SUFFIX.length);
+            console.log(`[Router] Checking subdomain: ${subdomain}`);
             
-            // 1. Lookup Project
             if (db) {
-                const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).get();
-                
+                const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).limit(1).get();
                 if (!snapshot.empty) {
-                    const project = snapshot.docs[0].data();
-                    const projectId = project.projectId;
-                    
-                    // 2. Proxy from GCS
-                    // Url: https://storage.googleapis.com/site-{projectId}/index.html
-                    const bucketName = `site-${projectId}`;
-                    // Simple logic: If request is root, serve index.html. Else try to serve file.
-                    // For SPA/Single file sites, we usually just serve index.html or assets.
-                    
-                    const filePath = req.url === '/' ? '/index.html' : req.url;
-                    const gcsUrl = `https://storage.googleapis.com/${bucketName}${filePath}`;
-                    
-                    const https = require('https');
-                    
-                    return https.get(gcsUrl, (proxyRes) => {
-                        if (proxyRes.statusCode === 404 && req.url !== '/') {
-                             // If asset not found, do we 404 or serve index? 
-                             // For now, let's 404.
-                             res.status(404).send('Not Found');
-                             return;
-                        }
-                        
-                        // Copy headers
-                        res.status(proxyRes.statusCode);
-                        Object.keys(proxyRes.headers).forEach(key => {
-                             // clean up some headers?
-                             res.setHeader(key, proxyRes.headers[key]);
-                        });
-                        
-                        proxyRes.pipe(res);
-                    }).on('error', (e) => {
-                        console.error('Proxy Stream Error:', e);
-                        res.status(502).send('Upstream Error');
-                    });
+                    projectId = snapshot.docs[0].data().projectId;
                 }
             }
-            
-            // If DB not connected or project not found, fall through to 404 or main app?
-            // If it ends in .genweb.in but we found no project, it's a 404.
-            return res.status(404).send('Site not found');
-            
-        } catch (error) {
-            console.error('Wildcard routing error:', error);
-            return res.status(500).send('Internal Server Error');
+        } 
+        // 2. Check if it's a Custom Domain
+        else {
+            console.log(`[Router] Checking custom domain: ${host}`);
+            if (db) {
+                const snapshot = await db.collection('projects').where('customDomain', '==', host).limit(1).get();
+                if (!snapshot.empty) {
+                    projectId = snapshot.docs[0].data().projectId;
+                }
+            }
         }
+
+        // 3. Proxy if Project Found
+        if (projectId) {
+            console.log(`[Router] Proxying for Project ID: ${projectId}`);
+            
+            const bucketName = `site-${projectId}`;
+            const filePath = req.url === '/' ? '/index.html' : req.url;
+            const gcsUrl = `https://storage.googleapis.com/${bucketName}${filePath}`;
+            
+            const https = require('https');
+            
+            return https.get(gcsUrl, (proxyRes) => {
+                if (proxyRes.statusCode === 404 && req.url !== '/') {
+                     res.status(404).send('Not Found');
+                     return;
+                }
+                
+                res.status(proxyRes.statusCode);
+                Object.keys(proxyRes.headers).forEach(key => {
+                     res.setHeader(key, proxyRes.headers[key]);
+                });
+                
+                proxyRes.pipe(res);
+            }).on('error', (e) => {
+                console.error('Proxy Stream Error:', e);
+                res.status(502).send('Upstream Error');
+            });
+        }
+        
+        // If it was a *.genweb.in request but no project found -> 404
+        if (host.endsWith(DOMAIN_SUFFIX)) {
+            return res.status(404).send('Site not found');
+        }
+
+        // For custom domains not found, we might want to let it fall through 
+        // (maybe it's a misconfigured DNS hitting our IP) or 404.
+        // If we are the default backend, we should probably 404 if not found in DB.
+        // But for safety, let's next() if it's just some random hit, 
+        // unless we want to be strict.
+        // Being strict is better for a "Catch All" backend.
+        if (!projectId && host.includes('.')) { 
+             // It looks like a domain request but we don't know it.
+             return res.status(404).send('Site not found on GenWeb.');
+        }
+
+    } catch (error) {
+        console.error('Routing error:', error);
+        return res.status(500).send('Internal Server Error');
     }
     
     next();
@@ -247,8 +267,19 @@ async function saveBuildArtifacts(id, distPath, userId) {
         
         // 1. Upload DIST to GCS (projects/{id}/dist)
         await uploadDirectory(distPath, `projects/${id}/dist`);
+
+        // 2. Update Local Preview (public/sites) & Generate Screenshot
+        const localSitePath = path.join(__dirname, 'public/sites', id);
+        await fs.copy(distPath, localSitePath);
+
+        try {
+            console.log(`[${id}] Auto-generating preview screenshot...`);
+            await captureScreenshot(path.join(localSitePath, 'index.html'), path.join(localSitePath, 'preview.jpg'));
+        } catch (e) {
+            console.warn(`[${id}] Auto-screenshot failed:`, e.message);
+        }
         
-        // 2. Return Local Preview URL
+        // 3. Return Local Preview URL
         // In GCS storage mode, we don't have a live public URL until published.
         // We return the local server URL for the editor preview.
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
@@ -483,6 +514,36 @@ app.get('/api/project/:id/pages', verifyToken, async (req, res) => {
         
     } catch (error) {
         console.error('Fetch pages list failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Trigger Manual Screenshot
+app.post('/api/project/:id/screenshot', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+        
+        const publicSitePath = path.join(__dirname, 'public/sites', id);
+        // Ensure public site exists
+        if (!await fs.pathExists(publicSitePath)) {
+             const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+             await fs.copy(distPath, publicSitePath);
+        }
+        
+        const previewPath = path.join(publicSitePath, 'preview.jpg');
+        const indexHtmlPath = path.join(publicSitePath, 'index.html');
+        
+        const success = await captureScreenshot(indexHtmlPath, previewPath);
+        
+        if (success) {
+            // Update Firestore if needed, or just return success
+            res.json({ success: true, url: `/sites/${id}/preview.jpg` });
+        } else {
+            res.status(500).json({ error: 'Screenshot generation failed' });
+        }
+    } catch (error) {
+        console.error('Screenshot endpoint failed:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -945,6 +1006,14 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
         // 2. Copy the 'dist' folder to 'public/sites' for hosting (Legacy fallback)
         const localSitePath = path.join(__dirname, 'public/sites', id);
         await fs.copy(path.join(sourcePath, 'dist'), localSitePath);
+        
+        // Generate Preview (Screenshot)
+        try {
+            console.log(`[${id}] Generating preview screenshot...`);
+            await captureScreenshot(path.join(localSitePath, 'index.html'), path.join(localSitePath, 'preview.jpg'));
+        } catch (e) {
+            console.warn(`[${id}] Screenshot failed:`, e.message);
+        }
         
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
 
@@ -1609,10 +1678,14 @@ app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
 
 // Claim Free Domain
 app.post('/api/domains/claim', verifyToken, async (req, res) => {
-    const { domain, projectId } = req.body;
+    const { domain, projectId, contact } = req.body;
 
     if (!domain || !projectId) {
         return res.status(400).json({ error: 'Domain and Project ID are required' });
+    }
+
+    if (!contact || !contact.nameFirst || !contact.nameLast || !contact.email || !contact.phone || !contact.address1 || !contact.city || !contact.state || !contact.postalCode || !contact.country) {
+        return res.status(400).json({ error: 'Incomplete contact details provided for domain registration.' });
     }
 
     const cleanDomain = domain.toLowerCase().trim();
@@ -1642,25 +1715,17 @@ app.post('/api/domains/claim', verifyToken, async (req, res) => {
         }
 
         // 3. Purchase Domain (Using Backend Wallet)
-        // We use dummy contact info for the "Free Claim" or user's if available?
-        // Ideally we should ask for it, but for "One Click Claim" we might use a default or user's email.
-        // Let's use a generic placeholder for the "Registrant" to speed up, or require it.
-        // The prompt says "Claim this domain name" button, implying simple click.
-        // We'll use the user's email and placeholder name if not provided.
-        // NOTE: NameSilo requires valid contact info.
-        
-        const user = await admin.auth().getUser(req.user.uid);
         const contactInfo = {
-            nameFirst: 'GenWeb',
-            nameLast: 'User',
-            email: user.email,
-            phone: '+1.5555555555', // Placeholder
+            nameFirst: contact.nameFirst,
+            nameLast: contact.nameLast,
+            email: contact.email,
+            phone: contact.phone,
             addressMailing: {
-                address1: '123 Web Gen St',
-                city: 'Internet',
-                state: 'CA',
-                postalCode: '90210',
-                country: 'US'
+                address1: contact.address1,
+                city: contact.city,
+                state: contact.state,
+                postalCode: contact.postalCode,
+                country: contact.country
             }
         };
 

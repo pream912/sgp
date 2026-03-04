@@ -4,16 +4,14 @@ const { spawn } = require('child_process');
 const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
+const { captureScreenshot } = require('./screenshot');
 
-const MAX_RETRIES = 3; // Lower retries for HTML as it's less prone to build errors
-
+// Replaced buildSite with CDN-based logic
 async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress = () => {}, stylePreset = null) {
     const tempDir = path.join(__dirname, '../temp', id);
     const distDir = path.join(tempDir, 'dist');
     const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
     
-    let success = false;
-
     try {
         // Prepare logo data if uploaded
         let logoBuffer = null;
@@ -42,7 +40,7 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
                 if (designAttempts >= MAX_DESIGN_RETRIES) {
                      throw new Error(`Failed to generate Design after ${MAX_DESIGN_RETRIES} attempts. Last error: ${err.message}`);
                 }
-                const delay = 2000 * Math.pow(2, designAttempts - 1); // 2s, 4s
+                const delay = 2000 * Math.pow(2, designAttempts - 1); 
                 console.log(`[${id}] Waiting ${delay}ms before retry...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
@@ -60,20 +58,15 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         console.log(msgSkeleton);
         onProgress(msgSkeleton);
         
-        // Copy everything EXCEPT node_modules AND src (we will use src/input.css from skeleton directly)
+        // Copy everything but exclude node_modules and src (since we use CDN, we don't need src/input.css)
+        // Actually, we just need a clean dist folder. The skeleton might have assets.
         await fs.copy(skeletonDir, tempDir, {
             filter: (src) => {
-                 // Check if it's node_modules or src (we only need src/input.css which we use directly)
-                 // Actually we do need src if we had JS files there, but we only have input.css.
-                 // Let's copy non-node_modules files.
                  return !src.includes(`${path.sep}node_modules${path.sep}`) && !src.endsWith(`${path.sep}node_modules`);
             }
         });
         
-        // NO SYMLINK, NO COPY of node_modules.
-        // We will run Tailwind from the skeleton directory directly.
-
-        await fs.ensureDir(distDir); // Ensure dist exists
+        await fs.ensureDir(distDir);
         
         // Copy Logo if exists
         if (logoFile) {
@@ -102,14 +95,7 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
                 try {
                     code = await generateCode(designSystem, userContext, pageName, pages, refLayout, stylePreset);
                     
-                    // Basic Validation & Cleanup
-                    // Always remove Tailwind CDN if present (it's strictly forbidden)
-                    code = code.replace(/<script\s+src="https:\/\/cdn\.tailwindcss\.com[^"]*"><\/script>/g, '');
-                    
-                    // Always remove any script that tries to define tailwind.config
-                    // This regex matches <script ...> ... tailwind.config = ... </script> including newlines/comments
-                    code = code.replace(/<script[^>]*>[\s\S]*?tailwind\.config\s*=[\s\S]*?<\/script>/g, '');
-    
+                    // Basic Validation
                     if (!code.trim().endsWith('</html>')) {
                         throw new Error("Incomplete HTML generated (Missing </html>)");
                     }
@@ -121,7 +107,7 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
                         throw new Error(`Failed to generate ${pageName} after ${MAX_GEN_RETRIES} attempts. Last error: ${err.message}`);
                     }
                     
-                    // Exponential Backoff with Jitter
+                    // Exponential Backoff
                     const backoff = 2000 * Math.pow(2, genAttempts - 1);
                     const jitter = Math.random() * 1000;
                     const delay = backoff + jitter;
@@ -140,14 +126,6 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         // 3.2 Extract Layout Reference (Header/Footer)
         let layoutReference = null;
         try {
-            // Regex to match data-section="header" and data-section="footer"
-            // We match the opening tag, content, and closing tag roughly.
-            // Assumption: AI follows strict nested structure or we grab the outer block.
-            // A simple regex might fail on nested tags, but let's try a robust one for known attributes.
-            // Alternatively, since we just need the text for the AI prompt, a looser match is okay.
-            
-            // Match <header ... data-section="header" ...> ... </header>
-            // Note: tag name might be 'div' or 'header'.
             const headerMatch = homeCode.match(/<(\w+)[^>]*data-section="header"[^>]*>([\s\S]*?)<\/\1>/);
             const footerMatch = homeCode.match(/<(\w+)[^>]*data-section="footer"[^>]*>([\s\S]*?)<\/\1>/);
 
@@ -183,41 +161,19 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
             }
         }
 
-        // 4. Build Loop (Tailwind & Config Injection)
-        let attempts = 0;
+        // 4. Inject Config & CDN (No Build Step)
+        const msgConfig = `[${id}] Injecting configuration...`;
+        console.log(msgConfig);
+        onProgress(msgConfig);
         
-        while (attempts < MAX_RETRIES && !success) {
-            attempts++;
-            const msgBuild = `[${id}] Build Attempt ${attempts}...`;
-            console.log(msgBuild);
-            onProgress(msgBuild);
-            
-            // 3.5. Dynamic Config & Injection (Must happen after html files are written)
-            await setupConfig(tempDir, distDir, designSystem, id);
-            
-            // Try build (Tailwind CLI)
-            // We run FROM skeletonDir, pointing input/output/config to tempDir via absolute paths
-            const configPath = path.join(tempDir, 'tailwind.config.js');
-            const inputPath = path.join(skeletonDir, 'src/input.css'); // Use original input.css
-            const outputPath = path.join(distDir, 'style.css');
+        await setupConfig(tempDir, distDir, designSystem, id);
+        
+        // Also save tailwind.config.js for reference/editing (optional but good for consistency)
+        // We use the same helper to get the object and write it
+        const tailwindConfigObj = getTailwindConfigFromDesign(designSystem);
+        const configPath = path.join(tempDir, 'tailwind.config.js');
+        await fs.writeFile(configPath, `module.exports = ${JSON.stringify(tailwindConfigObj, null, 2)}`);
 
-            try {
-                await runBuild(skeletonDir, configPath, inputPath, outputPath);
-                success = true;
-            } catch (error) {
-                console.error(`[${id}] Build Failed:`, error.message);
-                if (attempts < MAX_RETRIES) {
-                    // Logic to fix code is complex with multiple files. 
-                    // For now, we just retry build or log error. 
-                    // Ideally, we'd identify WHICH file caused the error.
-                    // But Tailwind CSS errors are usually about the config or input.css, not HTML.
-                    console.warn(`[${id}] Retrying build...`);
-                } else {
-                    throw new Error(`Build failed after ${MAX_RETRIES} attempts.`);
-                }
-            }
-        }
-        
         return distDir;
         
     } catch (err) {
@@ -226,8 +182,33 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
     }
 }
 
-async function setupConfig(rootDir, distDir, designSystem, id) {
-    const { googleFonts, colorPalette, businessName, logoUrl } = designSystem;
+// Helper to construct config object
+function getTailwindConfigFromDesign(designSystem) {
+    const { googleFonts, colorPalette } = designSystem;
+    return {
+      theme: {
+        extend: {
+          fontFamily: {
+            heading: [googleFonts ? googleFonts.heading : 'sans-serif', 'sans-serif'],
+            body: [googleFonts ? googleFonts.body : 'sans-serif', 'sans-serif'],
+          },
+          colors: {
+            primary: colorPalette.primary,
+            secondary: colorPalette.secondary,
+            accent: colorPalette.accent,
+            background: colorPalette.background,
+            text: colorPalette.text,
+            buttonBackground: colorPalette.buttonBackground,
+            buttonText: colorPalette.buttonText,
+          }
+        },
+      },
+      plugins: [],
+    };
+}
+
+async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = null) {
+    const { googleFonts, businessName, logoUrl } = designSystem || {};
 
     // 1. Construct Google Fonts URL
     let fontLink = '';
@@ -247,7 +228,17 @@ async function setupConfig(rootDir, distDir, designSystem, id) {
         faviconLink = `<link rel="icon" type="image/png" href="${logoUrl}" />`;
     }
 
-    // 3. Update ALL HTML files
+    // 3. Prepare Tailwind Config
+    const tailwindConfig = overrideConfig || getTailwindConfigFromDesign(designSystem);
+
+    const tailwindScript = `
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = ${JSON.stringify(tailwindConfig, null, 2)}
+    </script>
+    `;
+
+    // 4. Update ALL HTML files
     const files = await fs.readdir(distDir);
     const htmlFiles = files.filter(f => f.endsWith('.html'));
 
@@ -260,10 +251,28 @@ async function setupConfig(rootDir, distDir, designSystem, id) {
             html = html.replace('</head>', `${fontLink}\n</head>`);
         }
         
-        // Inject CSS Link (Crucial)
-        if (!html.includes('href="./style.css"') && !html.includes("href='./style.css'")) {
-             html = html.replace('</head>', `<link href="./style.css" rel="stylesheet">
-</head>`);
+        // Inject/Update Tailwind CDN & Config
+        // Remove old style.css link if present
+        if (html.includes('href="./style.css"')) {
+            html = html.replace(/<link href="\.\/style\.css" rel="stylesheet">\s*/, '');
+        }
+        
+        // Update/Inject Config Script
+        const configRegex = /<script>\s*tailwind\.config\s*=\s*[\s\S]*?<\/script>/;
+        const cdnTag = '<script src="https://cdn.tailwindcss.com"></script>';
+        
+        if (html.match(configRegex)) {
+            // Replace existing config
+            html = html.replace(configRegex, `<script>\n  tailwind.config = ${JSON.stringify(tailwindConfig, null, 2)}\n</script>`);
+            // Ensure CDN script is present
+            if (!html.includes('cdn.tailwindcss.com')) {
+                html = html.replace('</head>', `${cdnTag}\n</head>`);
+            }
+        } else {
+            // New injection
+             if (!html.includes('cdn.tailwindcss.com')) {
+                 html = html.replace('</head>', `${tailwindScript}\n</head>`);
+             }
         }
     
         // Inject AOS CSS (Animation Library)
@@ -272,217 +281,147 @@ async function setupConfig(rootDir, distDir, designSystem, id) {
         }
         
         // Update Title (Append Page Name if not index)
-        const pageTitle = file === 'index.html' ? safeTitle : `${safeTitle} - ${file.replace('.html', '').replace(/-/g, ' ')}`;
-        if (html.includes('<title>')) {
-            html = html.replace(/<title>.*?<\/title>/, `<title>${pageTitle}</title>`);
-        } else {
-            html = html.replace('</head>', `<title>${pageTitle}</title>\n</head>`);
-        }
-    
-        // Inject Favicon
-        if (faviconLink) {
-            if (html.includes('<link rel="icon"')) {
-                html = html.replace(/<link rel="icon".*?>/, faviconLink);
+        // Only update if generic or missing? Or always?
+        // Let's preserve existing title if it looks custom, but here we assume it's generated.
+        // Actually, rebuild might be called on edited code. We should be careful.
+        // If designSystem is passed, we update.
+        if (designSystem) {
+            const pageTitle = file === 'index.html' ? safeTitle : `${safeTitle} - ${file.replace('.html', '').replace(/-/g, ' ')}`;
+            if (html.includes('<title>')) {
+                // Check if we should overwrite? Yes, for consistency.
+                html = html.replace(/<title>.*?<\/title>/, `<title>${pageTitle}</title>`);
             } else {
-                html = html.replace('</head>', `${faviconLink}\n</head>`);
+                html = html.replace('</head>', `<title>${pageTitle}</title>\n</head>`);
+            }
+        
+            // Inject Favicon
+            if (faviconLink) {
+                if (html.includes('<link rel="icon"')) {
+                    html = html.replace(/<link rel="icon".*?>/, faviconLink);
+                } else {
+                    html = html.replace('</head>', `${faviconLink}\n</head>`);
+                }
             }
         }
     
         // Inject Lead Submission Script AND AOS Init
-        // Note: For multi-page, relative path to assets might differ if we had subfolders, 
-        // but here everything is flat in dist/ so it's fine.
-        const script = `
-        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-        <script>
-        // Initialize Animations
-        AOS.init({
-            duration: 800,
-            once: true,
-            offset: 100
-        });
-    
-        async function handleLeadSubmit(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            // Find submit button to show loading state
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn ? submitBtn.innerText : 'Submit';
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerText = 'Sending...';
-            }
-    
-            try {
-                const response = await fetch('/api/submit-lead', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        projectId: '${id}',
-                        formData: data
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('Thank you! Your message has been sent.');
-                    form.reset();
-                } else {
-                    alert('Something went wrong. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error submitting form:', error);
-                alert('Error submitting form. Please check your connection.');
-            } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = originalText;
-                }
-            }
-        }
-        </script>
-        `;
+        // Only inject if not present
+        if (!html.includes('handleLeadSubmit')) {
+            const script = `
+            <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+            <script>
+            // Initialize Animations
+            AOS.init({
+                duration: 800,
+                once: true,
+                offset: 100
+            });
         
-        if (html.includes('</body>')) {
-            html = html.replace('</body>', `${script}\n</body>`);
-        } else {
-            html += script;
+            async function handleLeadSubmit(event) {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Find submit button to show loading state
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn ? submitBtn.innerText : 'Submit';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = 'Sending...';
+                }
+        
+                try {
+                    const response = await fetch('/api/submit-lead', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            projectId: '${id}',
+                            formData: data
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Thank you! Your message has been sent.');
+                        form.reset();
+                    } else {
+                        alert('Something went wrong. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    alert('Error submitting form. Please check your connection.');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = originalText;
+                    }
+                }
+            }
+            </script>
+            `;
+            
+            if (html.includes('</body>')) {
+                html = html.replace('</body>', `${script}\n</body>`);
+            } else {
+                html += script;
+            }
         }
     
         await fs.writeFile(filePath, html);
     }
-
-    // 4. Update tailwind.config.js
-    const configPath = path.join(rootDir, 'tailwind.config.js');
-    const absDistDir = path.resolve(distDir); // Ensure absolute paths in config
-    const newConfig = `
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["${absDistDir}/*.html", "${rootDir}/src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      fontFamily: {
-        heading: ['"${googleFonts ? googleFonts.heading : 'sans-serif'}"','sans-serif'],
-        body: ['"${googleFonts ? googleFonts.body : 'sans-serif'}"','sans-serif'],
-      },
-      colors: {
-        primary: "${colorPalette.primary}",
-        secondary: "${colorPalette.secondary}",
-        accent: "${colorPalette.accent}",
-        background: "${colorPalette.background}",
-        text: "${colorPalette.text}",
-        buttonBackground: "${colorPalette.buttonBackground}",
-        buttonText: "${colorPalette.buttonText}",
-      }
-    },
-  },
-  plugins: [],
-}
-    `;
-    await fs.writeFile(configPath, newConfig);
 }
 
 async function rebuildSite(id) {
     const sourceDir = path.join(__dirname, '../projects_source', id);
+    const configPath = path.join(sourceDir, 'tailwind.config.js');
+    const distDir = path.join(sourceDir, 'dist');
     const publicSiteDir = path.join(__dirname, '../public/sites', id);
-    // For rebuild, we assume node_modules are INSIDE project folder (legacy) or we use shared skeleton?
-    // The current logic assumes project source HAS node_modules because it was moved from temp.
-    // BUT we changed buildSite to NOT copy node_modules.
-    // So sourceDir will NOT have node_modules.
-    // We must run rebuild using the skeleton strategy too.
-    
-    const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
 
     if (!await fs.pathExists(sourceDir)) {
         throw new Error(`Project source not found: ${id}`);
     }
 
-    console.log(`[${id}] Re-building site (Tailwind) using skeleton modules...`);
+    console.log(`[${id}] Re-applying Tailwind Config (CDN)...`);
     
     try {
-        const configPath = path.join(sourceDir, 'tailwind.config.js');
-        const inputPath = path.join(skeletonDir, 'src/input.css');
-        const outputPath = path.join(sourceDir, 'dist/style.css');
+        let config = null;
+        if (await fs.pathExists(configPath)) {
+            // Delete cache to ensure fresh read
+            delete require.cache[require.resolve(configPath)];
+            config = require(configPath);
+        } else {
+            console.warn(`[${id}] No tailwind.config.js found. Skipping config update.`);
+            // We can still continue to ensure other injections
+        }
+
+        // We don't have the full DesignSystem object here easily unless we fetch from DB.
+        // But setupConfig mainly needs the config object for the script injection.
+        // If designSystem is null, it skips title/favicon updates (which is good for rebuilds preserving manual edits).
         
-        await runBuild(skeletonDir, configPath, inputPath, outputPath);
-        
-        // Move dist contents to public (Actually, dist IS the content now, but we need to ensure structure)
-        // sourceDir contains 'dist'.
-        const distPath = path.join(sourceDir, 'dist');
+        await setupConfig(sourceDir, distDir, null, id, config);
+
+        // Ensure public preview is synced
         await fs.emptyDir(publicSiteDir);
-        await fs.copy(distPath, publicSiteDir);
+        await fs.copy(distDir, publicSiteDir);
+
+        // Generate Screenshot
+        try {
+            const previewPath = path.join(publicSiteDir, 'preview.jpg');
+            const indexHtmlPath = path.join(publicSiteDir, 'index.html');
+            console.log(`[${id}] Generating preview screenshot...`);
+            // Run in background so we don't block response
+            captureScreenshot(indexHtmlPath, previewPath).catch(err => console.error(`[${id}] Background screenshot failed:`, err));
+        } catch (e) {
+            console.warn(`[${id}] Screenshot trigger failed:`, e.message);
+        }
         
-        return distPath;
+        return distDir;
     } catch (error) {
         console.error(`[${id}] Rebuild failed:`, error);
         throw error;
     }
 }
 
-function runBuild(cwd, configPath, inputPath, outputPath) {
-    return new Promise((resolve, reject) => {
-        // Command parts
-        // Use absolute paths for arguments.
-        // Run FROM skeleton directory where node_modules is guaranteed to be correct.
-        const command = `chmod +x ./node_modules/.bin/tailwindcss && ./node_modules/.bin/tailwindcss -i "${inputPath}" -o "${outputPath}" -c "${configPath}" --minify`;
-        
-        console.log(`[Builder] Spawning build command in ${cwd}...`);
-        
-        // Log memory usage before build
-        const used = process.memoryUsage();
-        console.log(`[Builder] Memory before spawn: RSS ${Math.round(used.rss / 1024 / 1024)}MB`);
-
-        const child = spawn(command, { 
-            cwd: cwd, // Important: Run inside skeleton
-            shell: true,
-            stdio: ['ignore', 'pipe', 'pipe'] // Ignore stdin, pipe stdout/stderr
-        });
-
-        let stdout = '';
-        let stderr = '';
-
-        child.stdout.on('data', (data) => {
-            const chunk = data.toString();
-            stdout += chunk;
-        });
-
-        child.stderr.on('data', (data) => {
-            const chunk = data.toString();
-            stderr += chunk;
-            console.warn(`[Builder STDERR] ${chunk}`); 
-        });
-
-        const timeout = setTimeout(() => {
-            child.kill('SIGTERM');
-            reject(new Error('Build timed out after 180 seconds'));
-        }, 180000); // 180s timeout
-
-        child.on('close', (code) => {
-            clearTimeout(timeout);
-            if (code === 0) {
-                console.log(`[Builder] Build completed successfully.`);
-                resolve();
-            } else {
-                console.error(`[Builder] Build process exited with code ${code}`);
-                // Log final memory
-                const usedEnd = process.memoryUsage();
-                console.log(`[Builder] Memory on failure: RSS ${Math.round(usedEnd.rss / 1024 / 1024)}MB`);
-                
-                reject({ 
-                    message: `Build failed with code ${code}`, 
-                    stderr: stderr,
-                    stdout: stdout
-                });
-            }
-        });
-
-        child.on('error', (err) => {
-            clearTimeout(timeout);
-            console.error(`[Builder] Spawn error:`, err);
-            reject(err);
-        });
-    });
-}
+module.exports = { buildSite, rebuildSite };

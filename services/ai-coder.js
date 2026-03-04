@@ -25,11 +25,11 @@ STRICT CONSTRAINTS:
    - USE THE DEFINED THEME COLORS: 'primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'.
    - Example: Use "bg-primary" instead of "bg-[#FF5733]". Use "text-accent" instead of "text-[#...]"
    - DO NOT use arbitrary values for main colors. The config is already set up.
-   - **NO TAILWIND CDN OR CONFIG IN HTML.**
-   - DO NOT include <script src="https://cdn.tailwindcss.com"></script>.
-   - DO NOT include <script>tailwind.config = ...</script> or any variation of it.
-   - DO NOT include "demonstration" or "placeholder" tailwind configs.
-   - The build process handles the config. You must output PURE HTML classes only.
+   - **TAILWIND CONFIG:**
+     - The build system will inject the Tailwind CDN and Config automatically.
+     - You DO NOT need to include the <script> tags for Tailwind.
+     - You DO NOT need to define the tailwind.config object.
+     - Just use the classes based on the theme colors provided.
    - Assume standard Tailwind classes work immediately.
    - **NO <style> BLOCKS:**
      - DO NOT use <style> tags to define custom classes (e.g., .card-neumorphic { ... }).

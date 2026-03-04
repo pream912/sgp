@@ -1,9 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For this to work, you need to create a project in Firebase Console
-// and add a web app to get these details.
 const firebaseConfig = {
   apiKey: "AIzaSyC1ZTyTyMtm-WetW67WMxIu5Djjj3kqnDY",
   authDomain: "gen-web-484805.firebaseapp.com",
@@ -14,10 +12,6 @@ const firebaseConfig = {
   measurementId: "G-28P7PC36RH"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-
-// Initialize Cloud Firestore and get a reference to the service
-import { getFirestore } from "firebase/firestore";
 export const db = getFirestore(app);

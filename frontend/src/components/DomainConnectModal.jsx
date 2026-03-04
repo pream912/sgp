@@ -33,6 +33,19 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const [claimStatus, setClaimStatus] = useState('idle'); // idle, checking, available, unavailable, claiming, success
     const [claimError, setClaimError] = useState(null);
 
+    // Contact form state
+    const [contact, setContact] = useState({
+        nameFirst: '',
+        nameLast: '',
+        email: '',
+        phone: '',
+        address1: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'IN' // Default to IN
+    });
+
 
     useEffect(() => {
         if (isOpen && projectId) {
@@ -292,7 +305,8 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
             const token = await auth.currentUser.getIdToken();
             await axios.post(`/api/domains/claim`, {
                 domain: claimDomain,
-                projectId
+                projectId,
+                contact // Pass contact info
             }, { headers: { Authorization: `Bearer ${token}` } });
             
             setClaimStatus('success');
@@ -427,7 +441,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                                         )}
 
                                         {claimStatus === 'available' && (
-                                            <div className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg">
+                                            <div className="p-4 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg space-y-4">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <span className="material-symbols-outlined text-green-500">check_circle</span>
@@ -437,10 +451,108 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <div className="pt-4 border-t border-green-200 dark:border-green-900/30">
+                                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Registrant Details</h4>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">First Name</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.nameFirst} 
+                                                                onChange={e => setContact({...contact, nameFirst: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="John"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Last Name</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.nameLast} 
+                                                                onChange={e => setContact({...contact, nameLast: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="Doe"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+                                                            <input 
+                                                                type="email" 
+                                                                value={contact.email} 
+                                                                onChange={e => setContact({...contact, email: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="john@example.com"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number (with + code)</label>
+                                                            <input 
+                                                                type="tel" 
+                                                                value={contact.phone} 
+                                                                onChange={e => setContact({...contact, phone: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="+91.9876543210"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Street Address</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.address1} 
+                                                                onChange={e => setContact({...contact, address1: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="123 Web Street"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.city} 
+                                                                onChange={e => setContact({...contact, city: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="Mumbai"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">State / Province (Full Name)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={contact.state}
+                                                                onChange={e => setContact({...contact, state: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="Maharashtra"
+                                                            />
+                                                        </div>                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Zip / Postal Code</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.postalCode} 
+                                                                onChange={e => setContact({...contact, postalCode: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3"
+                                                                placeholder="400001"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Country</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={contact.country} 
+                                                                onChange={e => setContact({...contact, country: e.target.value})}
+                                                                className="block w-full rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-[#121121] text-sm text-slate-900 dark:text-white shadow-sm py-2 px-3 uppercase"
+                                                                placeholder="IN"
+                                                                maxLength={2}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                 <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-900/30 flex justify-end">
                                                     <button 
                                                         onClick={handleClaim}
-                                                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow-md shadow-green-500/20 flex items-center gap-2"
+                                                        disabled={!contact.nameFirst || !contact.nameLast || !contact.email || !contact.phone || !contact.address1 || !contact.city || !contact.state || !contact.postalCode || !contact.country}
+                                                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow-md shadow-green-500/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         Claim this domain name
                                                         <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
