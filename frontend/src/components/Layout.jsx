@@ -43,9 +43,9 @@ const Layout = ({ children }) => {
                             <span className="material-symbols-outlined">logout</span>
                         </button>
                         
-                        <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border-2 border-white dark:border-slate-800 shadow-sm flex items-center justify-center bg-orange-100 text-orange-600 font-bold overflow-hidden">
-                             {auth.currentUser?.email?.[0]?.toUpperCase()}
-                        </div>
+                        <Link to="/settings" className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border-2 border-white dark:border-slate-800 shadow-sm flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-600 font-bold overflow-hidden hover:ring-2 hover:ring-orange-500 transition-all">
+                             {auth.currentUser?.email?.[0]?.toUpperCase() || auth.currentUser?.phoneNumber?.slice(-2) || <span className="material-symbols-outlined text-[20px]">person</span>}
+                        </Link>
                     </div>
                 </div>
             </header>
@@ -56,18 +56,29 @@ const Layout = ({ children }) => {
                     <div className="flex flex-col justify-between p-4 h-full">
                         <div className="flex flex-col gap-6">
                             <div className="flex flex-col gap-1">
-                                <Link 
-                                    to="/" 
+                                <Link
+                                    to="/"
                                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
-                                        isActive('/') 
-                                        ? 'bg-orange-500/10 text-orange-500' 
+                                        isActive('/')
+                                        ? 'bg-orange-500/10 text-orange-500'
                                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                     }`}
                                 >
-                                    <span className={`material-symbols-outlined text-[20px] ${isActive('/') ? 'fill-current' : 'group-hover:text-orange-500'}`}>home</span>
+                                    <span className={`material-symbols-outlined text-[20px] ${isActive('/') ? 'fill-current' : 'group-hover:text-orange-500'}`}>dashboard</span>
                                     <p className="text-sm font-medium">Dashboard</p>
                                 </Link>
-                                <Link 
+                                <Link
+                                    to="/sites"
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                                        isActive('/sites')
+                                        ? 'bg-orange-500/10 text-orange-500'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <span className={`material-symbols-outlined text-[20px] ${isActive('/sites') ? 'fill-current' : 'group-hover:text-orange-500'}`}>web</span>
+                                    <p className="text-sm font-medium">My Sites</p>
+                                </Link>
+                                <Link
                                     to="/domains" 
                                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
                                         isActive('/domains') 
@@ -89,18 +100,42 @@ const Layout = ({ children }) => {
                                     <span className={`material-symbols-outlined text-[20px] ${isActive('/leads') ? 'fill-current' : 'group-hover:text-orange-500'}`}>inbox</span>
                                     <p className="text-sm font-medium">Leads</p>
                                 </Link>
-                                <Link 
-                                    to="/credits" 
+                                <Link
+                                    to="/credits"
                                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
-                                        isActive('/credits') 
-                                        ? 'bg-orange-500/10 text-orange-500' 
+                                        isActive('/credits')
+                                        ? 'bg-orange-500/10 text-orange-500'
                                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                     }`}
                                 >
                                     <span className={`material-symbols-outlined text-[20px] ${isActive('/credits') ? 'fill-current' : 'group-hover:text-orange-500'}`}>account_balance_wallet</span>
                                     <p className="text-sm font-medium">Credits</p>
                                 </Link>
+                                <Link
+                                    to="/referral"
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                                        isActive('/referral')
+                                        ? 'bg-orange-500/10 text-orange-500'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                    }`}
+                                >
+                                    <span className={`material-symbols-outlined text-[20px] ${isActive('/referral') ? 'fill-current' : 'group-hover:text-orange-500'}`}>card_giftcard</span>
+                                    <p className="text-sm font-medium">Refer & Earn</p>
+                                </Link>
                             </div>
+                        </div>
+                        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                            <Link
+                                to="/settings"
+                                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${
+                                    isActive('/settings')
+                                    ? 'bg-orange-500/10 text-orange-500'
+                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                <span className={`material-symbols-outlined text-[20px] ${isActive('/settings') ? 'fill-current' : 'group-hover:text-orange-500'}`}>settings</span>
+                                <p className="text-sm font-medium">Settings</p>
+                            </Link>
                         </div>
                     </div>
                 </aside>

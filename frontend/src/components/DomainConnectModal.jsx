@@ -47,6 +47,8 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     });
 
 
+    const [billingPrefilled, setBillingPrefilled] = useState(false);
+
     useEffect(() => {
         if (isOpen && projectId) {
             fetchProjectDetails();
@@ -59,6 +61,37 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
             setView('setup');
             setClaimDomain('');
             setClaimStatus('idle');
+
+            // Pre-populate contact from billing address
+            const fetchBilling = async () => {
+                try {
+                    const token = await auth.currentUser.getIdToken();
+                    const { data } = await axios.get('/api/profile', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (data.billingAddress) {
+                        const b = data.billingAddress;
+                        setContact({
+                            nameFirst: b.firstName || '',
+                            nameLast: b.lastName || '',
+                            email: b.email || '',
+                            phone: b.phone || '',
+                            address1: b.address1 || '',
+                            city: b.city || '',
+                            state: b.state || '',
+                            postalCode: b.postalCode || '',
+                            country: b.country || 'IN'
+                        });
+                        setBillingPrefilled(true);
+                    } else {
+                        setBillingPrefilled(false);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch billing address:', err);
+                    setBillingPrefilled(false);
+                }
+            };
+            fetchBilling();
         }
     }, [isOpen, projectId]);
 
@@ -453,7 +486,14 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
                                                 </div>
 
                                                 <div className="pt-4 border-t border-green-200 dark:border-green-900/30">
-                                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Registrant Details</h4>
+                                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Registrant Details</h4>
+                                                    {billingPrefilled && (
+                                                        <p className="text-xs text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[14px]">info</span>
+                                                            Pre-filled from your billing address
+                                                        </p>
+                                                    )}
+                                                    {!billingPrefilled && <div className="mb-3" />}
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div>
                                                             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">First Name</label>

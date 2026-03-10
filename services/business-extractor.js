@@ -2,11 +2,12 @@ const { google } = require('googleapis');
 const { VertexAI } = require('@google-cloud/vertexai');
 
 const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT, 
-  location: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+  project: process.env.GCP_PROJECT,
+  location: 'global',
+  apiEndpoint: 'aiplatform.googleapis.com'
 });
 const model = vertex_ai.preview.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.1-flash-lite-preview',
 });
 
 const customsearch = google.customsearch('v1');
@@ -84,13 +85,16 @@ Ensure valid JSON. Do not include markdown code blocks.
 async function extractFromUrl(query) {
     try {
         console.log(`Extracting info for: "${query}"`);
-        
+        const usageLog = [];
+
         // 1. Try Google Places API (New) - Preferred for local businesses
         try {
             const placesData = await fetchPlacesData(query);
             if (placesData) {
                 console.log('Successfully fetched data from Google Places API.');
-                return await formatPlacesData(placesData);
+                const { data, usage } = await formatPlacesData(placesData);
+                if (usage) usageLog.push(usage);
+                return { data, usageLog };
             }
         } catch (e) {
             console.warn('Google Places API failed or disabled. Falling back to Search.', e.message);
@@ -98,7 +102,9 @@ async function extractFromUrl(query) {
 
         // 2. Fallback to Custom Search
         console.log('Using Google Custom Search fallback...');
-        return await fetchCustomSearchData(query);
+        const { data, usage } = await fetchCustomSearchData(query);
+        if (usage) usageLog.push(usage);
+        return { data, usageLog };
 
     } catch (error) {
         console.error('Extraction failed:', error);
@@ -175,22 +181,25 @@ async function formatPlacesData(place) {
     const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT.replace('{DATA}', rawDataSummary) }] }],
     });
-    
+
+    const usage = result.response.usageMetadata || null;
     let textResponse = result.response.candidates[0].content.parts[0].text;
     textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
     try {
-        return JSON.parse(textResponse);
+        return { data: JSON.parse(textResponse), usage };
     } catch (e) {
         console.error("Failed to parse AI JSON response", textResponse);
-        // Fallback object
         return {
-            name: place.displayName?.text || '',
-            address: place.formattedAddress || '',
-            phone: place.nationalPhoneNumber || '',
-            website: place.websiteUri || '',
-            description: place.editorialSummary?.text || '',
-            reviews: reviews // Return the array directly
+            data: {
+                name: place.displayName?.text || '',
+                address: place.formattedAddress || '',
+                phone: place.nationalPhoneNumber || '',
+                website: place.websiteUri || '',
+                description: place.editorialSummary?.text || '',
+                reviews: reviews
+            },
+            usage
         };
     }
 }
@@ -227,16 +236,20 @@ SchemaData: ${schema}
         contents: [{ role: 'user', parts: [{ text: SEARCH_PROMPT.replace('{SEARCH_RESULTS}', searchContext) }] }],
     });
 
+    const usage = result.response.usageMetadata || null;
     let textResponse = result.response.candidates[0].content.parts[0].text;
     textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
     try {
-        return JSON.parse(textResponse);
+        return { data: JSON.parse(textResponse), usage };
     } catch (e) {
         console.error("Failed to parse AI JSON response (Search)", textResponse);
-         return {
-            name: query,
-            description: "Could not automatically extract details."
+        return {
+            data: {
+                name: query,
+                description: "Could not automatically extract details."
+            },
+            usage
         };
     }
 }

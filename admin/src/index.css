@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background-light: #f8fafc;
+  --color-background-dark: #0f172a;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-brand-dark: #1e293b;
+
+  --font-display: "Inter", sans-serif;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-background-light text-slate-900 dark:bg-background-dark dark:text-white transition-colors duration-200;
+  }
+}

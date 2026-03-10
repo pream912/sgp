@@ -251,14 +251,13 @@ Button Text: ${selectedPalette.colors.buttonText}`;
 
             if (response.data.success) {
                 setBuildStatus('Deploying...');
-                setTimeout(() => navigate('/'), 2000);
+                setTimeout(() => navigate('/sites'), 2000);
             }
 
         } catch (error) {
             console.error('Build failed:', error);
-            setBuildStatus('Failed');
-            alert('Build failed: ' + (error.response?.data?.error || error.message));
             setLoading(false);
+            navigate('/sites');
         }
     };
 
@@ -638,8 +637,8 @@ Button Text: ${selectedPalette.colors.buttonText}`;
                                 {step === 4 ? (
                                     <>
                                         {loading ? (
-                                            <div className="bg-orange-500/20 text-orange-400 p-4 rounded-xl text-center font-bold animate-pulse border border-orange-500/30">
-                                                {buildStatus}
+                                            <div className="bg-orange-500/20 text-orange-400 p-4 rounded-xl text-center font-bold border border-orange-500/30 flex items-center justify-center gap-3">
+                                                <Loader className="animate-spin h-5 w-5" /> Building...
                                             </div>
                                         ) : (
                                             <button 

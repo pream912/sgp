@@ -9,9 +9,22 @@ const storage = new Storage();
 const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'sgp1-projects-storage';
 const HOSTING_BUCKET = process.env.GCS_HOSTING_BUCKET || 'sgp1-sites-hosting';
 
+async function uploadWithRetry(bucket, filePath, options, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await bucket.upload(filePath, options);
+            return;
+        } catch (error) {
+            if (attempt === maxRetries) throw error;
+            console.warn(`Upload failed (attempt ${attempt}/${maxRetries}): ${error.message}. Retrying...`);
+            await new Promise(r => setTimeout(r, 1000 * attempt));
+        }
+    }
+}
+
 async function uploadFile(localPath, destinationPath, bucketName = BUCKET_NAME) {
     try {
-        await storage.bucket(bucketName).upload(localPath, {
+        await uploadWithRetry(storage.bucket(bucketName), localPath, {
             destination: destinationPath,
         });
         console.log(`Uploaded ${localPath} to gs://${bucketName}/${destinationPath}`);
@@ -41,21 +54,13 @@ async function uploadDirectory(localDir, destPrefix, bucketName = BUCKET_NAME) {
             const relativePath = path.relative(localDir, filePath);
             const destination = path.join(destPrefix, relativePath).replace(/\\/g, '/'); // Ensure forward slashes
             
-            try {
-                await storage.bucket(bucketName).upload(filePath, {
-                    destination: destination,
-                    gzip: true,
-                    metadata: {
-                        cacheControl: filePath.endsWith('.html') ? 'no-cache, max-age=0' : 'public, max-age=31536000',
-                    },
-                });
-            } catch (err) {
-                console.error(`Failed to upload ${filePath}:`, err.message);
-                // Don't throw immediately, let other files try? 
-                // Better to throw if it's critical, but for backup/assets, maybe warn.
-                // Throwing to ensure integrity.
-                throw err;
-            }
+            await uploadWithRetry(storage.bucket(bucketName), filePath, {
+                destination: destination,
+                gzip: true,
+                metadata: {
+                    cacheControl: filePath.endsWith('.html') ? 'no-cache, max-age=0' : 'public, max-age=31536000',
+                },
+            });
         }));
         
         // Optional: Small delay between batches if needed, but sequential batches usually suffice
@@ -119,4 +124,18 @@ async function getFiles(dir) {
     return files.reduce((a, f) => a.concat(f), []);
 }
 
-module.exports = { uploadFile, uploadDirectory, downloadDirectory, BUCKET_NAME, HOSTING_BUCKET };
+async function uploadPreview(localPath, projectId) {
+    const destination = `previews/${projectId}.jpg`;
+    await uploadWithRetry(storage.bucket(HOSTING_BUCKET), localPath, {
+        destination,
+        metadata: {
+            cacheControl: 'no-cache, max-age=0',
+            contentType: 'image/jpeg',
+        },
+    });
+    const url = `https://storage.googleapis.com/${HOSTING_BUCKET}/${destination}`;
+    console.log(`[Preview] Uploaded to ${url}`);
+    return url;
+}
+
+module.exports = { uploadFile, uploadDirectory, downloadDirectory, uploadPreview, BUCKET_NAME, HOSTING_BUCKET };

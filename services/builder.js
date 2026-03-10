@@ -1,6 +1,5 @@
 const fs = require('fs-extra');
 const path = require('path');
-const { spawn } = require('child_process');
 const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
@@ -11,7 +10,8 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
     const tempDir = path.join(__dirname, '../temp', id);
     const distDir = path.join(tempDir, 'dist');
     const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
-    
+    const tokenUsageLog = [];
+
     try {
         // Prepare logo data if uploaded
         let logoBuffer = null;
@@ -28,20 +28,25 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         
         let designSystem;
         let designAttempts = 0;
-        const MAX_DESIGN_RETRIES = 3;
-        
+        const MAX_DESIGN_RETRIES = 5;
+
         while (designAttempts < MAX_DESIGN_RETRIES) {
             designAttempts++;
             try {
-                designSystem = await generateDesign(userContext, logoBuffer, logoMimeType);
+                const designResult = await generateDesign(userContext, logoBuffer, logoMimeType);
+                designSystem = designResult.design;
+                if (designResult.usage) tokenUsageLog.push({ service: 'architect', action: 'generateDesign', ...designResult.usage });
                 break; // Success
             } catch (err) {
+                const is429 = err.message && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED'));
                 console.warn(`[${id}] Design Generation Attempt ${designAttempts} failed: ${err.message}`);
                 if (designAttempts >= MAX_DESIGN_RETRIES) {
-                     throw new Error(`Failed to generate Design after ${MAX_DESIGN_RETRIES} attempts. Last error: ${err.message}`);
+                    if (is429) throw new Error('RATE_LIMITED');
+                    throw new Error(`Failed to generate Design after ${MAX_DESIGN_RETRIES} attempts. Last error: ${err.message}`);
                 }
-                const delay = 2000 * Math.pow(2, designAttempts - 1); 
-                console.log(`[${id}] Waiting ${delay}ms before retry...`);
+                const baseDelay = is429 ? 10000 : 2000;
+                const delay = baseDelay * Math.pow(2, designAttempts - 1) + Math.random() * 2000;
+                console.log(`[${id}] ${is429 ? 'Rate limited. ' : ''}Waiting ${Math.round(delay)}ms before retry...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -88,30 +93,39 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
              onProgress(msgPage);
             let code = '';
             let genAttempts = 0;
-            const MAX_GEN_RETRIES = 5;
+            const MAX_GEN_RETRIES = 7;
 
             while (genAttempts < MAX_GEN_RETRIES) {
                 genAttempts++;
                 try {
-                    code = await generateCode(designSystem, userContext, pageName, pages, refLayout, stylePreset);
-                    
+                    const codeResult = await generateCode(designSystem, userContext, pageName, pages, refLayout, stylePreset);
+                    code = codeResult.code;
+                    if (codeResult.usage) tokenUsageLog.push({ service: 'coder', action: `generateCode:${pageName}`, ...codeResult.usage });
+
                     // Basic Validation
                     if (!code.trim().endsWith('</html>')) {
                         throw new Error("Incomplete HTML generated (Missing </html>)");
                     }
-    
+
                     return code;
                 } catch (err) {
+                    const is429 = err.message && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED'));
                     console.warn(`[${id}] ${pageName} Generation Attempt ${genAttempts} failed: ${err.message}`);
+
                     if (genAttempts >= MAX_GEN_RETRIES) {
+                        if (is429) {
+                            throw new Error('RATE_LIMITED');
+                        }
                         throw new Error(`Failed to generate ${pageName} after ${MAX_GEN_RETRIES} attempts. Last error: ${err.message}`);
                     }
-                    
-                    // Exponential Backoff
-                    const backoff = 2000 * Math.pow(2, genAttempts - 1);
-                    const jitter = Math.random() * 1000;
+
+                    // Longer backoff for rate limits
+                    const baseDelay = is429 ? 10000 : 2000;
+                    const backoff = baseDelay * Math.pow(2, genAttempts - 1);
+                    const jitter = Math.random() * 2000;
                     const delay = backoff + jitter;
-                    console.log(`[${id}] Waiting ${Math.round(delay)}ms before retry...`);
+                    console.log(`[${id}] ${is429 ? 'Rate limited. ' : ''}Waiting ${Math.round(delay)}ms before retry...`);
+                    onProgress(`[${id}] Waiting to retry ${pageName}...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
             }
@@ -161,11 +175,24 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
             }
         }
 
+        // 3.5 Generate site-config.json & copy site-nav.js
+        const siteConfig = {
+            businessName: designSystem.businessName || 'Business',
+            logo: logoFile ? './logo.png' : null,
+            navigation: pages.map(pageName => ({
+                name: pageName,
+                path: pageName === 'Home' ? 'index.html' : `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`,
+                children: []
+            }))
+        };
+        await fs.writeFile(path.join(distDir, 'site-config.json'), JSON.stringify(siteConfig, null, 2));
+        await fs.copy(path.join(skeletonDir, 'site-nav.js'), path.join(distDir, 'site-nav.js'));
+
         // 4. Inject Config & CDN (No Build Step)
         const msgConfig = `[${id}] Injecting configuration...`;
         console.log(msgConfig);
         onProgress(msgConfig);
-        
+
         await setupConfig(tempDir, distDir, designSystem, id);
         
         // Also save tailwind.config.js for reference/editing (optional but good for consistency)
@@ -174,8 +201,8 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         const configPath = path.join(tempDir, 'tailwind.config.js');
         await fs.writeFile(configPath, `module.exports = ${JSON.stringify(tailwindConfigObj, null, 2)}`);
 
-        return distDir;
-        
+        return { distDir, tokenUsageLog };
+
     } catch (err) {
         await fs.remove(tempDir);
         throw err;
@@ -184,6 +211,10 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
 
 // Helper to construct config object
 function getTailwindConfigFromDesign(designSystem) {
+    if (!designSystem) {
+        // Return a minimal default config if no design system is available
+        return { theme: { extend: {} }, plugins: [] };
+    }
     const { googleFonts, colorPalette } = designSystem;
     return {
       theme: {
@@ -252,28 +283,18 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         }
         
         // Inject/Update Tailwind CDN & Config
-        // Remove old style.css link if present
-        if (html.includes('href="./style.css"')) {
-            html = html.replace(/<link href="\.\/style\.css" rel="stylesheet">\s*/, '');
-        }
-        
-        // Update/Inject Config Script
-        const configRegex = /<script>\s*tailwind\.config\s*=\s*[\s\S]*?<\/script>/;
-        const cdnTag = '<script src="https://cdn.tailwindcss.com"></script>';
-        
-        if (html.match(configRegex)) {
-            // Replace existing config
-            html = html.replace(configRegex, `<script>\n  tailwind.config = ${JSON.stringify(tailwindConfig, null, 2)}\n</script>`);
-            // Ensure CDN script is present
-            if (!html.includes('cdn.tailwindcss.com')) {
-                html = html.replace('</head>', `${cdnTag}\n</head>`);
-            }
-        } else {
-            // New injection
-             if (!html.includes('cdn.tailwindcss.com')) {
-                 html = html.replace('</head>', `${tailwindScript}\n</head>`);
-             }
-        }
+        // Remove old style.css link if present (handle various attribute orders, quotes, whitespace)
+        html = html.replace(/<link[^>]*href=["']\.\/style\.css["'][^>]*>\s*/gi, '');
+
+        // Also remove any old versioned CDN tags (e.g., cdn.tailwindcss.com/3.4.1) - we'll inject a fresh one
+        html = html.replace(/<script[^>]*src=["'][^"']*cdn\.tailwindcss\.com[^"']*["'][^>]*>\s*<\/script>\s*/gi, '');
+
+        // Remove any existing tailwind.config script blocks
+        const configRegex = /<script>\s*tailwind\.config\s*=\s*[\s\S]*?<\/script>\s*/g;
+        html = html.replace(configRegex, '');
+
+        // Always inject fresh CDN + Config
+        html = html.replace('</head>', `${tailwindScript}\n</head>`);
     
         // Inject AOS CSS (Animation Library)
         if (!html.includes('aos.css')) {
@@ -304,6 +325,11 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
             }
         }
     
+        // Inject site-nav.js for dynamic navigation
+        if (!html.includes('site-nav.js')) {
+            html = html.replace('</body>', `<script src="site-nav.js"></script>\n</body>`);
+        }
+
         // Inject Lead Submission Script AND AOS Init
         // Only inject if not present
         if (!html.includes('handleLeadSubmit')) {
@@ -406,17 +432,6 @@ async function rebuildSite(id) {
         await fs.emptyDir(publicSiteDir);
         await fs.copy(distDir, publicSiteDir);
 
-        // Generate Screenshot
-        try {
-            const previewPath = path.join(publicSiteDir, 'preview.jpg');
-            const indexHtmlPath = path.join(publicSiteDir, 'index.html');
-            console.log(`[${id}] Generating preview screenshot...`);
-            // Run in background so we don't block response
-            captureScreenshot(indexHtmlPath, previewPath).catch(err => console.error(`[${id}] Background screenshot failed:`, err));
-        } catch (e) {
-            console.warn(`[${id}] Screenshot trigger failed:`, e.message);
-        }
-        
         return distDir;
     } catch (error) {
         console.error(`[${id}] Rebuild failed:`, error);

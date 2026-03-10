@@ -11,8 +11,8 @@ const Editor = () => {
   const [searchParams] = useSearchParams();
   const iframeRef = useRef(null);
   
-  // Modes: 'preview', 'section', 'text', 'image', 'theme'
-  const [activeMode, setActiveMode] = useState('preview'); 
+  // Modes: 'preview', 'section', 'text', 'image', 'theme', 'pages'
+  const [activeMode, setActiveMode] = useState('preview');
   const activeModeRef = useRef(activeMode);
 
   // View Mode: 'desktop', 'tablet', 'mobile'
@@ -49,11 +49,21 @@ const Editor = () => {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
 
+  // Pages & Navigation State
+  const [siteConfig, setSiteConfig] = useState(null);
+  const [newPageName, setNewPageName] = useState('');
+  const [newPagePrompt, setNewPagePrompt] = useState('');
+  const [addingPage, setAddingPage] = useState(false);
+  const [addingSubPage, setAddingSubPage] = useState(false);
+  const [newSubPageName, setNewSubPageName] = useState('');
+  const [newSubPagePrompt, setNewSubPagePrompt] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+
   useEffect(() => {
       const init = async () => {
           // Initialize mode from URL
           const modeParam = searchParams.get('mode');
-          if (modeParam && ['preview', 'section', 'text', 'image', 'theme', 'menu'].includes(modeParam)) {
+          if (modeParam && ['preview', 'section', 'text', 'image', 'theme', 'menu', 'pages'].includes(modeParam)) {
               setActiveMode(modeParam);
           } else {
              // Default behavior if no param
@@ -91,6 +101,12 @@ const Editor = () => {
     if (activeMode === 'theme') {
         setActiveTab('theme');
         fetchTheme();
+    } else if (activeMode === 'pages') {
+        setActiveTab('content');
+        fetchSiteConfig();
+    } else if (activeMode === 'menu') {
+        setActiveTab('content');
+        if (!siteConfig) fetchSiteConfig();
     } else if (activeMode !== 'preview') {
         setActiveTab('content');
     }
@@ -112,6 +128,84 @@ const Editor = () => {
           });
           setColors(res.data.colors || {});
       } catch (e) { console.error('Failed to fetch theme', e); }
+  };
+
+  const fetchSiteConfig = async () => {
+      try {
+          const token = await auth.currentUser.getIdToken();
+          const res = await axios.get(`/api/project/${projectId}/site-config`, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          setSiteConfig(res.data);
+      } catch (e) { console.error('Failed to fetch site config', e); }
+  };
+
+  const handleAddPage = async () => {
+      if (!newPageName.trim()) return;
+      setAddingPage(true);
+      try {
+          const token = await auth.currentUser.getIdToken();
+          const res = await axios.post(`/api/project/${projectId}/pages/add`, {
+              pageName: newPageName.trim(),
+              pagePrompt: newPagePrompt.trim() || null,
+              isSubPage: false
+          }, { headers: { Authorization: `Bearer ${token}` } });
+          setSiteConfig(res.data.config);
+          setNewPageName('');
+          setNewPagePrompt('');
+          reloadFrame();
+      } catch (e) {
+          alert(e.response?.data?.error || 'Failed to add page');
+      } finally { setAddingPage(false); }
+  };
+
+  const handleAddSubPage = async () => {
+      if (!newSubPageName.trim()) return;
+      setAddingSubPage(true);
+      try {
+          const token = await auth.currentUser.getIdToken();
+          const res = await axios.post(`/api/project/${projectId}/pages/add`, {
+              pageName: newSubPageName.trim(),
+              pagePrompt: newSubPagePrompt.trim() || null,
+              isSubPage: true
+          }, { headers: { Authorization: `Bearer ${token}` } });
+          setSiteConfig(res.data.config);
+          setNewSubPageName('');
+          setNewSubPagePrompt('');
+          reloadFrame();
+      } catch (e) {
+          alert(e.response?.data?.error || 'Failed to add page');
+      } finally { setAddingSubPage(false); }
+  };
+
+  const handleLogoUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setLogoUploading(true);
+      try {
+          const token = await auth.currentUser.getIdToken();
+          const formData = new FormData();
+          formData.append('logo', file);
+          const res = await axios.post(`/api/project/${projectId}/logo`, formData, {
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+          });
+          setSiteConfig(prev => prev ? { ...prev, logo: res.data.logo } : prev);
+          reloadFrame();
+      } catch (e) {
+          alert('Failed to upload logo');
+      } finally { setLogoUploading(false); }
+  };
+
+  const handleUpdateNavOrder = async (newNav) => {
+      try {
+          const token = await auth.currentUser.getIdToken();
+          const updated = { ...siteConfig, navigation: newNav };
+          await axios.put(`/api/project/${projectId}/site-config`, updated, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          setSiteConfig(updated);
+          reloadFrame();
+      } catch (e) { alert('Failed to update navigation'); }
   };
 
   const scanPagesFromNav = (doc) => {
@@ -567,6 +661,44 @@ const Editor = () => {
                              </div>
                         </div>
 
+                        <div onClick={() => handleModeChange('pages')} className="group flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-teal-500/50 hover:shadow-md cursor-pointer transition-all">
+                             <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-500 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                                 <span className="material-symbols-outlined text-2xl">menu</span>
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900 dark:text-white">Pages & Navigation</h4>
+                                 <p className="text-xs text-gray-500 mt-1">Add and manage site pages.</p>
+                             </div>
+                        </div>
+
+                        {/* Logo Management - inline in menu */}
+                        <div className="group p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all">
+                             <div className="flex items-start gap-4">
+                                 <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500">
+                                     <span className="material-symbols-outlined text-2xl">image</span>
+                                 </div>
+                                 <div className="flex-1">
+                                     <h4 className="font-bold text-gray-900 dark:text-white">Site Logo</h4>
+                                     <p className="text-xs text-gray-500 mt-1">Upload or change your logo.</p>
+                                 </div>
+                             </div>
+                             <div className="mt-3">
+                                 {siteConfig?.logo && (
+                                     <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg flex items-center justify-center">
+                                         <img src={`/sites/${projectId}/logo.png?t=${Date.now()}`} alt="Current logo" className="max-h-10 object-contain" />
+                                     </div>
+                                 )}
+                                 <label className="w-full py-2 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                                     {logoUploading ? (
+                                         <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Uploading...</>
+                                     ) : (
+                                         <><span className="material-symbols-outlined text-[16px]">upload</span> {siteConfig?.logo ? 'Change Logo' : 'Upload Logo'}</>
+                                     )}
+                                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" disabled={logoUploading} />
+                                 </label>
+                             </div>
+                        </div>
+
                         <div onClick={() => handleModeChange('preview')} className="group flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-all mt-6">
                              <div className="p-2 text-gray-500">
                                  <span className="material-symbols-outlined text-2xl">visibility</span>
@@ -699,6 +831,128 @@ const Editor = () => {
                                         <p>Click on any image or background in the preview to replace it.</p>
                                     </div>
                                 )}
+                                {activeMode === 'pages' && (
+                                    <div className="space-y-4 animate-fadeIn">
+                                        {!siteConfig ? (
+                                            <div className="text-center py-4">
+                                                <span className="material-symbols-outlined text-2xl text-gray-300 animate-spin">progress_activity</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Main Pages */}
+                                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Main Pages</p>
+                                                {siteConfig.navigation?.filter(item => item.name !== 'More').map((item, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl ring-1 ring-black/5 dark:ring-white/10">
+                                                        <span className="material-symbols-outlined text-teal-400 text-[18px]">web</span>
+                                                        <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">{item.name}</span>
+                                                        <span className="text-[10px] text-gray-400 font-mono">{item.path}</span>
+                                                    </div>
+                                                ))}
+
+                                                {/* Add Main Page */}
+                                                {(() => {
+                                                    const mainCount = siteConfig.navigation?.filter(item => item.name !== 'More').length || 0;
+                                                    return mainCount < 7 ? (
+                                                        <div className="space-y-2 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl">
+                                                            <input
+                                                                value={newPageName}
+                                                                onChange={e => setNewPageName(e.target.value)}
+                                                                className="w-full px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-sm"
+                                                                placeholder="Page name (e.g. Gallery)"
+                                                            />
+                                                            <textarea
+                                                                value={newPagePrompt}
+                                                                onChange={e => setNewPagePrompt(e.target.value)}
+                                                                rows={2}
+                                                                className="w-full px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-xs placeholder:text-gray-400 resize-none"
+                                                                placeholder="Describe what this page should contain... (optional)"
+                                                            />
+                                                            <button
+                                                                onClick={handleAddPage}
+                                                                disabled={addingPage || !newPageName.trim()}
+                                                                className="w-full py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 text-sm font-semibold flex items-center justify-center gap-1"
+                                                            >
+                                                                {addingPage ? (
+                                                                    <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Generating...</>
+                                                                ) : (
+                                                                    <><span className="material-symbols-outlined text-[16px]">add</span> Add Page</>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs text-amber-500 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[14px]">info</span>
+                                                            Max 7 main pages reached
+                                                        </p>
+                                                    );
+                                                })()}
+
+                                                {/* Sub Pages (under "More" dropdown) */}
+                                                <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-2">
+                                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                                                        More Pages
+                                                        <span className="normal-case font-normal ml-1">(shown under "More" dropdown)</span>
+                                                    </p>
+
+                                                    {(() => {
+                                                        const moreItem = siteConfig.navigation?.find(item => item.name === 'More');
+                                                        const subPages = moreItem?.children || [];
+                                                        return (
+                                                            <>
+                                                                {subPages.length === 0 && (
+                                                                    <p className="text-xs text-gray-400 py-2">No sub-pages yet.</p>
+                                                                )}
+                                                                {subPages.map((child, cidx) => (
+                                                                    <div key={cidx} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl ring-1 ring-black/5 dark:ring-white/10 mb-1">
+                                                                        <span className="material-symbols-outlined text-gray-300 text-[16px]">subdirectory_arrow_right</span>
+                                                                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{child.name}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-mono">{child.path}</span>
+                                                                    </div>
+                                                                ))}
+
+                                                                {subPages.length < 30 ? (
+                                                                    <div className="space-y-2 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl mt-2">
+                                                                        <input
+                                                                            value={newSubPageName}
+                                                                            onChange={e => setNewSubPageName(e.target.value)}
+                                                                            className="w-full px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-sm"
+                                                                            placeholder="Sub-page name"
+                                                                        />
+                                                                        <textarea
+                                                                            value={newSubPagePrompt}
+                                                                            onChange={e => setNewSubPagePrompt(e.target.value)}
+                                                                            rows={2}
+                                                                            className="w-full px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-xs placeholder:text-gray-400 resize-none"
+                                                                            placeholder="Describe what this page should contain... (optional)"
+                                                                        />
+                                                                        <button
+                                                                            onClick={handleAddSubPage}
+                                                                            disabled={addingSubPage || !newSubPageName.trim()}
+                                                                            className="w-full py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 text-sm font-semibold flex items-center justify-center gap-1"
+                                                                        >
+                                                                            {addingSubPage ? (
+                                                                                <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Generating...</>
+                                                                            ) : (
+                                                                                <><span className="material-symbols-outlined text-[16px]">add</span> Add Sub Page</>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-xs text-amber-500 flex items-center gap-1 mt-2">
+                                                                        <span className="material-symbols-outlined text-[14px]">info</span>
+                                                                        Max 30 sub-pages reached
+                                                                    </p>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                <p className="text-[10px] text-gray-400 mt-2">Each new page costs 100 credits.</p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </>
                         )}
                     </>
@@ -716,17 +970,17 @@ const Editor = () => {
                         </div>
                     </div>
                     <div className="relative">
-                        <input 
+                        <textarea
                             value={globalInstruction}
                             onChange={(e) => setGlobalInstruction(e.target.value)}
-                            className="w-full pl-3 pr-10 py-2.5 rounded-lg border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-orange-500 shadow-sm" 
-                            placeholder="Describe page-wide changes..." 
-                            type="text" 
+                            rows={3}
+                            className="w-full pl-3 pr-10 py-2.5 rounded-lg border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-orange-500 shadow-sm resize-none"
+                            placeholder="Describe page-wide changes..."
                         />
-                        <button 
+                        <button
                             onClick={handleRegeneratePage}
                             disabled={!globalInstruction || loading}
-                            className="absolute right-2 top-1.5 p-1 text-orange-500 hover:bg-orange-500/10 rounded disabled:opacity-50"
+                            className="absolute right-2 bottom-2 p-1 text-orange-500 hover:bg-orange-500/10 rounded disabled:opacity-50"
                         >
                             <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                         </button>

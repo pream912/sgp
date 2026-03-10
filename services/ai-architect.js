@@ -1,11 +1,12 @@
 const { VertexAI } = require('@google-cloud/vertexai');
 
 const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT, 
-  location: 'us-central1'
+  project: process.env.GCP_PROJECT,
+  location: 'global',
+  apiEndpoint: 'aiplatform.googleapis.com'
 });
 const model = vertex_ai.preview.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.1-flash-lite-preview',
    generationConfig: {
     'responseMimeType': 'application/json',
   },
@@ -54,7 +55,7 @@ async function generateDesign(userInfo, logoBuffer, logoMimeType) {
     });
     
     const response = await result.response;
-    return JSON.parse(response.candidates[0].content.parts[0].text);
+    return { design: JSON.parse(response.candidates[0].content.parts[0].text), usage: response.usageMetadata || null };
 }
 
 async function generatePalette(userInfo) {
@@ -79,7 +80,7 @@ async function generatePalette(userInfo) {
     
     const response = await result.response;
     const json = JSON.parse(response.candidates[0].content.parts[0].text);
-    return json.colorPalette;
+    return { palette: json.colorPalette, usage: response.usageMetadata || null };
 }
 
 module.exports = { generateDesign, generatePalette };

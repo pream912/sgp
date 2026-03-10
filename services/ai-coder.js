@@ -2,8 +2,9 @@ const { VertexAI } = require('@google-cloud/vertexai');
 const cheerio = require('cheerio');
 
 const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT, 
-  location: 'us-central1'
+  project: process.env.GCP_PROJECT,
+  location: 'global',
+  apiEndpoint: 'aiplatform.googleapis.com'
 });
 const model = vertex_ai.preview.getGenerativeModel({
   model: 'gemini-2.5-pro',
@@ -180,6 +181,12 @@ const BASE_PROMPT_END = `
       - IF 'ALL_PAGES' contains ONLY ONE page (e.g., ['Home']):
         - **STRICTLY DO NOT GENERATE ANY NAVIGATION LINKS OR MENUS IN THE HEADER.**
         - The header should only contain the logo/business name and a CTA button (if appropriate).
+    - **NAVIGATION DATA ATTRIBUTES (CRITICAL):**
+      - The logo link (<a> wrapping logo img or business name text) MUST have: data-nav="logo"
+      - Desktop navigation container (<nav> or <ul> holding the nav links) MUST have: data-nav="desktop"
+      - Mobile menu container (the div shown/hidden on hamburger click) MUST have: data-nav="mobile"
+      - Mobile hamburger button MUST have: data-nav="mobile-toggle"
+      - Footer navigation links container (if footer has nav links) MUST have: data-nav="footer-links"
     - **CONSISTENCY (CRITICAL):**
       - If 'LAYOUT_REFERENCE' is provided, you **MUST** use the provided Header and Footer HTML structure EXACTLY.
       - **DO NOT CHANGE THE DESIGN, CLASSES, OR LAYOUT OF THE HEADER/FOOTER.**
@@ -253,10 +260,10 @@ async function generateCode(designSystem, userContext, pageName = 'Home', allPag
     }
 
     let text = candidate.content.parts[0].text;
-    
+
     // Clean up markdown
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return text;
+    return { code: text, usage: response.usageMetadata || null };
 }
 
 async function fixCode(badCode, errorLog, stylePreset = null) {
@@ -279,27 +286,36 @@ async function fixCode(badCode, errorLog, stylePreset = null) {
     
     const response = await result.response;
     let text = response.candidates[0].content.parts[0].text;
-    
+
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return text;
+    return { code: text, usage: response.usageMetadata || null };
 }
 
 async function regenerateSection(code, sectionId, instruction) {
     const prompt = `
     EXISTING HTML CODE:
     ${code}
-    
+
     TASK:
     Find the HTML Element/Section with the attribute 'data-section="${sectionId}"'.
     Rewrite ONLY the content of that section based on the following instruction:
     "${instruction}"
-    
+
     CRITICAL:
     1. Keep all other sections EXACTLY the same.
     2. Maintain the 'data-section="${sectionId}"' attribute on the container.
     3. Use the same Tailwind theme and design system.
     4. RETURN THE FULL UPDATED 'index.html' FILE.
-    
+    5. DO NOT modify, add, or remove any <script> tags related to Tailwind CDN or tailwind.config. The build system manages these automatically.
+
+    TAILWIND & STYLING CONSTRAINTS:
+    - USE TAILWIND CSS FOR ALL STYLING. Use the defined theme colors: 'primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'.
+    - Example: Use "bg-primary" instead of "bg-[#FF5733]". Use "text-accent" instead of hard-coded colors.
+    - DO NOT use <style> tags or @apply directives. ALL styling must be via inline Tailwind utility classes.
+    - Use 'font-heading' for headings and 'font-body' for body text.
+    - DO NOT include any Tailwind CDN <script> tags or tailwind.config definitions. The build system handles this.
+    - DO NOT use 'overflow-hidden' on <body>, <html>, or <main> tags.
+
     ${sectionId === 'footer' ? `
     IMPORTANT:
     - You MUST include a "Powered By GenWeb" link (https://genweb.in) in the footer, near "All rights reserved".
@@ -316,28 +332,39 @@ async function regenerateSection(code, sectionId, instruction) {
     
     const response = await result.response;
     let text = response.candidates[0].content.parts[0].text;
-    
+
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return text;
+    return { code: text, usage: response.usageMetadata || null };
 }
 
 async function regeneratePage(code, instruction) {
     const prompt = `
     EXISTING HTML CODE:
     ${code}
-    
+
     TASK:
     Modify the ENTIRE HTML document based on the following instruction:
     "${instruction}"
-    
+
     CRITICAL:
     1. You can add, remove, or modify sections, styles, and content as needed to fulfill the request.
     2. Maintain the overall structure (<html>, <head>, <body>).
     3. Use the same Tailwind theme and design system.
     4. RETURN THE FULL UPDATED 'index.html' FILE.
-    
+    5. DO NOT modify, add, or remove any <script> tags related to Tailwind CDN or tailwind.config. The build system manages these automatically.
+
+    TAILWIND & STYLING CONSTRAINTS:
+    - USE TAILWIND CSS FOR ALL STYLING. Use the defined theme colors: 'primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'.
+    - Example: Use "bg-primary" instead of "bg-[#FF5733]". Use "text-accent" instead of hard-coded colors.
+    - DO NOT use <style> tags or @apply directives. ALL styling must be via inline Tailwind utility classes.
+    - Use 'font-heading' for headings and 'font-body' for body text.
+    - DO NOT include any Tailwind CDN <script> tags or tailwind.config definitions. The build system handles this.
+    - DO NOT include <link href="./style.css"> or any local CSS file references. The build system handles all CSS.
+    - DO NOT use 'overflow-hidden' on <body>, <html>, or <main> tags.
+
     IMPORTANT:
     - Ensure the Footer (data-section="footer") contains a "Powered By GenWeb" link (https://genweb.in) near the copyright notice.
+    - Every major section must have a 'data-section' attribute.
 
     STRICT CONSTRAINTS:
     - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
@@ -349,9 +376,9 @@ async function regeneratePage(code, instruction) {
     
     const response = await result.response;
     let text = response.candidates[0].content.parts[0].text;
-    
+
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return text;
+    return { code: text, usage: response.usageMetadata || null };
 }
 
 async function updateSectionContent(code, sectionId, type, originalValue, newValue) {

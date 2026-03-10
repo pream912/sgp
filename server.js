@@ -8,7 +8,7 @@ const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 const { buildSite, rebuildSite } = require('./services/builder');
 const { deploySite, makeBucketPrivate, makeBucketPublic, deleteSiteBucket } = require('./services/deploy');
-const { uploadDirectory, downloadDirectory } = require('./services/storage');
+const { uploadDirectory, downloadDirectory, uploadPreview } = require('./services/storage');
 const { createOrder, verifyPayment } = require('./services/payments');
 const { extractFromUrl } = require('./services/business-extractor');
 const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability, cleanupGCPDomain, listDNSRecords, addDNSRecordGeneric, deleteDNSRecord } = require('./services/domains');
@@ -18,6 +18,7 @@ const { captureScreenshot } = require('./services/screenshot');
 const { getUserCredits, addCredits, deductCredits, getTransactions } = require('./services/credits');
 const { db, admin, auth } = require('./services/firebase');
 const verifyToken = require('./middleware/auth');
+const verifyAdmin = require('./middleware/adminAuth');
 
 const cookieParser = require('cookie-parser'); // Import cookie-parser
 const cors = require('cors'); // Import cors
@@ -26,6 +27,143 @@ const app = express();
 app.use(cors({ origin: true, credentials: true })); // Enable CORS for all origins with credentials
 app.use(express.json());
 app.use(cookieParser()); // Use cookie-parser
+
+// --- Token Usage Tracking ---
+async function saveTokenUsage(entries, projectId, userId) {
+    if (!db || !entries || entries.length === 0) return;
+    try {
+        const batch = db.batch();
+        for (const entry of entries) {
+            const ref = db.collection('tokenUsage').doc();
+            batch.set(ref, {
+                projectId: projectId || null,
+                userId: userId || null,
+                model: entry.model || 'gemini',
+                service: entry.service || 'unknown',
+                action: entry.action || null,
+                inputTokens: entry.promptTokenCount || 0,
+                outputTokens: entry.candidatesTokenCount || 0,
+                totalTokens: entry.totalTokenCount || 0,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        await batch.commit();
+        console.log(`[TokenUsage] Saved ${entries.length} usage entries for project ${projectId}`);
+    } catch (err) {
+        console.error('[TokenUsage] Failed to save:', err.message);
+    }
+}
+
+// --- Retry with Exponential Backoff (for 429 / RESOURCE_EXHAUSTED) ---
+async function retryWithBackoff(fn, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            const msg = err.message || '';
+            const is429 = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+            if (!is429 || attempt === maxRetries) {
+                if (is429) {
+                    const highDemandError = new Error('Our AI services are currently experiencing high demand. Please try again in a few minutes.');
+                    highDemandError.statusCode = 503;
+                    throw highDemandError;
+                }
+                throw err;
+            }
+            const delay = 10000 * Math.pow(2, attempt - 1) + Math.random() * 2000;
+            console.warn(`[Retry] 429 hit, attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay / 1000)}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+// --- Analytics Buffer ---
+const analyticsBuffer = new Map(); // projectId -> { pageviews, bandwidth }
+const projectOwnerCache = new Map(); // projectId -> userId
+
+function trackPageview(projectId, contentLength, userId) {
+    const entry = analyticsBuffer.get(projectId) || { pageviews: 0, bandwidth: 0 };
+    entry.pageviews += 1;
+    entry.bandwidth += (contentLength || 0);
+    analyticsBuffer.set(projectId, entry);
+    if (userId) projectOwnerCache.set(projectId, userId);
+}
+
+async function flushAnalytics() {
+    if (!db || analyticsBuffer.size === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const entries = Array.from(analyticsBuffer.entries());
+    analyticsBuffer.clear();
+
+    // Group by userId for userStats aggregation
+    const userAgg = new Map(); // userId -> { pageviews, bandwidth }
+
+    for (const [projectId, data] of entries) {
+        try {
+            // Per-project analytics (kept for per-site breakdown)
+            const analyticsRef = db.collection('analytics').doc(projectId);
+            const dailyRef = analyticsRef.collection('daily').doc(today);
+            const batch = db.batch();
+            batch.set(analyticsRef, {
+                totalPageviews: admin.firestore.FieldValue.increment(data.pageviews),
+                totalBandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
+                lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            batch.set(dailyRef, {
+                pageviews: admin.firestore.FieldValue.increment(data.pageviews),
+                bandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
+                date: today
+            }, { merge: true });
+            await batch.commit();
+
+            // Accumulate per-user totals
+            let userId = projectOwnerCache.get(projectId);
+            if (!userId) {
+                const snap = await db.collection('projects').where('projectId', '==', projectId).limit(1).get();
+                if (!snap.empty) {
+                    userId = snap.docs[0].data().userId;
+                    projectOwnerCache.set(projectId, userId);
+                }
+            }
+            if (userId) {
+                const u = userAgg.get(userId) || { pageviews: 0, bandwidth: 0 };
+                u.pageviews += data.pageviews;
+                u.bandwidth += data.bandwidth;
+                userAgg.set(userId, u);
+            }
+        } catch (err) {
+            console.error(`[Analytics] Flush failed for ${projectId}:`, err.message);
+        }
+    }
+
+    // Flush user-level aggregates
+    for (const [userId, data] of userAgg) {
+        try {
+            const batch = db.batch();
+            const userStatsRef = db.collection('userStats').doc(userId);
+            const userDailyRef = userStatsRef.collection('daily').doc(today);
+            batch.set(userStatsRef, {
+                totalPageviews: admin.firestore.FieldValue.increment(data.pageviews),
+                totalBandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
+                lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            batch.set(userDailyRef, {
+                pageviews: admin.firestore.FieldValue.increment(data.pageviews),
+                bandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
+                date: today
+            }, { merge: true });
+            await batch.commit();
+        } catch (err) {
+            console.error(`[Analytics] User stats flush failed for ${userId}:`, err.message);
+        }
+    }
+
+    console.log(`[Analytics] Flushed ${entries.length} project(s), ${userAgg.size} user(s) to Firestore`);
+}
+
+setInterval(flushAnalytics, 60000);
+process.on('SIGTERM', async () => { await flushAnalytics(); process.exit(0); });
+process.on('SIGINT', async () => { await flushAnalytics(); process.exit(0); });
 
 // --- Wildcard Subdomain & Custom Domain Routing ---
 app.use(async (req, res, next) => {
@@ -43,25 +181,31 @@ app.use(async (req, res, next) => {
     try {
         let projectId = null;
 
+        let projectUserId = null;
+
         // 1. Check if it's a *.genweb.in subdomain
         if (host.endsWith(DOMAIN_SUFFIX)) {
             const subdomain = host.slice(0, -DOMAIN_SUFFIX.length);
             console.log(`[Router] Checking subdomain: ${subdomain}`);
-            
+
             if (db) {
                 const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).limit(1).get();
                 if (!snapshot.empty) {
-                    projectId = snapshot.docs[0].data().projectId;
+                    const pData = snapshot.docs[0].data();
+                    projectId = pData.projectId;
+                    projectUserId = pData.userId;
                 }
             }
-        } 
+        }
         // 2. Check if it's a Custom Domain
         else {
             console.log(`[Router] Checking custom domain: ${host}`);
             if (db) {
                 const snapshot = await db.collection('projects').where('customDomain', '==', host).limit(1).get();
                 if (!snapshot.empty) {
-                    projectId = snapshot.docs[0].data().projectId;
+                    const pData = snapshot.docs[0].data();
+                    projectId = pData.projectId;
+                    projectUserId = pData.userId;
                 }
             }
         }
@@ -81,12 +225,19 @@ app.use(async (req, res, next) => {
                      res.status(404).send('Not Found');
                      return;
                 }
-                
+
+                // Track pageviews for HTML pages
+                const contentType = proxyRes.headers['content-type'] || '';
+                if (proxyRes.statusCode === 200 && contentType.includes('text/html')) {
+                    const cl = parseInt(proxyRes.headers['content-length'] || '0', 10);
+                    trackPageview(projectId, cl, projectUserId);
+                }
+
                 res.status(proxyRes.statusCode);
                 Object.keys(proxyRes.headers).forEach(key => {
                      res.setHeader(key, proxyRes.headers[key]);
                 });
-                
+
                 proxyRes.pipe(res);
             }).on('error', (e) => {
                 console.error('Proxy Stream Error:', e);
@@ -136,21 +287,6 @@ async function ensureProjectSource(id) {
         const success = await downloadDirectory(`projects/${id}`, projectDir);
         if (success) {
             console.log(`[${id}] Project source restored.`);
-            
-            // Re-link node_modules from skeleton to ensure it works on this instance
-            try {
-                const skeletonModules = path.join(__dirname, 'templates/html-skeleton/node_modules');
-                const projectModules = path.join(projectDir, 'node_modules');
-                
-                // Remove restored node_modules (likely broken or partial)
-                await fs.remove(projectModules);
-                
-                // Symlink to the valid local modules
-                await fs.ensureSymlink(skeletonModules, projectModules);
-                console.log(`[${id}] node_modules re-linked.`);
-            } catch (err) {
-                console.warn(`[${id}] Failed to re-link node_modules:`, err.message);
-            }
 
             // Ensure the site is available in public/sites for the editor preview
             try {
@@ -253,12 +389,15 @@ const PORT = process.env.PORT || 3000;
 
 // Email Transporter (Configure with your SMTP settings)
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Example: Use Gmail or configure generic SMTP
+    host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+    port: parseInt(process.env.BREVO_SMTP_PORT || '587'),
+    secure: false,
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_KEY
     }
 });
+const SMTP_FROM = process.env.BREVO_SMTP_FROM || 'noreply@genweb.in';
 
 // Helper: Save Artifacts (GCS Only - No Cloudflare Deploy)
 async function saveBuildArtifacts(id, distPath, userId) {
@@ -272,36 +411,98 @@ async function saveBuildArtifacts(id, distPath, userId) {
         const localSitePath = path.join(__dirname, 'public/sites', id);
         await fs.copy(distPath, localSitePath);
 
+        // 3. Generate screenshot, upload to GCS, and store URL in Firebase
+        let previewUrl = null;
         try {
             console.log(`[${id}] Auto-generating preview screenshot...`);
-            await captureScreenshot(path.join(localSitePath, 'index.html'), path.join(localSitePath, 'preview.jpg'));
+            const previewPath = path.join(localSitePath, 'preview.jpg');
+            await captureScreenshot(path.join(localSitePath, 'index.html'), previewPath);
+            previewUrl = await uploadPreview(previewPath, id);
         } catch (e) {
-            console.warn(`[${id}] Auto-screenshot failed:`, e.message);
+            console.warn(`[${id}] Preview generation/upload failed:`, e.message);
         }
-        
-        // 3. Return Local Preview URL
-        // In GCS storage mode, we don't have a live public URL until published.
-        // We return the local server URL for the editor preview.
+
         const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
-        
-        // Update DB with updated timestamp but NOT deployUrl
+
+        // Update DB with timestamp and preview URL
         if (db) {
             const updateData = {
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             };
-            
+            if (previewUrl) {
+                updateData.previewUrl = previewUrl;
+            }
+
             const snapshot = await db.collection('projects').where('projectId', '==', id).get();
             if (!snapshot.empty) {
                 await snapshot.docs[0].ref.update(updateData);
             }
         }
-        
+
         return localUrl;
     } catch (error) {
         console.error(`[${id}] Save artifacts failed:`, error);
         throw error; 
     }
 }
+
+// Dashboard Stats (optimized: reads from pre-aggregated userStats)
+app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+
+        // Build date keys for last 7 days
+        const now = new Date();
+        const dateKeys = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            dateKeys.push(d.toISOString().slice(0, 10));
+        }
+
+        // Run all reads in parallel: projects, leads count, userStats, 7 daily docs
+        const projectsPromise = db.collection('projects').where('userId', '==', userId).get();
+        const userStatsPromise = db.collection('userStats').doc(userId).get();
+        const dailyPromises = dateKeys.map(date =>
+            db.collection('userStats').doc(userId).collection('daily').doc(date).get()
+        );
+
+        const [projectsSnap, userStatsDoc, ...dailyDocs] = await Promise.all([
+            projectsPromise, userStatsPromise, ...dailyPromises
+        ]);
+
+        const totalSites = projectsSnap.size;
+        const publishedSites = projectsSnap.docs.filter(d => d.data().isPublished).length;
+
+        // Count leads (single query, not per-project)
+        const projectIds = projectsSnap.docs.map(d => d.data().projectId);
+        let totalLeads = 0;
+        if (projectIds.length > 0) {
+            const chunks = [];
+            for (let i = 0; i < projectIds.length; i += 30) {
+                chunks.push(projectIds.slice(i, i + 30));
+            }
+            const leadsResults = await Promise.all(
+                chunks.map(chunk => db.collection('leads').where('projectId', 'in', chunk).get())
+            );
+            totalLeads = leadsResults.reduce((sum, snap) => sum + snap.size, 0);
+        }
+
+        const statsData = userStatsDoc.exists ? userStatsDoc.data() : {};
+        const totalPageviews = statsData.totalPageviews || 0;
+        const totalBandwidth = statsData.totalBandwidth || 0;
+
+        const recentPageviews = dateKeys.map((date, i) => ({
+            date,
+            pageviews: dailyDocs[i].exists ? (dailyDocs[i].data().pageviews || 0) : 0
+        }));
+
+        res.json({ totalSites, publishedSites, totalLeads, totalPageviews, totalBandwidth, recentPageviews });
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    }
+});
 
 // Extract Business Info (Pre-build step)
 app.post('/api/extract-info', verifyToken, async (req, res) => {
@@ -310,11 +511,14 @@ app.post('/api/extract-info', verifyToken, async (req, res) => {
 
     try {
         console.log(`Extracting info for query: "${query}"...`);
-        const userContext = await extractFromUrl(query);
+        const extractResult = await retryWithBackoff(() => extractFromUrl(query));
+        const userContext = extractResult.data;
+        if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
         res.json({ userContext });
     } catch (error) {
         console.error('Extraction failed:', error);
-        res.status(500).json({ error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ error: error.message });
     }
 });
 
@@ -360,10 +564,17 @@ app.post('/api/submit-lead', async (req, res) => {
             });
         }
 
-        // 3. Send Email Notification
-        if (userEmail && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        // 3. Send Email Notification (only if email is verified)
+        let emailVerified = false;
+        if (userId) {
+            try {
+                const ownerDoc = await db.collection('users').doc(userId).get();
+                emailVerified = ownerDoc.exists && ownerDoc.data().emailVerified === true;
+            } catch { /* ignore */ }
+        }
+        if (userEmail && process.env.BREVO_SMTP_USER && emailVerified) {
             const mailOptions = {
-                from: process.env.SMTP_USER,
+                from: `"GenWeb" <${SMTP_FROM}>`,
                 to: userEmail,
                 subject: `New Lead for Project ${projectId}`,
                 text: `You have a new submission on your website!\n\nDetails:\n${JSON.stringify(formData, null, 2)}`,
@@ -518,6 +729,285 @@ app.get('/api/project/:id/pages', verifyToken, async (req, res) => {
     }
 });
 
+// --- Site Config (Dynamic Navigation) ---
+
+// GET site-config.json (auto-generates from HTML if missing)
+app.get('/api/project/:id/site-config', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        const configPath = path.join(distDir, 'site-config.json');
+
+        if (await fs.pathExists(configPath)) {
+            const config = await fs.readJson(configPath);
+            return res.json(config);
+        }
+
+        // Auto-generate from existing HTML files (backward compat)
+        const files = await fs.readdir(distDir);
+        const htmlFiles = files.filter(f => f.endsWith('.html')).sort((a, b) => {
+            if (a === 'index.html') return -1;
+            if (b === 'index.html') return 1;
+            return a.localeCompare(b);
+        });
+
+        const navigation = htmlFiles.map(f => ({
+            name: f === 'index.html' ? 'Home' : f.replace('.html', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            path: f,
+            children: []
+        }));
+
+        const hasLogo = await fs.pathExists(path.join(distDir, 'logo.png'));
+        const config = {
+            businessName: 'Business',
+            logo: hasLogo ? './logo.png' : null,
+            navigation
+        };
+
+        // Try to extract business name from index.html title
+        try {
+            const indexHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf-8');
+            const titleMatch = indexHtml.match(/<title>(.*?)<\/title>/);
+            if (titleMatch) config.businessName = titleMatch[1].split(' - ')[0].trim();
+        } catch (e) { /* ignore */ }
+
+        // Save for future use
+        await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+        // Also copy site-nav.js if missing
+        const navJsPath = path.join(distDir, 'site-nav.js');
+        if (!await fs.pathExists(navJsPath)) {
+            const templateNavJs = path.join(__dirname, 'templates/html-skeleton/site-nav.js');
+            if (await fs.pathExists(templateNavJs)) {
+                await fs.copy(templateNavJs, navJsPath);
+            }
+        }
+
+        res.json(config);
+    } catch (error) {
+        console.error('Get site-config failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT site-config.json (update nav structure/logo/business name)
+app.put('/api/project/:id/site-config', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        const configPath = path.join(distDir, 'site-config.json');
+
+        const newConfig = req.body;
+        await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2));
+
+        // Sync to public/sites
+        const publicConfigPath = path.join(__dirname, 'public/sites', id, 'site-config.json');
+        await fs.copy(configPath, publicConfigPath);
+
+        // Upload to GCS
+        await uploadDirectory(distDir, `projects/${id}/dist`);
+
+        res.json({ success: true, config: newConfig });
+    } catch (error) {
+        console.error('Update site-config failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST add new page (AI-generated, matching site style)
+app.post('/api/project/:id/pages/add', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { pageName, isSubPage, pagePrompt } = req.body;
+
+    if (!pageName) return res.status(400).json({ error: 'pageName is required' });
+
+    try {
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const sourceDir = path.join(__dirname, 'projects_source', id);
+        const distDir = path.join(sourceDir, 'dist');
+        const configPath = path.join(distDir, 'site-config.json');
+
+        // Read existing config
+        let config;
+        if (await fs.pathExists(configPath)) {
+            config = await fs.readJson(configPath);
+        } else {
+            const files = await fs.readdir(distDir);
+            const htmlFiles = files.filter(f => f.endsWith('.html'));
+            config = {
+                businessName: 'Business',
+                logo: (await fs.pathExists(path.join(distDir, 'logo.png'))) ? './logo.png' : null,
+                navigation: htmlFiles.map(f => ({
+                    name: f === 'index.html' ? 'Home' : f.replace('.html', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    path: f,
+                    children: []
+                }))
+            };
+        }
+
+        // Enforce limits
+        const mainPages = config.navigation.filter(n => n.name !== 'More');
+        const moreItem = config.navigation.find(n => n.name === 'More');
+        const subPages = moreItem?.children || [];
+
+        if (isSubPage) {
+            if (subPages.length >= 30) {
+                return res.status(400).json({ error: 'Maximum of 30 sub-pages reached.' });
+            }
+        } else {
+            if (mainPages.length >= 7) {
+                return res.status(400).json({ error: 'Maximum of 7 main pages reached.' });
+            }
+        }
+
+        // Credit deduction (100 credits for new page)
+        try {
+            await deductCredits(req.user.uid, 100, `Add page "${pageName}" to project ${id}`);
+        } catch (err) {
+            return res.status(402).json({ error: 'Insufficient credits. Need 100 credits to add a page.' });
+        }
+
+        // Build page filename
+        const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
+        const newPagePath = path.join(distDir, filename);
+
+        if (await fs.pathExists(newPagePath)) {
+            return res.status(409).json({ error: `Page "${pageName}" already exists` });
+        }
+
+        // Extract layout reference from index.html
+        let layoutReference = null;
+        try {
+            const homeCode = await fs.readFile(path.join(distDir, 'index.html'), 'utf-8');
+            const headerMatch = homeCode.match(/<(\w+)[^>]*data-section="header"[^>]*>([\s\S]*?)<\/\1>/);
+            const footerMatch = homeCode.match(/<(\w+)[^>]*data-section="footer"[^>]*>([\s\S]*?)<\/\1>/);
+            if (headerMatch && footerMatch) {
+                layoutReference = { header: headerMatch[0], footer: footerMatch[0] };
+            }
+        } catch (e) { console.warn(`[${id}] Could not extract layout reference for new page`); }
+
+        // Get all page names for nav
+        const allPageNames = config.navigation.filter(n => n.name !== 'More').map(n => n.name);
+        subPages.forEach(s => allPageNames.push(s.name));
+        allPageNames.push(pageName);
+
+        // Get designSystem from tailwind config + stylePreset from Firestore
+        let stylePreset = null;
+        const twConfigPath = path.join(sourceDir, 'tailwind.config.js');
+        let designSystem = null;
+        if (await fs.pathExists(twConfigPath)) {
+            delete require.cache[require.resolve(twConfigPath)];
+            const twConfig = require(twConfigPath);
+            const colors = twConfig?.theme?.extend?.colors || {};
+            const fonts = twConfig?.theme?.extend?.fontFamily || {};
+            designSystem = {
+                colorPalette: colors,
+                googleFonts: {
+                    heading: fonts.heading ? fonts.heading[0] : 'sans-serif',
+                    body: fonts.body ? fonts.body[0] : 'sans-serif'
+                },
+                businessName: config.businessName,
+                logoUrl: config.logo,
+                imageUrls: []
+            };
+        }
+
+        // Read userContext and stylePreset from Firestore
+        let userContext = `Business: ${config.businessName}`;
+        try {
+            const snapshot = await db.collection('projects').where('projectId', '==', id).get();
+            if (!snapshot.empty) {
+                const projectData = snapshot.docs[0].data();
+                if (projectData.context) userContext = projectData.context;
+                if (projectData.stylePreset) stylePreset = projectData.stylePreset;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Append page-specific prompt to user context if provided
+        let pageContext = userContext;
+        if (pagePrompt) {
+            pageContext += `\n\nSPECIFIC INSTRUCTIONS FOR THIS PAGE ("${pageName}"): ${pagePrompt}`;
+        }
+
+        // Generate the new page
+        console.log(`[${id}] Generating new page: ${pageName} (${isSubPage ? 'sub-page' : 'main'})...`);
+        const codeResult = await retryWithBackoff(() =>
+            generateCode(designSystem || {}, pageContext, pageName, allPageNames, layoutReference, stylePreset)
+        );
+
+        if (codeResult.usage) {
+            await saveTokenUsage([{ ...codeResult.usage, service: 'coder', action: `addPage:${pageName}` }], id, req.user.uid);
+        }
+
+        // Write the new page
+        await fs.writeFile(newPagePath, codeResult.code);
+
+        // Update site-config.json
+        const newNavEntry = { name: pageName, path: filename, children: [] };
+        if (isSubPage) {
+            // Add under "More" dropdown — create it if it doesn't exist
+            let more = config.navigation.find(n => n.name === 'More');
+            if (!more) {
+                more = { name: 'More', path: '#', children: [] };
+                config.navigation.push(more);
+            }
+            if (!more.children) more.children = [];
+            more.children.push(newNavEntry);
+        } else {
+            config.navigation.push(newNavEntry);
+        }
+        await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+        // Rebuild (injects scripts, syncs)
+        const distPath = await rebuildSite(id);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+
+        res.json({ success: true, page: filename, config, url: previewUrl });
+    } catch (error) {
+        console.error('Add page failed:', error);
+        const status = error.statusCode || 500;
+        res.status(status).json({ error: error.message });
+    }
+});
+
+// POST upload/change logo
+app.post('/api/project/:id/logo', verifyToken, upload.single('logo'), async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No logo file uploaded' });
+        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
+        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+        const logoDest = path.join(distDir, 'logo.png');
+
+        // Copy uploaded file to dist
+        await fs.copy(req.file.path, logoDest);
+        await fs.remove(req.file.path).catch(() => {});
+
+        // Update site-config.json
+        const configPath = path.join(distDir, 'site-config.json');
+        if (await fs.pathExists(configPath)) {
+            const config = await fs.readJson(configPath);
+            config.logo = './logo.png';
+            await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+        }
+
+        // Sync to public/sites and GCS
+        const distPath = await rebuildSite(id);
+        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+
+        res.json({ success: true, logo: './logo.png', url: previewUrl });
+    } catch (error) {
+        console.error('Logo upload failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Trigger Manual Screenshot
 app.post('/api/project/:id/screenshot', verifyToken, async (req, res) => {
     const { id } = req.params;
@@ -535,10 +1025,17 @@ app.post('/api/project/:id/screenshot', verifyToken, async (req, res) => {
         const indexHtmlPath = path.join(publicSitePath, 'index.html');
         
         const success = await captureScreenshot(indexHtmlPath, previewPath);
-        
+
         if (success) {
-            // Update Firestore if needed, or just return success
-            res.json({ success: true, url: `/sites/${id}/preview.jpg` });
+            const previewUrl = await uploadPreview(previewPath, id);
+            // Update Firestore with new preview URL
+            if (db) {
+                const snapshot = await db.collection('projects').where('projectId', '==', id).get();
+                if (!snapshot.empty) {
+                    await snapshot.docs[0].ref.update({ previewUrl });
+                }
+            }
+            res.json({ success: true, url: previewUrl });
         } else {
             res.status(500).json({ error: 'Screenshot generation failed' });
         }
@@ -593,12 +1090,14 @@ app.post('/api/project/:id/theme/regenerate', verifyToken, async (req, res) => {
             }
         }
         
-        const palette = await generatePalette(context);
-        res.json({ colors: palette });
-        
+        const paletteResult = await retryWithBackoff(() => generatePalette(context));
+        if (paletteResult.usage) await saveTokenUsage([{ ...paletteResult.usage, service: 'architect', action: 'generatePalette' }], id, req.user.uid);
+        res.json({ colors: paletteResult.palette });
+
     } catch (error) {
         console.error('Regenerate theme failed:', error);
-        res.status(500).json({ error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ error: error.message });
     }
 });
 
@@ -650,11 +1149,13 @@ app.post('/api/project/:id/section', verifyToken, async (req, res) => {
         const currentCode = await fs.readFile(sourcePath, 'utf-8');
         
         console.log(`Regenerating section '${sectionId}' in file '${targetFile}' for project ${id}...`);
-        const newCode = await regenerateSection(currentCode, sectionId, instruction);
-        
+        const sectionResult = await retryWithBackoff(() => regenerateSection(currentCode, sectionId, instruction));
+        const newCode = sectionResult.code;
+        if (sectionResult.usage) await saveTokenUsage([{ ...sectionResult.usage, service: 'coder', action: 'regenerateSection' }], id, req.user.uid);
+
         // Backup old code (simple undo)
         await fs.writeFile(sourcePath + '.bak', currentCode);
-        
+
         // Write new code
         await fs.writeFile(sourcePath, newCode);
         
@@ -667,7 +1168,8 @@ app.post('/api/project/:id/section', verifyToken, async (req, res) => {
         
     } catch (error) {
         console.error('Update failed:', error);
-        res.status(500).json({ error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ error: error.message });
     }
 });
 
@@ -698,8 +1200,10 @@ app.post('/api/project/:id/regenerate-page', verifyToken, async (req, res) => {
         const currentCode = await fs.readFile(sourcePath, 'utf-8');
         
         console.log(`Regenerating page '${targetFile}' for project ${id}...`);
-        const newCode = await regeneratePage(currentCode, instruction);
-        
+        const pageResult = await retryWithBackoff(() => regeneratePage(currentCode, instruction));
+        const newCode = pageResult.code;
+        if (pageResult.usage) await saveTokenUsage([{ ...pageResult.usage, service: 'coder', action: 'regeneratePage' }], id, req.user.uid);
+
         // Backup old code
         await fs.writeFile(sourcePath + '.bak', currentCode);
         
@@ -714,7 +1218,8 @@ app.post('/api/project/:id/regenerate-page', verifyToken, async (req, res) => {
         
     } catch (error) {
         console.error('Page regeneration failed:', error);
-        res.status(500).json({ error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ error: error.message });
     }
 });
 
@@ -885,8 +1390,10 @@ app.post('/api/extract', verifyToken, async (req, res) => {
         if (!query) return res.status(400).json({ error: 'Query is required' });
         
         console.log(`[API] Extracting info for: "${query}"...`);
-        const userContext = await extractFromUrl(query);
-        
+        const extractResult = await extractFromUrl(query);
+        const userContext = extractResult.data;
+        if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
+
         res.json({ success: true, data: userContext });
     } catch (error) {
         console.error('Extraction failed:', error);
@@ -922,7 +1429,9 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
         // Only extract if userContext is not provided
         if (!userContext && query) {
             console.log(`Extracting info for query: "${query}"...`);
-            userContext = await extractFromUrl(query);
+            const extractResult = await extractFromUrl(query);
+            userContext = extractResult.data;
+            if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), id, req.user.uid);
             console.log('Extracted Context:', userContext);
         }
 
@@ -942,16 +1451,20 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
         
         // Initialize Firestore Document
         if (db) {
-            await db.collection('projects').doc(id).set({ // Use custom ID as doc ID for easier lookup
+            await db.collection('projects').doc(id).set({
                 projectId: id,
                 userId: req.user.uid,
                 query: query || 'Manual Context',
                 status: 'starting',
-                subdomain: defaultSubdomain, // Set default subdomain
+                subdomain: defaultSubdomain,
                 logs: [],
+                buildProgress: 0,
+                buildProgressMessage: 'Starting...',
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 isPublished: false,
-                stylePreset: stylePreset || 'standard'
+                stylePreset: stylePreset || 'standard',
+                userContext: userContext,
+                pages: parsedPages,
             });
         }
 
@@ -968,21 +1481,139 @@ app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
     }
 });
 
+// Retry a failed build
+app.post('/api/project/:id/retry', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const doc = await db.collection('projects').doc(id).get();
+        if (!doc.exists) return res.status(404).json({ error: 'Project not found' });
+
+        const project = doc.data();
+        if (project.userId !== req.user.uid) return res.status(403).json({ error: 'Unauthorized' });
+        if (project.status !== 'failed') return res.status(400).json({ error: 'Project is not in failed state' });
+
+        // Reset status
+        await db.collection('projects').doc(id).update({
+            status: 'starting',
+            buildProgress: 0,
+            buildProgressMessage: 'Starting...',
+            error: admin.firestore.FieldValue.delete(),
+            isRateLimited: admin.firestore.FieldValue.delete(),
+        });
+
+        // Re-trigger build
+        runBuildProcess(id, project.userContext, null, project.pages || ['Home'], req.user.uid, 0, project.query, project.stylePreset)
+            .catch(err => console.error(`Retry build ${id} failed:`, err));
+
+        res.json({ success: true, message: 'Build retry started.' });
+    } catch (error) {
+        console.error('Retry failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Background Build Processor
+async function sendBuildNotification(userId, projectId, projectName, status, errorMessage = null) {
+    try {
+        // Only send email if user has verified their email
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        if (!userData.emailVerified) {
+            console.log(`[Email] Skipping build notification for ${userId} - email not verified`);
+            return;
+        }
+
+        const userRecord = await admin.auth().getUser(userId);
+        const userEmail = userRecord.email;
+        if (!userEmail || !process.env.BREVO_SMTP_USER) {
+            console.log(`[Email] Skipping build notification - no email or SMTP not configured`);
+            return;
+        }
+
+        const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+        const isSuccess = status === 'success';
+        const siteName = projectName || 'your site';
+
+        const statusColor = isSuccess ? '#16a34a' : '#dc2626';
+        const statusBg = isSuccess ? '#f0fdf4' : '#fef2f2';
+        const statusIcon = isSuccess ? '&#10003;' : '&#10007;';
+        const statusText = isSuccess ? 'Your site is ready!' : 'Build failed';
+        const subject = isSuccess
+            ? `Your site "${siteName}" is ready! - GenWeb`
+            : `Build failed for "${siteName}" - GenWeb`;
+
+        const ctaSection = isSuccess
+            ? `<div style="text-align: center; margin: 32px 0;">
+                    <a href="${baseUrl}/my-sites" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
+                        View Your Site
+                    </a>
+                </div>`
+            : `<div style="background: ${statusBg}; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="color: #991b1b; font-size: 14px; margin: 0;"><strong>Error:</strong> ${errorMessage || 'An unexpected error occurred.'}</p>
+                </div>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="${baseUrl}/my-sites" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
+                        Retry Build
+                    </a>
+                </div>`;
+
+        const mailOptions = {
+            from: `"GenWeb" <${SMTP_FROM}>`,
+            to: userEmail,
+            subject,
+            html: `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <h1 style="font-size: 24px; font-weight: 700; color: #1a1a2e; margin: 0;">GenWeb</h1>
+                    </div>
+                    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px;">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background: ${statusBg}; color: ${statusColor}; font-size: 24px; font-weight: bold;">
+                                ${statusIcon}
+                            </div>
+                        </div>
+                        <h2 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0 0 8px; text-align: center;">${statusText}</h2>
+                        <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin: 0 0 8px; text-align: center;">
+                            ${isSuccess
+                                ? `Your website <strong>"${siteName}"</strong> has been built successfully and is ready to preview and publish.`
+                                : `We couldn't build your website <strong>"${siteName}"</strong>. You can retry the build from your dashboard.`
+                            }
+                        </p>
+                        ${ctaSection}
+                    </div>
+                    <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
+                        &copy; GenWeb &middot; <a href="https://genweb.in" style="color: #9ca3af;">genweb.in</a>
+                    </p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[Email] Build ${status} notification sent to ${userEmail} for project ${projectId}`);
+    } catch (err) {
+        console.error(`[Email] Failed to send build notification:`, err.message);
+    }
+}
+
 async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, cost, query, stylePreset) {
     console.log(`[${id}] Starting background build process...`);
     
-    const logProgress = async (message) => {
-        console.log(`[${id}] Progress: ${message}`);
+    const logProgress = async (message, progress = null) => {
+        console.log(`[${id}] Progress: ${message}${progress !== null ? ` (${progress}%)` : ''}`);
         if (db) {
             try {
-                await db.collection('projects').doc(id).update({
+                const updateData = {
                     status: 'processing',
                     logs: admin.firestore.FieldValue.arrayUnion({
                         message,
                         timestamp: new Date().toISOString()
                     })
-                });
+                };
+                if (progress !== null) {
+                    updateData.buildProgress = progress;
+                    updateData.buildProgressMessage = message.replace(`[${id}] `, '');
+                }
+                await db.collection('projects').doc(id).update(updateData);
             } catch (e) {
                 console.warn(`[${id}] Failed to update firestore log:`, e.message);
             }
@@ -990,41 +1621,58 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
     };
 
     try {
-        await logProgress('Starting build engine...');
-        
-        const distPath = await buildSite(id, userContext, logoFile, parsedPages, logProgress, stylePreset);
-        
-        await logProgress('Build success! Saving & Deploying...');
-        
+        await logProgress('Starting build engine...', 5);
+
+        const totalPages = parsedPages.length;
+        const wrappedProgress = async (message) => {
+            // Builder calls onProgress with messages; map them to percentages
+            const msg = message.replace(`[${id}] `, '');
+            let pct = null;
+            if (msg.includes('Generating Design')) pct = 10;
+            else if (msg.includes('Fetching Images')) pct = 20;
+            else if (msg.includes('Copying skeleton')) pct = 25;
+            else if (msg.includes('Generating') && msg.includes('pages')) pct = 30;
+            else if (msg.includes('Generating Home') || msg.includes('Generating') && !msg.includes('remaining')) {
+                // Individual page generation - distribute 30-70% across pages
+                const pageMatch = msg.match(/Generating (.+?)\.\.\./);
+                if (pageMatch) {
+                    const pageName = pageMatch[1];
+                    const pageIndex = parsedPages.indexOf(pageName);
+                    if (pageIndex >= 0) {
+                        pct = 30 + Math.round((pageIndex / totalPages) * 40);
+                    } else {
+                        pct = 50; // fallback
+                    }
+                }
+            }
+            else if (msg.includes('remaining pages')) pct = 45;
+            else if (msg.includes('Injecting configuration')) pct = 75;
+            await logProgress(message, pct);
+        };
+
+        const buildResult = await buildSite(id, userContext, logoFile, parsedPages, wrappedProgress, stylePreset);
+        const distPath = buildResult.distDir;
+
+        // Save token usage from the build
+        if (buildResult.tokenUsageLog) await saveTokenUsage(buildResult.tokenUsageLog, id, userId);
+
+        await logProgress('Build success! Saving & Deploying...', 80);
+
         // 1. Move the entire project (source + dist) to projects_source
         const sourcePath = path.join(__dirname, 'projects_source', id);
         const tempPath = path.join(__dirname, 'temp', id);
-        
+
         await fs.move(tempPath, sourcePath);
-        await logProgress(`Source code saved.`);
+        await logProgress(`Source code saved.`, 85);
 
-        // 2. Copy the 'dist' folder to 'public/sites' for hosting (Legacy fallback)
-        const localSitePath = path.join(__dirname, 'public/sites', id);
-        await fs.copy(path.join(sourcePath, 'dist'), localSitePath);
-        
-        // Generate Preview (Screenshot)
-        try {
-            console.log(`[${id}] Generating preview screenshot...`);
-            await captureScreenshot(path.join(localSitePath, 'index.html'), path.join(localSitePath, 'preview.jpg'));
-        } catch (e) {
-            console.warn(`[${id}] Screenshot failed:`, e.message);
-        }
-        
-        const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
-
-        // 3. Post-Build: Save to Storage (GCS)
-        await logProgress('Saving to Cloud Storage...');
+        // 2. Post-Build: Save to Storage (GCS) + Preview
+        await logProgress('Saving to Cloud Storage...', 90);
         const savedUrl = await saveBuildArtifacts(id, path.join(sourcePath, 'dist'), userId);
-        
+
         // 4. Deduct Credits (Only on Success)
         try {
             await deductCredits(userId, cost, `Generate ${parsedPages.length > 1 ? 'Multi-Page' : 'Single-Page'} Site (${id})`);
-            await logProgress('Credits deducted.');
+            await logProgress('Credits deducted.', 95);
         } catch (creditErr) {
             console.error(`[${id}] Failed to deduct credits after success:`, creditErr);
             // Don't fail the build for this, but log it critically
@@ -1036,7 +1684,7 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
                 status: 'completed',
                 isPublished: false,
                 url: savedUrl, // Default to preview URL until published
-                localUrl: localUrl,
+                localUrl: savedUrl,
                 // deployUrl: null, // Don't wipe it if it exists, but don't set it either
                 completedAt: admin.firestore.FieldValue.serverTimestamp(),
                 logs: admin.firestore.FieldValue.arrayUnion({
@@ -1048,19 +1696,35 @@ async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, c
         
         console.log(`[${id}] Process Finished Successfully.`);
 
+        // Send success email notification
+        sendBuildNotification(userId, id, query, 'success').catch(err =>
+            console.error(`[${id}] Failed to send success email:`, err.message)
+        );
+
     } catch (error) {
         console.error(`[${id}] Build Process Failed:`, error);
+        const isRateLimited = error.message === 'RATE_LIMITED';
+        const userError = isRateLimited
+            ? 'We are currently experiencing high demand. Please retry after a few minutes.'
+            : error.message;
+
         if (db) {
             await db.collection('projects').doc(id).update({
                 status: 'failed',
-                error: error.message,
+                error: userError,
+                isRateLimited: isRateLimited,
                 logs: admin.firestore.FieldValue.arrayUnion({
-                    message: `Error: ${error.message}`,
+                    message: `Error: ${userError}`,
                     timestamp: new Date().toISOString()
                 })
             });
         }
-        
+
+        // Send failure email notification
+        sendBuildNotification(userId, id, query, 'failed', userError).catch(err =>
+            console.error(`[${id}] Failed to send failure email:`, err.message)
+        );
+
         // Cleanup temp if it exists and wasn't moved
         try {
              const tempPath = path.join(__dirname, 'temp', id);
@@ -1138,6 +1802,29 @@ app.post('/api/credits/verify', verifyToken, async (req, res) => {
         if (isValid) {
             // Add credits to user wallet
             await addCredits(req.user.uid, parseInt(credits), `Purchased ${credits} credits for ₹${amount}`, paymentId);
+
+            // Referral reward trigger: complete pending referrals on first purchase
+            try {
+                const referralSnap = await db.collection('referrals')
+                    .where('referredUserId', '==', req.user.uid)
+                    .where('status', '==', 'pending')
+                    .limit(1)
+                    .get();
+
+                if (!referralSnap.empty) {
+                    const referral = referralSnap.docs[0];
+                    const refData = referral.data();
+                    await addCredits(refData.referrerUserId, refData.rewardAmount, `Referral reward - referred user made a purchase`);
+                    await referral.ref.update({
+                        status: 'completed',
+                        completedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log(`[Referral] Completed referral ${referral.id}: rewarded ${refData.referrerUserId} with ${refData.rewardAmount} credits`);
+                }
+            } catch (refErr) {
+                console.error('[Referral] Failed to process referral reward:', refErr.message);
+            }
+
             res.json({ success: true, message: 'Credits added successfully' });
         } else {
             res.status(400).json({ success: false, error: 'Invalid Signature' });
@@ -1827,6 +2514,471 @@ cron.schedule('0 1 * * *', async () => {
         console.error('[Cron] Expiry check failed:', error);
     }
 });
+
+// --- Email Verification ---
+const crypto = require('crypto');
+
+function generateVerificationToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
+async function sendVerificationEmail(email, token, userName) {
+    const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+    const verifyLink = `${baseUrl}/api/auth/verify-email?token=${token}`;
+
+    const mailOptions = {
+        from: `"GenWeb" <${SMTP_FROM}>`,
+        to: email,
+        subject: 'Verify your email address - GenWeb',
+        html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h1 style="font-size: 24px; font-weight: 700; color: #1a1a2e; margin: 0;">GenWeb</h1>
+                </div>
+                <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px;">
+                    <h2 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0 0 12px;">Verify your email</h2>
+                    <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+                        Hi${userName ? ' ' + userName : ''}, please verify your email address to start using GenWeb. Click the button below to confirm your email.
+                    </p>
+                    <div style="text-align: center; margin: 32px 0;">
+                        <a href="${verifyLink}" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
+                            Verify Email
+                        </a>
+                    </div>
+                    <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0;">
+                        If the button doesn't work, copy and paste this link into your browser:<br/>
+                        <a href="${verifyLink}" style="color: #f97316; word-break: break-all;">${verifyLink}</a>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 13px; margin: 24px 0 0;">This link expires in 24 hours.</p>
+                </div>
+                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
+                    &copy; GenWeb &middot; <a href="https://genweb.in" style="color: #9ca3af;">genweb.in</a>
+                </p>
+            </div>
+        `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Verification email sent to ${email}`);
+}
+
+// Send verification email
+app.post('/api/auth/send-verification-email', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const userData = userDoc.data();
+        const email = req.body.email || userData.email;
+
+        if (!email) {
+            return res.status(400).json({ error: 'No email address provided' });
+        }
+
+        // Generate token and store
+        const token = generateVerificationToken();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        await userRef.set({
+            emailVerificationToken: token,
+            emailVerificationExpires: expiresAt.toISOString(),
+            emailVerified: false,
+            email: email
+        }, { merge: true });
+
+        await sendVerificationEmail(email, token, userData.name);
+
+        res.json({ success: true, message: 'Verification email sent' });
+    } catch (error) {
+        console.error('Send verification email error:', error);
+        res.status(500).json({ error: 'Failed to send verification email' });
+    }
+});
+
+// Verify email (clicked from email link — no auth required)
+app.get('/api/auth/verify-email', async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.status(400).send('Invalid verification link.');
+    }
+
+    try {
+        // Find user with this token
+        const usersSnap = await db.collection('users')
+            .where('emailVerificationToken', '==', token)
+            .limit(1)
+            .get();
+
+        if (usersSnap.empty) {
+            return res.send(verificationResultPage('Invalid or expired verification link.', false));
+        }
+
+        const userDoc = usersSnap.docs[0];
+        const userData = userDoc.data();
+
+        // Check expiry
+        if (userData.emailVerificationExpires && new Date(userData.emailVerificationExpires) < new Date()) {
+            return res.send(verificationResultPage('This verification link has expired. Please request a new one from your account.', false));
+        }
+
+        // Mark email as verified
+        await userDoc.ref.update({
+            emailVerified: true,
+            emailVerifiedAt: new Date().toISOString(),
+            emailVerificationToken: admin.firestore.FieldValue.delete(),
+            emailVerificationExpires: admin.firestore.FieldValue.delete()
+        });
+
+        console.log(`[Email] Email verified for user ${userDoc.id}: ${userData.email}`);
+        return res.send(verificationResultPage('Your email has been verified successfully! You can now close this page and continue using GenWeb.', true));
+    } catch (error) {
+        console.error('Email verification error:', error);
+        return res.status(500).send(verificationResultPage('Something went wrong. Please try again.', false));
+    }
+});
+
+function verificationResultPage(message, success) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Verification - GenWeb</title></head>
+    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f9fafb;">
+        <div style="text-align:center;max-width:420px;padding:40px 24px;">
+            <div style="font-size:48px;margin-bottom:16px;">${success ? '&#9989;' : '&#10060;'}</div>
+            <h1 style="font-size:22px;font-weight:700;color:#1a1a2e;margin:0 0 12px;">Email Verification</h1>
+            <p style="color:#6b7280;font-size:15px;line-height:1.6;margin:0 0 24px;">${message}</p>
+            <a href="${process.env.APP_URL || 'https://app.genweb.in'}" style="display:inline-block;background:#f97316;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:8px;">Go to GenWeb</a>
+        </div>
+    </body></html>`;
+}
+
+// Check email verification status
+app.get('/api/auth/email-status', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userDoc = await db.collection('users').doc(userId).get();
+
+        if (!userDoc.exists) {
+            return res.json({ emailVerified: false, email: null });
+        }
+
+        const data = userDoc.data();
+        res.json({
+            emailVerified: data.emailVerified === true,
+            email: data.email || null
+        });
+    } catch (error) {
+        console.error('Email status check error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update email (requires re-verification)
+app.post('/api/auth/update-email', verifyToken, async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    try {
+        const userId = req.user.uid;
+        const userRef = db.collection('users').doc(userId);
+
+        const token = generateVerificationToken();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        const userDoc = await userRef.get();
+        const userName = userDoc.exists ? userDoc.data().name : '';
+
+        await userRef.set({
+            email: email,
+            emailVerified: false,
+            emailVerificationToken: token,
+            emailVerificationExpires: expiresAt.toISOString()
+        }, { merge: true });
+
+        await sendVerificationEmail(email, token, userName);
+
+        res.json({ success: true, message: 'Verification email sent to new address' });
+    } catch (error) {
+        console.error('Update email error:', error);
+        res.status(500).json({ error: 'Failed to update email' });
+    }
+});
+
+// --- New User Setup (Signup Gift Credits + Referral Bonus) ---
+app.post('/api/auth/setup-new-user', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists && userDoc.data().setupComplete) {
+            return res.json({ success: true, message: 'Already setup' });
+        }
+
+        // Read platform config for gift amount
+        const configDoc = await db.collection('platformConfig').doc('general').get();
+        const config = configDoc.exists ? configDoc.data() : {};
+        const giftAmount = config.signupGiftCredits || 200;
+
+        // Add welcome credits
+        await addCredits(userId, giftAmount, 'Welcome bonus credits');
+
+        // Check for pending referral bonus (referred user bonus)
+        const referralBonusAmount = config.referralBonusAmount || 50;
+        const referralSnap = await db.collection('referrals')
+            .where('referredUserId', '==', userId)
+            .where('status', '==', 'pending')
+            .limit(1)
+            .get();
+
+        const hasReferral = !referralSnap.empty;
+        if (hasReferral) {
+            await addCredits(userId, referralBonusAmount, 'Referral signup bonus');
+        }
+
+        // Mark setup complete
+        await userRef.set({ setupComplete: true }, { merge: true });
+
+        res.json({
+            success: true,
+            giftCredits: giftAmount,
+            hasReferral,
+            referralBonusAmount: hasReferral ? referralBonusAmount : 0,
+            referrerReward: config.referralRewardAmount || 100
+        });
+    } catch (error) {
+        console.error('Setup new user error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Referral System ---
+app.post('/api/referral/generate', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists && userDoc.data().referralCode) {
+            return res.json({ code: userDoc.data().referralCode });
+        }
+
+        // Generate unique code
+        const code = 'GW' + userId.slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+        await userRef.set({ referralCode: code }, { merge: true });
+
+        res.json({ code });
+    } catch (error) {
+        console.error('Generate referral error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/referral/apply', verifyToken, async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ error: 'Referral code required' });
+
+        const referredUserId = req.user.uid;
+
+        // Find referrer by code
+        const referrerSnap = await db.collection('users')
+            .where('referralCode', '==', code.toUpperCase())
+            .limit(1)
+            .get();
+
+        if (referrerSnap.empty) {
+            return res.status(404).json({ error: 'Invalid referral code' });
+        }
+
+        const referrerDoc = referrerSnap.docs[0];
+        if (referrerDoc.id === referredUserId) {
+            return res.status(400).json({ error: 'Cannot refer yourself' });
+        }
+
+        // Check if already referred
+        const existingSnap = await db.collection('referrals')
+            .where('referredUserId', '==', referredUserId)
+            .limit(1)
+            .get();
+
+        if (!existingSnap.empty) {
+            return res.json({ success: true, message: 'Referral already applied' });
+        }
+
+        // Read config for reward amount
+        const configDoc = await db.collection('platformConfig').doc('general').get();
+        const config = configDoc.exists ? configDoc.data() : {};
+        const rewardAmount = config.referralRewardAmount || 100;
+
+        // Create referral record
+        await db.collection('referrals').add({
+            referrerUserId: referrerDoc.id,
+            referredUserId,
+            referralCode: code.toUpperCase(),
+            status: 'pending',
+            rewardAmount,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Apply referral error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Profile & Billing Address ---
+app.get('/api/profile', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userDoc = await db.collection('users').doc(userId).get();
+        const data = userDoc.exists ? userDoc.data() : {};
+        res.json({
+            name: data.name || '',
+            email: data.email || '',
+            phoneNumber: data.phoneNumber || req.user.phone_number || '',
+            emailVerified: data.emailVerified || false,
+            createdAt: data.createdAt || null,
+            billingAddress: data.billingAddress || null
+        });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/profile', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const { name } = req.body;
+        if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+        await db.collection('users').doc(userId).set({ name: name.trim() }, { merge: true });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/profile/billing-address', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const { firstName, lastName, email, phone, address1, city, state, postalCode, country } = req.body;
+        const required = { firstName, lastName, email, phone, address1, city, state, postalCode, country };
+        const missing = Object.entries(required).filter(([, v]) => !v || !v.trim());
+        if (missing.length > 0) {
+            return res.status(400).json({ error: `Missing fields: ${missing.map(([k]) => k).join(', ')}` });
+        }
+        await db.collection('users').doc(userId).set({
+            billingAddress: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim(), address1: address1.trim(), city: city.trim(), state: state.trim(), postalCode: postalCode.trim(), country: country.trim().toUpperCase() }
+        }, { merge: true });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Update billing address error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Referral Stats ---
+app.get('/api/referral/stats', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        const referralCode = userData.referralCode || null;
+
+        const referralsSnap = await db.collection('referrals')
+            .where('referrerUserId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const referrals = [];
+        let totalCompleted = 0;
+        let totalCreditsEarned = 0;
+
+        // Collect referred user IDs to batch-fetch names
+        const referralDocs = [];
+        referralsSnap.forEach(doc => {
+            referralDocs.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Fetch referred user names in parallel
+        const userNameMap = {};
+        const uniqueUserIds = [...new Set(referralDocs.map(d => d.referredUserId).filter(Boolean))];
+        if (uniqueUserIds.length > 0) {
+            const userFetches = uniqueUserIds.map(async (uid) => {
+                try {
+                    const uDoc = await db.collection('users').doc(uid).get();
+                    if (uDoc.exists && uDoc.data().name) {
+                        userNameMap[uid] = uDoc.data().name;
+                    } else {
+                        // Fallback to Firebase Auth display name
+                        const authUser = await admin.auth().getUser(uid);
+                        userNameMap[uid] = authUser.displayName || 'User';
+                    }
+                } catch { userNameMap[uid] = 'User'; }
+            });
+            await Promise.all(userFetches);
+        }
+
+        // Check which referred users have made a payment
+        const paidUserSet = new Set();
+        if (uniqueUserIds.length > 0) {
+            const txFetches = uniqueUserIds.map(async (uid) => {
+                try {
+                    const txSnap = await db.collection('transactions')
+                        .where('userId', '==', uid)
+                        .where('type', '==', 'purchase')
+                        .limit(1)
+                        .get();
+                    if (!txSnap.empty) paidUserSet.add(uid);
+                } catch { /* ignore */ }
+            });
+            await Promise.all(txFetches);
+        }
+
+        for (const d of referralDocs) {
+            referrals.push({
+                id: d.id || d.__id,
+                referredUserName: userNameMap[d.referredUserId] || 'User',
+                hasPaid: paidUserSet.has(d.referredUserId),
+                status: d.status || 'pending',
+                rewardAmount: d.rewardAmount || 0,
+                createdAt: d.createdAt ? d.createdAt.toDate().toISOString() : null
+            });
+            if (d.status === 'completed') {
+                totalCompleted++;
+                totalCreditsEarned += (d.rewardAmount || 0);
+            }
+        }
+
+        const configDoc = await db.collection('platformConfig').doc('general').get();
+        const config = configDoc.exists ? configDoc.data() : {};
+
+        res.json({
+            referralCode,
+            totalReferred: referrals.length,
+            totalCompleted,
+            totalCreditsEarned,
+            referrals,
+            program: {
+                referrerReward: config.referralRewardAmount || 100,
+                signupBonus: config.referralBonusAmount || 50
+            }
+        });
+    } catch (error) {
+        console.error('Referral stats error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Admin Routes ---
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
