@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
+import BuyCreditsModal from '../components/BuyCreditsModal';
 
 const STYLE_PRESETS = [
     { id: 'standard', name: 'Standard', desc: 'Balanced & Modern' },
@@ -17,7 +18,8 @@ const NewBuilder = () => {
     // State
     const [step, setStep] = useState(1); // 1: Vision, 2: Config, 3: Generation
     const [credits, setCredits] = useState(0);
-    
+    const [showBuyCredits, setShowBuyCredits] = useState(false);
+
     // Data
     const [visionQuery, setVisionQuery] = useState('');
     const [siteType, setSiteType] = useState('landing'); // landing, portfolio, ecommerce
@@ -203,6 +205,7 @@ const NewBuilder = () => {
                                                 </label>
                                             ))}
                                         </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">You can always add or remove pages later from the editor.</p>
                                     </div>
 
                                     {/* Visual Identity */}
@@ -287,7 +290,7 @@ const NewBuilder = () => {
                                 <span className="text-xl font-bold text-slate-900 dark:text-white">150 <span className="text-sm font-normal text-slate-500">credits</span></span>
                             </div>
                             <div className="flex flex-col gap-3">
-                                <button 
+                                <button
                                     onClick={handleBuild}
                                     disabled={step < 2 || credits < 150}
                                     className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -295,12 +298,21 @@ const NewBuilder = () => {
                                     <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
                                     {step === 3 ? 'Building...' : 'Build Website'}
                                 </button>
+                                {credits < 150 && (
+                                    <div className="text-center text-xs text-red-500 mt-1">
+                                        <span>Insufficient credits. </span>
+                                        <button onClick={() => setShowBuyCredits(true)} className="text-orange-500 hover:text-orange-400 underline font-medium">
+                                            Buy Credits
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                 </div>
             </div>
+            <BuyCreditsModal isOpen={showBuyCredits} onClose={() => setShowBuyCredits(false)} />
         </div>
     );
 };

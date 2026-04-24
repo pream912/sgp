@@ -716,9 +716,9 @@ const Editor = () => {
                         </button>
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Color Theme</h3>
                         <div className="space-y-3">
-                            {['primary', 'secondary', 'accent', 'background', 'text'].map(key => (
+                            {['primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'].map(key => (
                                 <div key={key} className="flex items-center justify-between">
-                                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 capitalize">{key}</label>
+                                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
                                     <div className="flex items-center gap-2">
                                         <input type="color" value={colors[key] || '#000000'} onChange={e => setColors({...colors, [key]: e.target.value})} className="h-8 w-8 rounded cursor-pointer border-0 p-0" />
                                     </div>
@@ -748,6 +748,7 @@ const Editor = () => {
                                             <label className="text-xs font-bold text-orange-700 dark:text-orange-400 flex items-center gap-1 mb-2">
                                                 <span className="material-symbols-outlined text-[16px]">auto_fix_high</span>
                                                 AI Redesign (50 Credits)
+                                                {credits < 50 && <button onClick={() => setShowBuyCredits(true)} className="ml-auto text-[10px] text-orange-500 hover:text-orange-400 underline font-medium">Buy Credits</button>}
                                             </label>
                                             <textarea value={instruction} onChange={e => setInstruction(e.target.value)} rows={3} className="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm p-2 mb-2" placeholder="e.g. Make it dark themed, add more padding..." />
                                             <button onClick={handleRegenerateSection} disabled={loading || !instruction} className="w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 text-xs font-bold">Regenerate Section</button>
@@ -948,7 +949,7 @@ const Editor = () => {
                                                     })()}
                                                 </div>
 
-                                                <p className="text-[10px] text-gray-400 mt-2">Each new page costs 100 credits.</p>
+                                                <p className="text-[10px] text-gray-400 mt-2">Each new page costs 100 credits. {credits < 100 && <button onClick={() => setShowBuyCredits(true)} className="text-orange-500 hover:text-orange-400 underline font-medium">Buy Credits</button>}</p>
                                             </>
                                         )}
                                     </div>
@@ -966,7 +967,7 @@ const Editor = () => {
                         <span className="material-symbols-outlined text-orange-500 text-[18px]">rocket_launch</span>
                         <div className="flex-1">
                             <span className="text-xs font-bold text-gray-900 dark:text-white block">Page Assistant</span>
-                            <span className="text-[10px] text-gray-500">Rebuild entire page (100 Credits)</span>
+                            <span className="text-[10px] text-gray-500">Rebuild entire page (100 Credits) {credits < 100 && <button onClick={() => setShowBuyCredits(true)} className="text-orange-500 hover:text-orange-400 underline font-medium">Buy</button>}</span>
                         </div>
                     </div>
                     <div className="relative">

@@ -1,11 +1,12 @@
 const fs = require('fs-extra');
 const path = require('path');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 const { generateCode, fixCode } = require('./ai-coder');
 const { generateDesign } = require('./ai-architect');
 const { fetchImages } = require('./images');
 const { captureScreenshot } = require('./screenshot');
 
-// Replaced buildSite with CDN-based logic
 async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress = () => {}, stylePreset = null) {
     const tempDir = path.join(__dirname, '../temp', id);
     const distDir = path.join(tempDir, 'dist');
@@ -63,13 +64,18 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         console.log(msgSkeleton);
         onProgress(msgSkeleton);
         
-        // Copy everything but exclude node_modules and src (since we use CDN, we don't need src/input.css)
-        // Actually, we just need a clean dist folder. The skeleton might have assets.
         await fs.copy(skeletonDir, tempDir, {
             filter: (src) => {
                  return !src.includes(`${path.sep}node_modules${path.sep}`) && !src.endsWith(`${path.sep}node_modules`);
             }
         });
+        
+        // Create symbolic link to node_modules in tempDir to save space/time
+        try {
+            await fs.ensureSymlink(path.join(skeletonDir, 'node_modules'), path.join(tempDir, 'node_modules'));
+        } catch(err) {
+            console.error(`[${id}] Error symlinking node_modules:`, err);
+        }
         
         await fs.ensureDir(distDir);
         
@@ -188,18 +194,28 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         await fs.writeFile(path.join(distDir, 'site-config.json'), JSON.stringify(siteConfig, null, 2));
         await fs.copy(path.join(skeletonDir, 'site-nav.js'), path.join(distDir, 'site-nav.js'));
 
-        // 4. Inject Config & CDN (No Build Step)
-        const msgConfig = `[${id}] Injecting configuration...`;
+        // 4. Inject Config & Compilation
+        const msgConfig = `[${id}] Injecting configuration & compiling CSS...`;
         console.log(msgConfig);
         onProgress(msgConfig);
 
-        await setupConfig(tempDir, distDir, designSystem, id);
-        
         // Also save tailwind.config.js for reference/editing (optional but good for consistency)
         // We use the same helper to get the object and write it
         const tailwindConfigObj = getTailwindConfigFromDesign(designSystem);
         const configPath = path.join(tempDir, 'tailwind.config.js');
         await fs.writeFile(configPath, `module.exports = ${JSON.stringify(tailwindConfigObj, null, 2)}`);
+
+        await setupConfig(tempDir, distDir, designSystem, id, tailwindConfigObj);
+        
+        // Compile CSS using Tailwind CLI
+        console.log(`[${id}] Running Tailwind CLI...`);
+        try {
+            await exec('./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify', { cwd: tempDir });
+            console.log(`[${id}] Tailwind CLI compilation successful.`);
+        } catch (err) {
+            console.error(`[${id}] Tailwind CLI error:`, err.stdout, err.stderr);
+            throw err;
+        }
 
         return { distDir, tokenUsageLog };
 
@@ -213,10 +229,11 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
 function getTailwindConfigFromDesign(designSystem) {
     if (!designSystem) {
         // Return a minimal default config if no design system is available
-        return { theme: { extend: {} }, plugins: [] };
+        return { content: ["./dist/**/*.{html,js}"], theme: { extend: {} }, plugins: [] };
     }
     const { googleFonts, colorPalette } = designSystem;
     return {
+      content: ["./dist/**/*.{html,js}"],
       theme: {
         extend: {
           fontFamily: {
@@ -247,9 +264,7 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         const heading = googleFonts.heading.replace(/\s+/g, '+');
         const body = googleFonts.body.replace(/\s+/g, '+');
         const fontUrl = `https://fonts.googleapis.com/css2?family=${heading}:wght@400;700&family=${body}:wght@300;400;600&display=swap`;
-        fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="${fontUrl}" rel="stylesheet">`;
+        fontLink = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="${fontUrl}" rel="stylesheet">`;
     }
 
     // 2. Prepare Title and Favicon
@@ -259,15 +274,7 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         faviconLink = `<link rel="icon" type="image/png" href="${logoUrl}" />`;
     }
 
-    // 3. Prepare Tailwind Config
-    const tailwindConfig = overrideConfig || getTailwindConfigFromDesign(designSystem);
-
-    const tailwindScript = `
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = ${JSON.stringify(tailwindConfig, null, 2)}
-    </script>
-    `;
+    const tailwindScript = `<link rel="stylesheet" href="./style.css">`;
 
     // 4. Update ALL HTML files
     const files = await fs.readdir(distDir);
@@ -293,7 +300,7 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         const configRegex = /<script>\s*tailwind\.config\s*=\s*[\s\S]*?<\/script>\s*/g;
         html = html.replace(configRegex, '');
 
-        // Always inject fresh CDN + Config
+        // Always inject fresh style.css
         html = html.replace('</head>', `${tailwindScript}\n</head>`);
     
         // Inject AOS CSS (Animation Library)
@@ -409,7 +416,7 @@ async function rebuildSite(id) {
         throw new Error(`Project source not found: ${id}`);
     }
 
-    console.log(`[${id}] Re-applying Tailwind Config (CDN)...`);
+    console.log(`[${id}] Re-applying Tailwind Config and compiling CSS...`);
     
     try {
         let config = null;
@@ -417,16 +424,40 @@ async function rebuildSite(id) {
             // Delete cache to ensure fresh read
             delete require.cache[require.resolve(configPath)];
             config = require(configPath);
+            config.content = config.content || ["./dist/**/*.{html,js}"];
+            await fs.writeFile(configPath, `module.exports = ${JSON.stringify(config, null, 2)}`);
         } else {
             console.warn(`[${id}] No tailwind.config.js found. Skipping config update.`);
             // We can still continue to ensure other injections
         }
 
-        // We don't have the full DesignSystem object here easily unless we fetch from DB.
-        // But setupConfig mainly needs the config object for the script injection.
-        // If designSystem is null, it skips title/favicon updates (which is good for rebuilds preserving manual edits).
-        
         await setupConfig(sourceDir, distDir, null, id, config);
+
+        // Compile CSS using Tailwind CLI
+        console.log(`[${id}] Running Tailwind CLI...`);
+        const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
+        
+        // Ensure symlink exists in projects_source
+        try {
+            await fs.ensureSymlink(path.join(skeletonDir, 'node_modules'), path.join(sourceDir, 'node_modules'));
+        } catch(err) {
+            console.error(`[${id}] Error symlinking node_modules:`, err);
+        }
+        
+        // Ensure src/input.css exists
+        try {
+            await fs.ensureSymlink(path.join(skeletonDir, 'src'), path.join(sourceDir, 'src'));
+        } catch(err) {
+            console.error(`[${id}] Error symlinking src:`, err);
+        }
+        
+        try {
+            await exec('./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify', { cwd: sourceDir });
+            console.log(`[${id}] Tailwind CLI compilation successful.`);
+        } catch (err) {
+            console.error(`[${id}] Tailwind CLI error:`, err.stdout, err.stderr);
+            throw err;
+        }
 
         // Ensure public preview is synced
         await fs.emptyDir(publicSiteDir);

@@ -1062,7 +1062,7 @@ app.get('/api/project/:id/theme', verifyToken, async (req, res) => {
         const keys = ['primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'];
         
         keys.forEach(key => {
-            const match = configContent.match(new RegExp(`${key}:\\s*["']([^"']+)["']`));
+            const match = configContent.match(new RegExp(`["']?${key}["']?:\\s*["']([^"']+)["']`));
             if (match) {
                 colors[key] = match[1];
             }
@@ -1363,9 +1363,9 @@ app.post('/api/project/:id/theme', verifyToken, async (req, res) => {
         // Simple regex replacement for each color key
         // Assumes format: key: "value",
         Object.entries(colors).forEach(([key, value]) => {
-             // Regex looks for: key: "..." or key: '...'
-             const regex = new RegExp(`${key}:\\s*["'][^"']*["']`, 'g');
-             configContent = configContent.replace(regex, `${key}: "${value}"`);
+             // Regex looks for: "key": "..." or key: "..." (handles both quoted and unquoted keys)
+             const regex = new RegExp(`(["']?)${key}\\1:\\s*["'][^"']*["']`, 'g');
+             configContent = configContent.replace(regex, `$1${key}$1: "${value}"`);
         });
 
         await fs.writeFile(configPath, configContent);

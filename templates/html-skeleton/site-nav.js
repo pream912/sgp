@@ -17,7 +17,7 @@
 
     // --- Desktop Nav ---
     var desktopEl = document.querySelector('[data-nav="desktop"]') || document.querySelector('header nav');
-    if (desktopEl) {
+    if (desktopEl && !desktopEl.querySelector('.group')) {
       rebuildDesktopNav(desktopEl, nav, currentFile);
     }
 
@@ -36,7 +36,7 @@
         }
       }
     }
-    if (mobileEl) {
+    if (mobileEl && mobileEl.querySelectorAll('a').length <= 5) {
       rebuildMobileNav(mobileEl, nav, currentFile);
     }
 
@@ -118,16 +118,39 @@
         group.appendChild(parentLink);
 
         var dropdown = document.createElement('div');
-        dropdown.className = 'absolute left-0 top-full mt-1 bg-background border border-gray-200 rounded-lg shadow-lg hidden group-hover:block min-w-[180px] z-50';
+        dropdown.className = 'absolute right-0 top-full pt-2 z-50 hidden group-hover:block';
 
-        item.children.forEach(function(child) {
-          var childLink = document.createElement('a');
-          childLink.href = child.path;
-          childLink.textContent = child.name;
-          childLink.className = 'block px-4 py-2 text-sm text-text hover:bg-primary/10 ' + ((child.path === currentFile) ? 'font-bold text-primary' : '');
-          dropdown.appendChild(childLink);
-        });
+        var dropdownInner = document.createElement('div');
+        var childCount = item.children.length;
+        // Use multi-column for many items, single column for few
+        if (childCount > 6) {
+          var colCount = Math.min(3, Math.ceil(childCount / 5));
+          var colWidth = colCount * 200;
+          dropdownInner.className = 'bg-white/95 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl p-6';
+          dropdownInner.style.width = colWidth + 'px';
+          var grid = document.createElement('div');
+          grid.className = 'grid gap-x-6 gap-y-1';
+          grid.style.gridTemplateColumns = 'repeat(' + colCount + ', 1fr)';
+          item.children.forEach(function(child) {
+            var childLink = document.createElement('a');
+            childLink.href = child.path;
+            childLink.textContent = child.name;
+            childLink.className = 'block py-1.5 text-sm text-text/80 hover:text-primary transition ' + ((child.path === currentFile) ? 'font-bold text-primary' : '');
+            grid.appendChild(childLink);
+          });
+          dropdownInner.appendChild(grid);
+        } else {
+          dropdownInner.className = 'bg-white/95 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl p-4 min-w-[200px]';
+          item.children.forEach(function(child) {
+            var childLink = document.createElement('a');
+            childLink.href = child.path;
+            childLink.textContent = child.name;
+            childLink.className = 'block py-1.5 px-2 text-sm text-text/80 hover:text-primary transition rounded-lg hover:bg-primary/5 ' + ((child.path === currentFile) ? 'font-bold text-primary' : '');
+            dropdownInner.appendChild(childLink);
+          });
+        }
 
+        dropdown.appendChild(dropdownInner);
         group.appendChild(dropdown);
         container.appendChild(group);
       } else {

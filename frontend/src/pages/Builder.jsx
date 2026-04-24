@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { ArrowLeft, Search, Check, Upload, Loader, AlertCircle, ChevronRight, Layout, Type, Image as ImageIcon, Briefcase, MapPin, Globe, Mail, Phone, Facebook, Instagram, Twitter, Linkedin, Youtube, FileText } from 'lucide-react';
 import { useCredits } from '../context/CreditsContext';
+import BuyCreditsModal from '../components/BuyCreditsModal';
 
 const STYLE_PRESETS = [
     { 
@@ -62,7 +63,8 @@ const STEPS = [
 const Builder = () => {
     const navigate = useNavigate();
     const { credits } = useCredits();
-    
+    const [showBuyCredits, setShowBuyCredits] = useState(false);
+
     // Global State
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -366,6 +368,7 @@ Button Text: ${selectedPalette.colors.buttonText}`;
                                 {siteType === 'multi' && (
                                     <div className="space-y-4 animate-fade-in bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
                                         <p className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Select Additional Pages</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">You can always add or remove pages later from the editor.</p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                             <label className="flex items-center space-x-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 opacity-75 cursor-not-allowed">
                                                 <input type="checkbox" checked disabled className="rounded text-indigo-600" />
@@ -651,9 +654,14 @@ Button Text: ${selectedPalette.colors.buttonText}`;
                                         )}
                                         
                                         {credits < costBreakdown.total && (
-                                            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs mt-3 p-3 rounded-lg text-center flex items-center justify-center gap-2">
-                                                <AlertCircle className="w-4 h-4" /> 
-                                                <span>Insufficient Credits</span>
+                                            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs mt-3 p-3 rounded-lg text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <AlertCircle className="w-4 h-4" />
+                                                    <span>Insufficient Credits</span>
+                                                </div>
+                                                <button onClick={() => setShowBuyCredits(true)} className="text-orange-400 hover:text-orange-300 underline font-medium">
+                                                    Buy Credits
+                                                </button>
                                             </div>
                                         )}
                                         
@@ -672,6 +680,7 @@ Button Text: ${selectedPalette.colors.buttonText}`;
                     </div>
                 )}
             </div>
+            <BuyCreditsModal isOpen={showBuyCredits} onClose={() => setShowBuyCredits(false)} />
         </div>
     );
 };

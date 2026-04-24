@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extended Informed Consent | Smile Dental Care, Trichy</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #7B1D1D;
+    --maroon-deep: #5A1212;
+    --amber: #C8720A;
+    --amber-light: #F5A623;
+    --cream: #FDF8F2;
+    --warm-white: #FFFCF8;
+    --text: #1E1208;
+    --text-soft: #4A3728;
+    --text-muted: #7A6355;
+    --rule: #D9C9B8;
+    --note-bg: #FFF4E6;
+    --note-border: #E8A048;
+    --section-bg: #F9F2EA;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--cream); color: var(--text); font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.78; }
+
+  /* HEADER */
+  .site-header {
+    background: var(--maroon-deep);
+    padding: 0.7rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 3px solid var(--amber);
+  }
+  .brand { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #fff; letter-spacing: 0.04em; }
+  .brand span { color: var(--amber-light); }
+  .nav-link { color: rgba(255,255,255,0.6); font-family: 'DM Mono', monospace; font-size: 0.7rem; text-decoration: none; letter-spacing: 0.08em; transition: color 0.2s; }
+  .nav-link:hover { color: var(--amber-light); }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, var(--maroon-deep) 0%, var(--maroon) 60%, #A0351A 100%);
+    padding: 3.8rem 2rem 3.2rem; text-align: center; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 15% 50%, rgba(200,114,10,0.13) 0%, transparent 60%);
+  }
+  .hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.22em; color: var(--amber-light); text-transform: uppercase; margin-bottom: 0.9rem; position: relative; }
+  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.9rem, 5vw, 3rem); color: #fff; font-weight: 700; line-height: 1.2; position: relative; margin-bottom: 0.9rem; }
+  .hero-sub { color: rgba(255,255,255,0.7); font-size: 0.97rem; font-style: italic; max-width: 540px; margin: 0 auto 1.8rem; position: relative; }
+  .qr-pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50px; padding: 0.4rem 1rem;
+    font-family: 'DM Mono', monospace; font-size: 0.68rem; color: rgba(255,255,255,0.78); letter-spacing: 0.06em;
+    position: relative;
+  }
+
+  /* TOC */
+  .toc { background: var(--warm-white); border-bottom: 1px solid var(--rule); padding: 1rem 2rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; justify-content: center; }
+  .toc a { font-family: 'DM Mono', monospace; font-size: 0.67rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--maroon); text-decoration: none; border-bottom: 1.5px solid transparent; transition: border-color 0.2s, color 0.2s; padding-bottom: 1px; }
+  .toc a:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* LAYOUT */
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+  /* PREAMBLE */
+  .preamble { background: var(--section-bg); border-left: 4px solid var(--maroon); padding: 1.4rem 1.7rem; margin: 2.5rem 0 0.5rem; border-radius: 0 6px 6px 0; font-size: 0.93rem; color: var(--text-soft); font-style: italic; }
+  .preamble strong { color: var(--maroon); font-style: normal; }
+
+  /* SECTIONS */
+  .sec { margin-top: 3.2rem; padding-top: 1rem; border-top: 2px solid var(--rule); }
+  .sec-label { font-family: 'DM Mono', monospace; font-size: 0.63rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.35rem; display: block; }
+  .sec-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--maroon-deep); font-weight: 700; margin-bottom: 1.3rem; line-height: 1.25; }
+
+  /* SUB */
+  .sub { margin-top: 2rem; }
+  .sub-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--maroon); font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
+
+  p { margin-bottom: 0.85rem; color: var(--text-soft); font-size: 0.95rem; }
+
+  /* LISTS */
+  ul.pl, ol.pl { margin: 0.4rem 0 0.9rem 0; padding-left: 1.4rem; }
+  ul.pl li, ol.pl li { margin-bottom: 0.5rem; color: var(--text-soft); font-size: 0.93rem; padding-left: 0.25rem; }
+  ul.pl li::marker { color: var(--amber); }
+  ol.pl li::marker { color: var(--maroon); font-weight: 600; font-family: 'DM Mono', monospace; font-size: 0.83rem; }
+
+  /* NOTE BOX */
+  .note { background: var(--note-bg); border: 1px solid var(--note-border); border-left: 4px solid var(--amber); padding: 0.95rem 1.2rem; border-radius: 0 6px 6px 0; margin: 1.1rem 0; font-size: 0.89rem; color: var(--text-soft); }
+  .note .nlabel { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber); display: block; margin-bottom: 0.35rem; }
+  .note strong { color: var(--maroon); }
+
+  /* POLICY LINK CARDS — for linking out to existing pages */
+  .policy-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .plink {
+    display: block; text-decoration: none;
+    background: var(--warm-white); border: 1px solid var(--rule);
+    border-top: 3px solid var(--maroon); border-radius: 6px;
+    padding: 1.1rem 1.2rem; transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .plink:hover { box-shadow: 0 4px 16px rgba(123,29,29,0.12); transform: translateY(-2px); }
+  .plink .plink-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.35rem; display: block; }
+  .plink h4 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--maroon); margin-bottom: 0.4rem; }
+  .plink p { font-size: 0.8rem; margin: 0; color: var(--text-muted); }
+  .plink .arrow { display: inline-block; margin-top: 0.6rem; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--amber); }
+
+  /* TABLE */
+  .ptable { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin: 1.1rem 0 1.4rem; }
+  .ptable thead th { background: var(--maroon); color: #fff; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.6rem 0.85rem; text-align: left; font-weight: 500; }
+  .ptable tbody tr { border-bottom: 1px solid var(--rule); }
+  .ptable tbody tr:nth-child(even) { background: var(--section-bg); }
+  .ptable tbody td { padding: 0.6rem 0.85rem; color: var(--text-soft); vertical-align: top; }
+  .ptable tbody td:first-child { font-weight: 600; color: var(--maroon); font-size: 0.84rem; }
+
+  /* DIGITAL BRIDGE BOX */
+  .bridge {
+    background: linear-gradient(135deg, var(--maroon-deep), var(--maroon));
+    color: #fff; padding: 1.8rem 2rem; border-radius: 10px;
+    margin: 2.8rem 0 1rem; display: flex; gap: 1.4rem; align-items: flex-start;
+  }
+  .bridge-icon { flex-shrink: 0; width: 64px; height: 64px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; }
+  .bridge h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .bridge p { font-size: 0.83rem; color: rgba(255,255,255,0.75); margin: 0; line-height: 1.55; }
+  .bridge a { display: inline-block; margin-top: 0.55rem; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--amber-light); letter-spacing: 0.04em; border-bottom: 1px dashed var(--amber-light); text-decoration: none; }
+
+  /* FOOTER */
+  footer { background: var(--maroon-deep); color: rgba(255,255,255,0.5); text-align: center; padding: 2rem; font-family: 'DM Mono', monospace; font-size: 0.67rem; letter-spacing: 0.08em; line-height: 2.1; border-top: 3px solid var(--amber); }
+  footer a { color: var(--amber-light); text-decoration: none; }
+
+  /* REVEAL */
+  .reveal { opacity: 1; transform: none; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 2.6rem 1.2rem 2.2rem; }
+    .bridge { flex-direction: column; }
+    .bridge-icon { width: 48px; height: 48px; font-size: 1.7rem; }
+    .policy-links { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">Smile <span>Dental</span> Care</div>
+  <a href="https://www.smiledentalcaretrichy.com" class="nav-link">smiledentalcaretrichy.com ↗</a>
+</header>
+
+<div class="hero">
+  <p class="hero-eyebrow">Patient Information & Policies</p>
+  <h1>Extended Informed Consent</h1>
+  <p class="hero-sub">Procedure-specific risks, patient rights, and the complete policy framework of Smile Dental Care — accessible via QR on your case sheet and bill.</p>
+  <span class="qr-pill">📱 &nbsp;Linked via QR · Case Sheet &amp; Bill</span>
+</div>
+
+<nav class="toc">
+  <a href="#sec-how">How This Works</a>
+  <a href="#sec-rights">Patient Rights</a>
+  <a href="#sec-procedures">Procedure Consents</a>
+  <a href="#sec-special">Special Situations</a>
+  <a href="#sec-policies">Our Policies</a>
+  <a href="#sec-bridge">Digital Consent</a>
+</nav>
+
+<div class="wrap">
+
+  <div class="preamble reveal">
+    This page is the <strong>Extended Informed Consent</strong> of Smile Dental Care, Tiruchirapalli. It supplements the signed <em>Informed Consent & Declaration Form</em> on your case sheet and the <em>Terms & Conditions</em> printed on the reverse of your bill. By proceeding with treatment and accessing this page via QR code, you acknowledge having been offered the opportunity to read this document before your procedure. The version published here on the date of your treatment constitutes the applicable record.
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       HOW THIS PAGE WORKS
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-how">
+    <span class="sec-label">Overview</span>
+    <h2 class="sec-title">How This Page Is Connected to Your Treatment</h2>
+    <p>Your case sheet (Informed Consent & Declaration Form) contains a binding clause that reads:</p>
+    <div class="note">
+      <span class="nlabel">Binding Bridge Clause — from your signed case sheet</span>
+      "By signing this form, I acknowledge that I have been informed of and voluntarily accept the Refund Policy, Re-treatment Policy, Privacy Policy, and Terms & Conditions of Smile Dental Care. These policies are available at <strong>www.smiledentalcaretrichy.com</strong> and can also be accessed by scanning the QR code on this form. By proceeding with treatment, I agree to abide by all the above-mentioned policies."
+    </div>
+    <p>This means your physical signature on the case sheet legally tethers you to everything on this page and all linked policy pages — <strong>no second signature is needed.</strong> This is your complete reference document.</p>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       PATIENT RIGHTS
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-rights">
+    <span class="sec-label">Section A</span>
+    <h2 class="sec-title">Patient Rights &amp; Responsibilities</h2>
+
+    <div class="sub">
+      <h3 class="sub-title">Your Rights as a Patient</h3>
+      <ul class="pl">
+        <li>To receive clear information about your diagnosis, proposed treatment, alternatives, and expected outcomes in a language you understand.</li>
+        <li>To accept or refuse any recommended treatment — without this affecting the respect and care you receive at this clinic.</li>
+        <li>To seek a second opinion. Relevant records, radiographs, and reports will be provided on written request.</li>
+        <li>To have your personal and medical information kept confidential at all times.</li>
+        <li>To be treated with dignity and respect, without discrimination.</li>
+        <li>To receive an itemised cost estimate before any procedure is initiated.</li>
+        <li>To access your dental records as per our Privacy Policy.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3 class="sub-title">Patient Responsibilities</h3>
+      <ul class="pl">
+        <li>Provide complete and accurate medical history — including all systemic conditions, current medications, allergies, and any previous adverse reactions to dental treatment.</li>
+        <li>Inform your dentist of any change in your health status between appointments.</li>
+        <li>Follow all post-operative instructions provided verbally and/or in writing.</li>
+        <li>Attend recall and review appointments as scheduled. Non-attendance may affect treatment warranty validity.</li>
+        <li>Communicate financial concerns <em>before</em> treatment is initiated rather than after procedures are completed.</li>
+        <li>Treat clinical staff with respect. Abusive or threatening behaviour will result in refusal of treatment without refund, as per our Terms & Conditions.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       PROCEDURE-SPECIFIC CONSENTS
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-procedures">
+    <span class="sec-label">Section B</span>
+    <h2 class="sec-title">Procedure-Specific Informed Consents</h2>
+    <p>The following are known risks and limitations for each procedure category. These represent recognised clinical outcomes — not necessarily errors — and do not constitute grounds for refund or liability unless proven operator negligence is established under applicable law.</p>
+
+    <!-- EXTRACTION -->
+    <div class="sub">
+      <h3 class="sub-title">Tooth Extraction</h3>
+      <p>Tooth extraction is irreversible. Known complications include:</p>
+      <ul class="pl">
+        <li><strong>Dry socket (Alveolar Osteitis)</strong> — pain developing 3–5 days post-extraction requiring dressing and review. Occurs in ~3–5% of routine extractions and up to 20% of lower wisdom tooth cases.</li>
+        <li><strong>Post-operative swelling, bruising, and restricted mouth opening</strong> — typically resolving within 5–7 days.</li>
+        <li><strong>Nerve paraesthesia</strong> — temporary or rarely permanent altered sensation in the lip, chin, or tongue, due to proximity of the inferior alveolar or lingual nerve.</li>
+        <li><strong>Oro-antral communication</strong> — possible opening between mouth and sinus for upper molar extractions. Surgical closure may be required.</li>
+        <li><strong>Retained root tip</strong> — may be left intentionally if removal poses greater risk than retention, with clinical documentation.</li>
+        <li><strong>Fracture of adjacent restorations</strong> — due to instrumentation near neighbouring teeth.</li>
+      </ul>
+      <div class="note">
+        <span class="nlabel">⚙ Pre-Extraction Dual Verification Protocol</span>
+        Before every extraction, you will be verbally asked to confirm the tooth or teeth to be extracted. The treating dentist will independently cross-verify against the written treatment plan. <strong>Your active participation in this two-step verification is required.</strong> Extraction of a wrong tooth resulting from a patient's failure to correctly identify the tooth during this verification step does not constitute clinical negligence on the part of Smile Dental Care.
+      </div>
+    </div>
+
+    <!-- RCT -->
+    <div class="sub">
+      <h3 class="sub-title">Root Canal Treatment (RCT / Endodontic Therapy)</h3>
+      <ul class="pl">
+        <li>RCT does not guarantee permanent tooth retention. Success rates are approximately 85–95% at 10 years depending on pre-existing infection and root anatomy.</li>
+        <li><strong>Instrument separation (file fracture)</strong> within the canal may occur. Depending on the location and clinical situation, the fragment may be left in situ, surgically retrieved via apicoectomy, or — in cases where the fragment compromises the seal or leads to persistent infection — <strong>extraction of the tooth may become necessary.</strong></li>
+        <li><strong>Root perforation</strong> — inadvertent communication with surrounding bone, which may require additional procedures or in rare cases extraction.</li>
+        <li><strong>Flare-up</strong> — acute exacerbation of pain or swelling between visits, occurring in approximately 10–20% of cases. This is a recognised biological response, not an error.</li>
+        <li><strong>Post-treatment sensitivity</strong> may persist for several weeks and is not clinically abnormal.</li>
+        <li><strong>Crown placement is strongly recommended</strong> after RCT to prevent tooth fracture. The clinic is not responsible for fracture if a crown was declined following completed treatment.</li>
+      </ul>
+    </div>
+
+    <!-- CROWN / PROSTHESIS -->
+    <div class="sub">
+      <h3 class="sub-title">Dental Crown &amp; Fixed Prosthesis (Bridge)</h3>
+      <ul class="pl">
+        <li>Crown preparation involves <strong>irreversible reduction</strong> of natural tooth structure.</li>
+        <li>Temporary crowns may occasionally debond — contact the clinic promptly to prevent sensitivity or tooth shifting.</li>
+        <li>Final crown shade, translucency, and contour may vary slightly from adjacent natural teeth due to inherent material limitations.</li>
+        <li>The prepared tooth may develop pulpal symptoms post-crown, necessitating RCT even after successful crown placement.</li>
+        <li>Crown warranty is governed by our <strong>Refund Policy & Warranties</strong> page. Failure due to fracture, periodontal disease, trauma, bruxism, or patient non-compliance voids warranty.</li>
+      </ul>
+    </div>
+
+    <!-- IMPLANTS -->
+    <div class="sub">
+      <h3 class="sub-title">Dental Implants</h3>
+      <ul class="pl">
+        <li><strong>Osseointegration failure</strong> — the implant may not bond with bone. Risk increases with uncontrolled diabetes, active smoking, osteoporosis, and poor bone quality.</li>
+        <li>Nerve proximity — altered sensation in lower lip, chin, or tongue following lower jaw implant placement.</li>
+        <li>Sinus involvement for upper jaw implants may require a sinus lift at additional cost.</li>
+        <li>A healing period of <strong>3–6 months</strong> is required before prosthetic loading.</li>
+        <li>Peri-implantitis (long-term infection around the implant) is a known risk requiring ongoing maintenance at recall visits.</li>
+        <li>Warranty covers the prosthetic crown only — not the implant fixture itself.</li>
+      </ul>
+    </div>
+
+    <!-- ORTHODONTICS -->
+    <div class="sub">
+      <h3 class="sub-title">Orthodontic Treatment (Braces &amp; Aligners)</h3>
+      <ul class="pl">
+        <li>Treatment duration is an estimate; individual biological response varies.</li>
+        <li>Enamel demineralisation and white spot lesions may occur with inadequate oral hygiene during treatment.</li>
+        <li>Minor root resorption is a recognised risk of orthodontic tooth movement.</li>
+        <li>Post-treatment relapse occurs if prescribed retainers are not worn consistently. Retainer compliance is entirely the patient's responsibility.</li>
+        <li>Emergency bracket or wire repairs between scheduled visits may attract additional charges.</li>
+      </ul>
+    </div>
+
+    <!-- PERIODONTICS -->
+    <div class="sub">
+      <h3 class="sub-title">Periodontal (Gum) Treatment</h3>
+      <ul class="pl">
+        <li>Scaling and root planing may cause temporary sensitivity, apparent gum recession, and tooth elongation as swelling resolves — this is expected and not a complication.</li>
+        <li>Periodontal disease is a chronic condition. <strong>Maintenance recall every 3–6 months is essential</strong> to preserve outcomes.</li>
+        <li>Bone loss from periodontal disease can spread to adjacent teeth, potentially necessitating RCT or extraction of those teeth. This natural disease progression is not clinical negligence.</li>
+      </ul>
+    </div>
+
+    <!-- WHITENING -->
+    <div class="sub">
+      <h3 class="sub-title">Teeth Whitening</h3>
+      <ul class="pl">
+        <li>Results vary based on the type of discolouration. Intrinsic stains (tetracycline, fluorosis) respond poorly to whitening procedures.</li>
+        <li>Tooth sensitivity and gum irritation are common but temporary side effects.</li>
+        <li>Existing crowns, veneers, and composite fillings will <strong>not</strong> whiten and may need replacement to match the new shade — at additional cost.</li>
+        <li>Whitening results are not permanent; maintenance is at the patient's expense.</li>
+      </ul>
+    </div>
+
+    <!-- LASER -->
+    <div class="sub">
+      <h3 class="sub-title">Laser &amp; Photochemical Procedures</h3>
+      <p>Certain procedures at Smile Dental Care may involve dental lasers, photodynamic dyes, or light-activated materials for enhanced clinical outcomes.</p>
+      <ul class="pl">
+        <li>These are standard adjunctive techniques in modern dentistry and are generally safe.</li>
+        <li>Minor risks include temporary tissue sensitivity, mild discomfort, transient colour change, or unpredictable tissue response.</li>
+        <li>Protective measures such as eye shields are provided wherever applicable.</li>
+        <li>The attending dentist will inform you if such devices or dyes are being used in your treatment.</li>
+      </ul>
+    </div>
+
+    <!-- PAEDIATRIC -->
+    <div class="sub">
+      <h3 class="sub-title">Paediatric Dental Procedures</h3>
+      <p>For patients under 18 years of age, consent is obtained from the parent or legal guardian.</p>
+      <ul class="pl">
+        <li>Behaviour management techniques including tell-show-do, voice modulation, and protective stabilisation may be used at the clinician's discretion.</li>
+        <li>Sedation or general anaesthesia, if recommended, requires a separate specialised consent at an appropriate facility.</li>
+        <li>Primary (milk) teeth treatment preserves space and function. Premature loss may affect permanent tooth eruption.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       SPECIAL CLINICAL SITUATIONS
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-special">
+    <span class="sec-label">Section C</span>
+    <h2 class="sec-title">Special Clinical Situations</h2>
+
+    <div class="sub">
+      <h3 class="sub-title">Systemic Conditions &amp; Treatment Modifications</h3>
+      <table class="ptable">
+        <thead>
+          <tr><th>Condition</th><th>What This Means for Your Treatment</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Diabetes Mellitus</td>
+            <td>Increased infection risk and delayed wound healing. Pre-operative blood glucose recording recommended. Elective procedures deferred if HbA1c &gt; 9%.</td>
+          </tr>
+          <tr>
+            <td>Hypertension</td>
+            <td>Blood pressure recorded before treatment. Epinephrine in local anaesthetic used in controlled doses. Elective procedures deferred if BP &gt;180/110 mmHg.</td>
+          </tr>
+          <tr>
+            <td>Anticoagulant Therapy</td>
+            <td>Do not stop medications without your physician's guidance. Haemostatic measures will be applied. Prolonged post-operative bleeding is a known risk.</td>
+          </tr>
+          <tr>
+            <td>Bisphosphonate Use</td>
+            <td>Risk of Medication-Related Osteonecrosis of the Jaw (MRONJ). Physician consultation is mandatory before extractions or implant placement.</td>
+          </tr>
+          <tr>
+            <td>Pregnancy</td>
+            <td>Elective radiographs and non-urgent procedures deferred to second trimester or post-partum. Emergency care provided with appropriate precautions.</td>
+          </tr>
+          <tr>
+            <td>Cardiac &amp; Pulmonary Conditions</td>
+            <td>Some conditions may render the patient temporarily unsuitable for elective treatment. Physician clearance may be required before certain procedures.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub">
+      <h3 class="sub-title">Medical Emergencies in the Clinic</h3>
+      <p>Smile Dental Care maintains a basic emergency kit including oxygen and adrenaline (epinephrine). Staff are trained in Basic Life Support (BLS). In the event of a medical emergency during treatment:</p>
+      <ul class="pl">
+        <li>Treatment is stopped immediately and emergency protocols are initiated.</li>
+        <li>Emergency services (108) are contacted without delay.</li>
+        <li>Your emergency contact will be notified.</li>
+        <li>Transfer to a hospital will be initiated when clinically indicated.</li>
+      </ul>
+      <div class="note">
+        <span class="nlabel">Important</span>
+        Smile Dental Care is an outpatient dental facility. It is not equipped as a hospital intensive care unit. In the event of a serious medical emergency, transfer to an appropriate medical facility will be the priority.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       OUR POLICIES — LINK OUT
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-policies">
+    <span class="sec-label">Section D</span>
+    <h2 class="sec-title">Our Policies — Full Details</h2>
+    <p>The following policies are maintained as dedicated pages on our website. By proceeding with treatment, you acknowledge and accept each of them. Click any card to read the full policy.</p>
+
+    <div class="policy-links">
+      <a class="plink" href="https://www.smiledentalcaretrichy.com/blank-18" target="_blank">
+        <span class="plink-label">Policy 01</span>
+        <h4>Re-Treatment Policy</h4>
+        <p>When retreatment is free, when charges apply, and the 3-month window for re-treatment claims.</p>
+        <span class="arrow">Read full policy →</span>
+      </a>
+      <a class="plink" href="https://www.smiledentalcaretrichy.com/blank-19" target="_blank">
+        <span class="plink-label">Policy 02</span>
+        <h4>Refund Policy &amp; Warranties</h4>
+        <p>Refund eligibility, warranty coverage for crowns &amp; implants, deductions, and the 3-month claim window.</p>
+        <span class="arrow">Read full policy →</span>
+      </a>
+      <a class="plink" href="https://www.smiledentalcaretrichy.com/blank" target="_blank">
+        <span class="plink-label">Policy 03</span>
+        <h4>Privacy Policy</h4>
+        <p>How your personal and clinical data is collected, stored, used, and protected by Smile Dental Care.</p>
+        <span class="arrow">Read full policy →</span>
+      </a>
+      <a class="plink" href="https://www.smiledentalcaretrichy.com/blank-10" target="_blank">
+        <span class="plink-label">Policy 04</span>
+        <h4>Terms, Conditions &amp; Disclaimer</h4>
+        <p>General terms of service, clinic rights, jurisdiction, and the medical &amp; legal disclaimer.</p>
+        <span class="arrow">Read full policy →</span>
+      </a>
+    </div>
+
+    <div class="note">
+      <span class="nlabel">Key points to remember across all policies</span>
+      <ul class="pl" style="margin-top:0.4rem">
+        <li>Re-treatment and refund claims must be raised within <strong>3 months</strong> of the original treatment date.</li>
+        <li>Patients who receive treatment at <strong>any clinic other than Smile Dental Care</strong> for the same tooth lose eligibility for re-treatment and refund.</li>
+        <li>Warranty validity requires attendance at <strong>mandatory recall visits</strong> as advised by your clinician.</li>
+        <li>All disputes are subject to the exclusive jurisdiction of <strong>Tiruchirapalli courts, Tamil Nadu</strong>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       DIGITAL CONSENT BRIDGE
+  ════════════════════════════════════════ -->
+  <section class="sec reveal" id="sec-bridge">
+    <span class="sec-label">Section E</span>
+    <h2 class="sec-title">Digital Consent — How the QR Bridges Your Case Sheet &amp; Bill</h2>
+
+    <p>Smile Dental Care uses a <strong>QR-bridged digital consent architecture</strong>. Here is how it works:</p>
+
+    <table class="ptable">
+      <thead><tr><th>Document</th><th>Where You See It</th><th>What It Contains</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Case Sheet (Informed Consent Form)</td>
+          <td>Signed at registration / before procedure</td>
+          <td>Core consent declaration + QR linking to this page and all SDC policies</td>
+        </tr>
+        <tr>
+          <td>Bill / Invoice Back Page</td>
+          <td>Issued after treatment</td>
+          <td>T&C summary (Clauses 1–24) + QR linking to full online policies</td>
+        </tr>
+        <tr>
+          <td>This Page (Extended IC)</td>
+          <td>Via QR — accessible anytime</td>
+          <td>Procedure-specific consents, patient rights, special situations + links to all policy pages</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="bridge">
+      <div class="bridge-icon">📱</div>
+      <div>
+        <h3>You reached this page via QR</h3>
+        <p>This is the Extended Informed Consent page of Smile Dental Care, Tiruchirapalli. By receiving treatment at this clinic and signing the case sheet, you confirm having been offered the opportunity to read this document and all linked policies before your procedure. The version live on this page on the date of your treatment constitutes your accepted policy record.</p>
+        <a href="https://www.smiledentalcaretrichy.com">www.smiledentalcaretrichy.com</a>
+      </div>
+    </div>
+
+    <div class="sub">
+      <h3 class="sub-title">Communication Consent</h3>
+      <ul class="pl">
+        <li>By registering at this clinic, you consent to receiving appointment reminders, post-operative instructions, and recall notifications via SMS or phone call on your registered number.</li>
+        <li>You may opt out of non-clinical communications by informing the front desk at any time.</li>
+        <li>Accurate contact information is the patient's responsibility, as stated in our Terms & Conditions.</li>
+      </ul>
+    </div>
+
+    <div class="sub">
+      <h3 class="sub-title">Policy Updates</h3>
+      <p>Smile Dental Care reserves the right to update these policies at any time. The version published on this page on the date of your treatment constitutes the applicable terms. Patients are encouraged to review this page before each course of treatment. Continued use of our services constitutes acceptance of any updates, as per our Terms & Conditions.</p>
+    </div>
+  </section>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div>SMILE DENTAL CARE &nbsp;|&nbsp; Tiruchirapalli, Tamil Nadu</div>
+  <div>Procedures by Specialist &nbsp;|&nbsp; Est. 2016</div>
+  <div style="margin-top:0.5rem">
+    <a href="https://www.smiledentalcaretrichy.com">www.smiledentalcaretrichy.com</a>
+    &nbsp;|&nbsp;
+    <a href="/cdn-cgi/l/email-protection#087b7d7878677a7c487b6561646d6c6d667c69646b697a6d7c7a616b6071266b6765"><span class="__cf_email__" data-cfemail="95e6e0e5e5fae7e1d5e6f8fcf9f0f1f0fbe1f4f9f6f4e7f0e1e7fcf6fdecbbf6faf8">[email&#160;protected]</span></a>
+  </div>
+  <div style="margin-top:0.5rem">Jurisdiction: Tiruchirapalli Courts, Tamil Nadu &nbsp;|&nbsp; All Rights Reserved © 2025 Smile Dental Care</div>
+  <div style="margin-top:0.6rem; opacity:0.45; font-size:0.59rem">This page forms part of the informed consent framework of Smile Dental Care and is linked via QR on all case sheets and bills.</div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><s

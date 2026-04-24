@@ -18,7 +18,7 @@
     "@google/generative-ai": "^0.24.1",
     "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
-    "cheerio": "^1.1.2",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -35,7 +35,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.12",
     "path": "^0.12.7",
-    "puppeteer": "^24.37.2",
+    "puppeteer": "^24.41.0",
     "razorpay": "^2.9.6"
   }
 }
