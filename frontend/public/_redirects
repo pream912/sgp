@@ -1,0 +1,3 @@
+/api/*  https://api.genweb.in/api/:splat  200
+/sites/*  https://api.genweb.in/sites/:splat  200
+/*  /index.html  200
