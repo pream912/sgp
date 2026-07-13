@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenWeb | AI Website Builder for India</title>
+    <meta name="description" content="Create a professional business website in 5 minutes with AI. No coding required. Perfect for shops, clinics, and small businesses in India.">
+    
+    <!-- Styles -->
+    <link href="./styles.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <link rel="icon" type="image/png" href="./logo_t.png">
+    <style>
+        .hero-card-shadow {
+            box-shadow: 0 25px 50px -12px rgba(255, 87, 34, 0.25);
+        }
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 antialiased bg-gray-50 selection:bg-brand-orange selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 transition-all duration-300 bg-white/0 backdrop-blur-sm" data-section="header">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-28">
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a href="index.html" class="flex items-center gap-4">
+                     <img class="h-24 w-auto hover:scale-105 transition-transform duration-300" src="./logo_t.png" alt="GenWeb">
+                     <span class="font-display font-bold text-4xl text-gray-900 tracking-tight">GenWeb</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="how-it-works.html" class="text-gray-600 hover:text-brand-orange font-medium transition-colors">How It Works</a>
+                    <a href="#industries" class="text-gray-600 hover:text-brand-orange font-medium transition-colors">Solutions</a>
+                    <a href="#features" class="text-gray-600 hover:text-brand-orange font-medium transition-colors">Features</a>
+                    <a href="#pricing" class="text-gray-600 hover:text-brand-orange font-medium transition-colors">Pricing</a>
+                    <a href="contact.html" class="text-gray-600 hover:text-brand-orange font-medium transition-colors">Contact</a>
+                    <a href="https://app.genweb.in" class="bg-gray-900 text-white px-6 py-3 rounded-full font-medium hover:bg-brand-orange transition-all transform hover:scale-105 shadow-lg">
+                        Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden min-h-screen flex items-center" data-section="hero">
+        <!-- Dynamic Background -->
+        <div class="absolute inset-0 bg-white -z-20"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-orange-50 via-white to-transparent -z-10"></div>
+        <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent -z-10"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                
+                <!-- Left: Text Content -->
+                <div class="hero-content z-10">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 border border-orange-100 text-brand-orange font-semibold text-sm mb-8">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-orange"></span>
+                        </span>
+                        AI Website Builder for India
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h1 class="text-5xl lg:text-7xl font-display font-extrabold text-gray-900 leading-tight">
+                            Build a 
+                        </h1>
+                        <!-- Container for Typing Effect -->
+                        <div class="relative text-5xl lg:text-7xl font-display font-extrabold leading-tight">
+                            <!-- Ghost Element: Invisible copy of the longest phrase to force correct height/wrapping -->
+                            <span class="invisible" aria-hidden="true">Website for a Clinic</span>
+                            
+                            <!-- Actual Typing Text (Absolute Positioned) -->
+                            <div class="absolute top-0 left-0 w-full">
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange to-red-600" id="typed-text"></span>
+                                <span class="typing-cursor text-brand-orange"></span>
+                            </div>
+                        </div>
+                        <h1 class="text-5xl lg:text-7xl font-display font-extrabold text-gray-900 leading-tight mt-2">
+                            in 5 Minutes.
+                        </h1>
+                    </div>
+                    
+                    <p class="text-xl text-gray-600 mb-10 leading-relaxed max-w-lg">
+                        No coding. No designer. Just tell AI what your business does, and get a professional website instantly.
+                        <br><span class="text-sm font-semibold text-gray-400 mt-2 block">Perfect for Shops, Clinics, & Contractors.</span>
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="https://app.genweb.in" class="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-full text-white bg-brand-orange hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 hover:-translate-y-1">
+                            <i class="fas fa-magic mr-3"></i> Generate for Free
+                        </a>
+                        <a href="how-it-works.html" class="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-full text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md">
+                            <i class="fas fa-play mr-3 text-gray-400"></i> See How It Works
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right: 3D Visual -->
+                <div class="hero-visual perspective-1000 hidden lg:block relative">
+                    <!-- Decorative Blobs -->
+                    <div class="absolute -top-20 -right-20 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                    <div class="absolute -bottom-20 -left-20 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+
+                    <!-- The 3D Card -->
+                    <div class="hero-card relative bg-white rounded-2xl border border-gray-100 p-2 transform transition-transform duration-100 hero-card-shadow rotate-y-12 rotate-x-6">
+                        <!-- Mockup Browser Header -->
+                        <div class="h-8 bg-gray-50 rounded-t-xl border-b border-gray-100 flex items-center px-4 gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                            <div class="ml-4 flex-1 h-5 bg-white border border-gray-200 rounded-md"></div>
+                        </div>
+                        <!-- Mockup Content -->
+                        <div class="relative overflow-hidden rounded-b-xl h-[450px]">
+                            <img src="https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=1000&auto=format&fit=crop" alt="Website Preview" class="w-full h-full object-cover">
+                            
+                            <!-- Floating UI Elements -->
+                            <div class="absolute top-10 left-10 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/50 max-w-[200px]" data-aos="fade-right">
+                                <div class="h-2 w-12 bg-brand-orange rounded mb-2"></div>
+                                <div class="h-4 w-full bg-gray-800 rounded mb-2"></div>
+                                <div class="h-3 w-3/4 bg-gray-300 rounded"></div>
+                            </div>
+
+                            <div class="absolute bottom-20 right-10 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-white/50 flex items-center gap-3" data-aos="fade-left">
+                                <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+                                    <i class="fab fa-whatsapp text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="h-3 w-20 bg-gray-800 rounded mb-1"></div>
+                                    <div class="h-2 w-16 bg-gray-400 rounded"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Industry Solutions Section -->
+    <section id="industries" class="py-24 bg-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 section-title">
+                <h2 class="text-4xl font-display font-bold text-gray-900 mb-4">Built for Indian Businesses</h2>
+                <p class="text-xl text-gray-600">Whatever your business, GenWeb builds the perfect site for you.</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                <!-- Card 1 -->
+                <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        🏥
+                    </div>
+                    <h3 class="font-bold text-gray-900">Clinics</h3>
+                    <p class="text-xs text-gray-500 mt-1">Doctors & Dentists</p>
+                </div>
+                 <!-- Card 2 -->
+                 <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        🏗️
+                    </div>
+                    <h3 class="font-bold text-gray-900">Construction</h3>
+                    <p class="text-xs text-gray-500 mt-1">Civil & Contractors</p>
+                </div>
+                 <!-- Card 3 -->
+                 <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        🏪
+                    </div>
+                    <h3 class="font-bold text-gray-900">Retail Shops</h3>
+                    <p class="text-xs text-gray-500 mt-1">Fashion & Electronics</p>
+                </div>
+                 <!-- Card 4 -->
+                 <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        🧑‍🏫
+                    </div>
+                    <h3 class="font-bold text-gray-900">Coaching</h3>
+                    <p class="text-xs text-gray-500 mt-1">Tutors & Institutes</p>
+                </div>
+                 <!-- Card 5 -->
+                 <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        💼
+                    </div>
+                    <h3 class="font-bold text-gray-900">Consultants</h3>
+                    <p class="text-xs text-gray-500 mt-1">Legal & Financial</p>
+                </div>
+                 <!-- Card 6 -->
+                 <div class="feature-card group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-orange hover:bg-white hover:shadow-xl transition-all text-center cursor-pointer">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-3xl">
+                        🍕
+                    </div>
+                    <h3 class="font-bold text-gray-900">Restaurants</h3>
+                    <p class="text-xs text-gray-500 mt-1">Cafes & Bakeries</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 section-title">
+                <h2 class="text-4xl font-display font-bold text-gray-900 mb-4">Powerful AI Features</h2>
+                <p class="text-xl text-gray-600">Everything you need to build a world-class business website.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[350px]">
+                
+                <!-- Feature 1: Instant Gen (Large: Spans 2 Cols) -->
+                <div class="feature-card md:col-span-2 relative group rounded-3xl overflow-hidden cursor-default shadow-lg hover:shadow-2xl transition-all duration-500">
+                    <img src="https://images.unsplash.com/photo-1761645502922-fe3dde9f7341?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njg4NTA4NTB8&ixlib=rb-4.1.0&q=80&w=1080" 
+                         alt="Instant Generation" 
+                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    
+                    <div class="absolute bottom-0 left-0 p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                        <div class="w-12 h-12 rounded-xl bg-brand-orange text-white flex items-center justify-center mb-4 shadow-lg shadow-orange-500/30">
+                            <i class="fas fa-bolt text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Instant AI Generation</h3>
+                        <p class="text-gray-300 max-w-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform translate-y-4 group-hover:translate-y-0">
+                            Just enter your business name. Our AI generates a full website layout, professional text, and relevant images in under 60 seconds.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Feature 2: AI Editor (Tall: Spans 1 Col) -->
+                <div class="feature-card md:col-span-1 relative group rounded-3xl overflow-hidden cursor-default shadow-lg hover:shadow-2xl transition-all duration-500">
+                    <img src="https://images.unsplash.com/photo-1555099962-4199c345e5dd?q=80&w=1080&auto=format&fit=crop" 
+                         alt="AI Editor" 
+                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    
+                    <div class="absolute bottom-0 left-0 p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                        <div class="w-12 h-12 rounded-xl bg-purple-600 text-white flex items-center justify-center mb-4 shadow-lg shadow-purple-500/30">
+                            <i class="fas fa-magic text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">AI Editor</h3>
+                        <p class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform translate-y-4 group-hover:translate-y-0">
+                            Chat with the AI to change text, swap images, or redesign sections instantly.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Feature 3: Mobile Friendly (Standard: Spans 1 Col) -->
+                <div class="feature-card md:col-span-1 relative group rounded-3xl overflow-hidden cursor-default shadow-lg hover:shadow-2xl transition-all duration-500">
+                    <img src="https://images.unsplash.com/photo-1561063775-883a10918c0d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njg4NTA4NTB8&ixlib=rb-4.1.0&q=80&w=1080" 
+                         alt="Mobile Friendly" 
+                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    
+                    <div class="absolute bottom-0 left-0 p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                        <div class="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
+                            <i class="fas fa-mobile-alt text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Mobile First</h3>
+                        <p class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform translate-y-4 group-hover:translate-y-0">
+                            100% responsive designs that look stunning on every smartphone and tablet.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Feature 4: SEO Ready (Large: Spans 2 Cols) -->
+                <div class="feature-card md:col-span-2 relative group rounded-3xl overflow-hidden cursor-default shadow-lg hover:shadow-2xl transition-all duration-500">
+                    <img src="https://images.unsplash.com/photo-1678483790053-71367bc7a02c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTEyODB8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Njg4NTA4NTF8&ixlib=rb-4.1.0&q=80&w=1080" 
+                         alt="SEO Ready" 
+                         class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    
+                    <div class="absolute bottom-0 left-0 p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                        <div class="w-12 h-12 rounded-xl bg-green-600 text-white flex items-center justify-center mb-4 shadow-lg shadow-green-500/30">
+                            <i class="fas fa-search text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">SEO Optimized</h3>
+                        <p class="text-gray-300 max-w-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform translate-y-4 group-hover:translate-y-0">
+                            Built with clean code and meta tags to help your business rank higher on Google Search results automatically.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-24 bg-white relative overflow-hidden">
+        <!-- Background decorative elements -->
+        <div class="absolute top-0 right-0 w-1/2 h-full bg-orange-50/50 -skew-x-12 transform translate-x-20"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16 section-title">
+                <h2 class="text-4xl font-display font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+                <p class="text-xl text-gray-600">Pay only for what you need. No hidden fees.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <!-- Plan 1: Generation -->
+                <div class="feature-card bg-white rounded-3xl p-8 border border-gray-200 shadow-lg hover:shadow-2xl hover:border-brand-orange transition-all relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-2 h-full bg-gray-200 group-hover:bg-brand-orange transition-colors"></div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-gray-900">Website Generation</h3>
+                        <p class="text-gray-500 mt-2">Perfect for designing your site</p>
+                    </div>
+                    
+                    <div class="flex items-baseline mb-8">
+                        <span class="text-5xl font-bold text-gray-900">₹200</span>
+                        <span class="text-gray-500 ml-2">/ one-time</span>
+                    </div>
+                    
+                    <ul class="space-y-4 mb-8 text-gray-600">
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> 60-Second AI Generation</li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> AI Text & Image Writing</li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> Full Customization Access</li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> Instant Live Preview</li>
+                    </ul>
+                    
+                    <a href="https://app.genweb.in" class="block w-full py-4 rounded-xl border-2 border-gray-900 text-gray-900 font-bold text-center hover:bg-gray-900 hover:text-white transition-all">
+                        Start Generating
+                    </a>
+                </div>
+
+                <!-- Plan 2: Hosting -->
+                <div class="feature-card bg-gray-900 rounded-3xl p-8 border border-gray-900 shadow-2xl relative overflow-hidden transform md:-translate-y-4">
+                    <div class="absolute top-0 right-0 bg-brand-orange text-white text-xs font-bold px-4 py-1 rounded-bl-xl">BEST VALUE</div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-white">Pro Hosting</h3>
+                        <p class="text-gray-400 mt-2">Everything needed to go live</p>
+                    </div>
+                    
+                    <div class="flex items-baseline mb-8">
+                        <span class="text-5xl font-bold text-brand-orange">₹2000</span>
+                        <span class="text-gray-400 ml-2">/ year</span>
+                    </div>
+                    
+                    <ul class="space-y-4 mb-8 text-gray-300">
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> <span class="text-white font-bold">FREE Domain Name (.com/.in)</span></li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> High-Speed Secure Hosting</li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> Free SSL Certificate</li>
+                        <li class="flex items-center"><i class="fas fa-check-circle text-brand-orange mr-3"></i> WhatsApp Integration</li>
+                    </ul>
+                    
+                    <a href="https://app.genweb.in" class="block w-full py-4 rounded-xl bg-brand-orange text-white font-bold text-center hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/25 transition-all">
+                        Get Hosting & Domain
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="py-24 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 section-title">
+                <h2 class="text-3xl font-display font-bold text-gray-900 mb-4">Why GenWeb?</h2>
+                <p class="text-gray-600">See how we compare to the giants.</p>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden comparison-table">
+                <div class="grid grid-cols-3 bg-gray-900 text-white p-6 font-bold text-lg text-center">
+                    <div class="text-left pl-4">Feature</div>
+                    <div class="text-brand-orange">GenWeb AI</div>
+                    <div class="text-gray-400">Wordpress / Wix</div>
+                </div>
+                
+                <!-- Row 1 -->
+                <div class="grid grid-cols-3 p-6 border-b border-gray-100 items-center comparison-row hover:bg-orange-50/50 transition-colors">
+                    <div class="font-semibold text-gray-900 pl-4">Time to Build</div>
+                    <div class="text-center font-bold text-green-600"><i class="fas fa-bolt mr-2"></i> 5 Minutes</div>
+                    <div class="text-center text-gray-500">2 - 5 Days</div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="grid grid-cols-3 p-6 border-b border-gray-100 items-center comparison-row hover:bg-orange-50/50 transition-colors">
+                    <div class="font-semibold text-gray-900 pl-4">Technical Skill</div>
+                    <div class="text-center font-bold text-green-600">Zero (AI writes code)</div>
+                    <div class="text-center text-gray-500">High (Drag & Drop / Plugins)</div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="grid grid-cols-3 p-6 border-b border-gray-100 items-center comparison-row hover:bg-orange-50/50 transition-colors">
+                    <div class="font-semibold text-gray-900 pl-4">Cost in India</div>
+                    <div class="text-center font-bold text-green-600">₹200 / generation</div>
+                    <div class="text-center text-gray-500">₹10,000+ / year</div>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="grid grid-cols-3 p-6 items-center comparison-row hover:bg-orange-50/50 transition-colors">
+                    <div class="font-semibold text-gray-900 pl-4">Mobile Optimized</div>
+                    <div class="text-center font-bold text-green-600">Auto-Magic 100%</div>
+                    <div class="text-center text-gray-500">Needs Adjustment</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 bg-gray-900 relative overflow-hidden">
+        <!-- Abstract Background -->
+        <div class="absolute inset-0 opacity-20">
+             <div class="absolute top-0 right-0 w-96 h-96 bg-brand-orange rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-pulse"></div>
+             <div class="absolute bottom-0 left-0 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-pulse animation-delay-2000"></div>
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 text-center relative z-10">
+            <h2 class="text-4xl md:text-5xl font-display font-bold text-white mb-6">Ready to Build Your Business?</h2>
+            <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+                Join thousands of Indian small businesses growing online with GenWeb. No credit card required for trial.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="https://app.genweb.in" class="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-full text-gray-900 bg-brand-orange hover:bg-white hover:text-brand-orange transition-all shadow-xl shadow-orange-500/20 hover:-translate-y-1 hover:shadow-2xl">
+                    <i class="fas fa-rocket mr-3"></i> Get Started for Free
+                </a>
+                <a href="contact.html" class="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-full text-white bg-transparent border-2 border-gray-700 hover:border-brand-orange hover:bg-gray-800 transition-all">
+                    Talk to Sales
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-16 border-t border-gray-800" data-section="footer">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-1">
+                    <div class="flex items-center gap-4 mb-6">
+                        <img class="h-20 w-auto grayscale opacity-90 hover:opacity-100 transition-opacity" src="./logo_t.png" alt="GenWeb Logo">
+                        <span class="font-display font-bold text-4xl text-white tracking-tight">GenWeb</span>
+                    </div>
+                    <p class="text-base leading-relaxed text-gray-500">Empowering Indian businesses with affordable, AI-powered web solutions.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Product</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><a href="#features" class="hover:text-brand-orange transition-colors">Features</a></li>
+                        <li><a href="#pricing" class="hover:text-brand-orange transition-colors">Pricing</a></li>
+                        <li><a href="contact.html" class="hover:text-brand-orange transition-colors">Contact</a></li>
+                        <li><a href="https://app.genweb.in" class="hover:text-brand-orange transition-colors">Login / Sign Up</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Legal</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><a href="privacy.html" class="hover:text-brand-orange transition-colors">Privacy Policy</a></li>
+                        <li><a href="terms.html" class="hover:text-brand-orange transition-colors">Terms & Conditions</a></li>
+                        <li><a href="refund.html" class="hover:text-brand-orange transition-colors">Refund Policy</a></li>
+                        <li><a href="delivery.html" class="hover:text-brand-orange transition-colors">Shipping Policy</a></li>
+                    </ul>
+                </div>
+                <!-- <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Contact</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><span class="font-bold text-white block mb-1">Vector Web Technologies</span></li>
+                        <li class="flex items-start"><i class="fas fa-map-marker-alt mt-1 mr-3 text-brand-orange"></i> 5/379, Old Street, Papakurichy, Kattur, Trichy 620019</li>
+                        <li class="flex items-center"><i class="fas fa-envelope mr-3 text-brand-orange"></i> <a href="mailto:hello@genweb.in" class="hover:text-brand-orange transition-colors">hello@genweb.in</a></li>
+                        <li class="flex items-center"><i class="fas fa-phone mr-3 text-brand-orange"></i> <a href="tel:+917708280410" class="hover:text-brand-orange transition-colors">+91 77082 80410</a></li>
+                    </ul>
+                </div> -->
+            </div>
+            <div class="border-t border-gray-800 pt-10 text-center text-sm text-gray-600">
+                &copy; 2026 Vector Web Technologies. All rights reserved. Made with <i class="fas fa-heart text-red-500 mx-1"></i> in India.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="./script.js"></script>
+</body>
+</html>

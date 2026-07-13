@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How It Works | GenWeb</title>
+    <link href="./styles.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <link rel="icon" type="image/png" href="./logo_t.png">
+</head>
+<body class="font-sans text-gray-800 antialiased bg-gray-50 selection:bg-brand-orange selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 transition-all duration-300 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-28">
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <a href="index.html" class="flex items-center gap-4">
+                        <img class="h-24 w-auto hover:scale-105 transition-transform duration-300" src="./logo_t.png" alt="GenWeb Logo">
+                        <span class="font-display font-bold text-4xl text-gray-900 tracking-tight">GenWeb</span>
+                    </a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="how-it-works.html" class="text-brand-orange font-bold text-lg">How It Works</a>
+                    <a href="index.html#industries" class="text-gray-600 hover:text-brand-orange font-medium transition-colors text-lg">Solutions</a>
+                    <a href="index.html#features" class="text-gray-600 hover:text-brand-orange font-medium transition-colors text-lg">Features</a>
+                    <a href="index.html#pricing" class="text-gray-600 hover:text-brand-orange font-medium transition-colors text-lg">Pricing</a>
+                    <a href="contact.html" class="text-gray-600 hover:text-brand-orange font-medium transition-colors text-lg">Contact</a>
+                    <a href="https://app.genweb.in" class="bg-gray-900 text-white px-6 py-3 rounded-full font-medium hover:bg-brand-orange transition-all transform hover:scale-105 shadow-lg">
+                        Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <section class="pt-48 pb-24 bg-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-orange-50 via-white to-transparent -z-10"></div>
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <span class="inline-block py-2 px-4 rounded-full bg-orange-100 text-brand-orange font-bold text-sm mb-6 animate-fade-in-up">
+                🚀 From Idea to Website in 10 Steps
+            </span>
+            <h1 class="text-5xl md:text-7xl font-display font-extrabold text-gray-900 mb-6">How GenWeb Works</h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                No coding. No design skills. Just follow these simple steps and your AI-powered business website will be live today.
+            </p>
+        </div>
+    </section>
+
+    <!-- Timeline Section -->
+    <section class="py-24 bg-gray-50 relative overflow-hidden">
+        <!-- Vertical Line (Desktop) -->
+        <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-gray-200 via-brand-orange to-gray-200 hidden lg:block transform -translate-x-1/2"></div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            
+            <!-- Step 1 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 flex justify-end order-2 lg:order-1" data-aos-side="left">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                            <div class="absolute -right-3 top-8 w-6 h-6 bg-white border-t border-r border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">📝</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">1. Sign Up</h3>
+                            <p class="text-gray-600">Create your free account in seconds using your email or Google account. No credit card required to start.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Center Dot -->
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-brand-orange rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white font-bold">1</div>
+                    </div>
+
+                    <div class="lg:w-1/2 order-1 lg:order-2 opacity-50 hidden lg:block">
+                        <!-- Spacer for alternating layout -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 order-1 hidden lg:block"></div>
+                    
+                    <!-- Center Dot -->
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">2</div>
+                    </div>
+
+                    <div class="lg:w-1/2 order-2" data-aos-side="right">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -left-3 top-8 w-6 h-6 bg-white border-l border-b border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">🏢</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">2. Describe Your Business</h3>
+                            <p class="text-gray-600">Either paste your <strong>Google My Business</strong> link for auto-extraction, or manually type what you do (e.g., "Dental Clinic in Trichy").</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 flex justify-end order-2 lg:order-1" data-aos-side="left">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                            <div class="absolute -right-3 top-8 w-6 h-6 bg-white border-t border-r border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">🎨</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">3. Brand It</h3>
+                            <p class="text-gray-600">Upload your logo and pick a color theme that matches your brand identity. Our AI adapts the design instantly.</p>
+                        </div>
+                    </div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">3</div>
+                    </div>
+                    <div class="lg:w-1/2 order-1 lg:order-2 hidden lg:block"></div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 order-1 hidden lg:block"></div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-brand-orange border-4 border-white rounded-full shadow-lg flex items-center justify-center text-white font-bold animate-pulse">4</div>
+                    </div>
+                    <div class="lg:w-1/2 order-2" data-aos-side="right">
+                        <div class="bg-brand-orange text-white p-8 rounded-3xl shadow-2xl shadow-orange-500/30 border border-orange-400 max-w-lg w-full relative transform scale-105">
+                             <div class="absolute -left-3 top-8 w-6 h-6 bg-brand-orange transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-6 text-3xl backdrop-blur-sm">⚡</div>
+                            <h3 class="text-2xl font-bold mb-3">4. AI Magic Happens</h3>
+                            <p class="text-orange-100">Sit back! In just 2-5 minutes, GenWeb writes your content, designs your layout, and builds your pages automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 flex justify-end order-2 lg:order-1" data-aos-side="left">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -right-3 top-8 w-6 h-6 bg-white border-t border-r border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-pink-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">👀</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">5. Preview Website</h3>
+                            <p class="text-gray-600">See your live site immediately. Check how it looks on mobile and desktop views.</p>
+                        </div>
+                    </div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">5</div>
+                    </div>
+                    <div class="lg:w-1/2 order-1 lg:order-2 hidden lg:block"></div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 order-1 hidden lg:block"></div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">6</div>
+                    </div>
+                    <div class="lg:w-1/2 order-2" data-aos-side="right">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -left-3 top-8 w-6 h-6 bg-white border-l border-b border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">✨</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">6. AI Fine-Tuning</h3>
+                            <p class="text-gray-600">Want to change text? Just ask the AI Editor. "Make the headline punchier" or "Add a testimonial section."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 flex justify-end order-2 lg:order-1" data-aos-side="left">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -right-3 top-8 w-6 h-6 bg-white border-t border-r border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">🚀</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">7. Publish</h3>
+                            <p class="text-gray-600">Happy with the result? Click publish to make your site accessible on the web instantly.</p>
+                        </div>
+                    </div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">7</div>
+                    </div>
+                    <div class="lg:w-1/2 order-1 lg:order-2 hidden lg:block"></div>
+                </div>
+            </div>
+
+            <!-- Step 8 -->
+            <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 order-1 hidden lg:block"></div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">8</div>
+                    </div>
+                    <div class="lg:w-1/2 order-2" data-aos-side="right">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -left-3 top-8 w-6 h-6 bg-white border-l border-b border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">🌐</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">8. Connect Domain</h3>
+                            <p class="text-gray-600">Claim your <strong>FREE domain name</strong> (on Hosting plan) or easily connect one you already own.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Step 9 -->
+             <div class="timeline-step relative mb-24 lg:mb-32">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 flex justify-end order-2 lg:order-1" data-aos-side="left">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -right-3 top-8 w-6 h-6 bg-white border-t border-r border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">🎉</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">9. You Are Live!</h3>
+                            <p class="text-gray-600">Your professional website is now visible to customers on Google, Maps, and social media.</p>
+                        </div>
+                    </div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">9</div>
+                    </div>
+                    <div class="lg:w-1/2 order-1 lg:order-2 hidden lg:block"></div>
+                </div>
+            </div>
+
+            <!-- Step 10 -->
+            <div class="timeline-step relative">
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
+                    <div class="lg:w-1/2 order-1 hidden lg:block"></div>
+                    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 hidden lg:flex items-center justify-center">
+                        <div class="w-12 h-12 bg-white border-4 border-brand-orange rounded-full shadow-lg flex items-center justify-center text-brand-orange font-bold">10</div>
+                    </div>
+                    <div class="lg:w-1/2 order-2" data-aos-side="right">
+                        <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 max-w-lg w-full relative group hover:-translate-y-2 transition-transform duration-500">
+                             <div class="absolute -left-3 top-8 w-6 h-6 bg-white border-l border-b border-gray-100 transform rotate-45 hidden lg:block"></div>
+                            <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 text-3xl text-white shadow-lg shadow-blue-500/30">📈</div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-3">10. Get Leads</h3>
+                            <p class="text-gray-600">Track visitors and get customer enquiries directly in your built-in GenWeb Leads Dashboard.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 bg-gray-900 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-20">
+             <div class="absolute top-0 left-0 w-96 h-96 bg-brand-orange rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-pulse"></div>
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 text-center relative z-10">
+            <h2 class="text-4xl md:text-5xl font-display font-bold text-white mb-6">Ready to Start Step 1?</h2>
+            <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+                It only takes 5 minutes to transform your business. Join GenWeb today.
+            </p>
+            <a href="https://app.genweb.in" class="inline-flex items-center justify-center px-12 py-5 text-xl font-bold rounded-full text-gray-900 bg-brand-orange hover:bg-white hover:text-brand-orange transition-all shadow-xl shadow-orange-500/20 hover:-translate-y-1 hover:shadow-2xl">
+                <i class="fas fa-magic mr-3"></i> Build My Website Now
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-16 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-1">
+                    <div class="flex items-center gap-4 mb-6">
+                        <img class="h-20 w-auto grayscale opacity-90 hover:opacity-100 transition-opacity" src="./logo_t.png" alt="GenWeb Logo">
+                        <span class="font-display font-bold text-4xl text-white tracking-tight">GenWeb</span>
+                    </div>
+                    <p class="text-base leading-relaxed text-gray-500">Empowering Indian businesses with affordable, AI-powered web solutions.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Product</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><a href="index.html#features" class="hover:text-brand-orange transition-colors">Features</a></li>
+                        <li><a href="index.html#pricing" class="hover:text-brand-orange transition-colors">Pricing</a></li>
+                        <li><a href="contact.html" class="hover:text-brand-orange transition-colors">Contact</a></li>
+                        <li><a href="https://app.genweb.in" class="hover:text-brand-orange transition-colors">Login / Sign Up</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Legal</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><a href="privacy.html" class="hover:text-brand-orange transition-colors">Privacy Policy</a></li>
+                        <li><a href="terms.html" class="hover:text-brand-orange transition-colors">Terms & Conditions</a></li>
+                        <li><a href="refund.html" class="hover:text-brand-orange transition-colors">Refund Policy</a></li>
+                        <li><a href="delivery.html" class="hover:text-brand-orange transition-colors">Shipping Policy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6 tracking-wide">Contact</h4>
+                    <ul class="space-y-4 text-base">
+                        <li><span class="font-bold text-white block mb-1">Vector Web Technologies</span></li>
+                        <li class="flex items-start"><i class="fas fa-map-marker-alt mt-1 mr-3 text-brand-orange"></i> 5/379, Old Street, Papakurichy, Kattur, Trichy 620019</li>
+                        <li class="flex items-center"><i class="fas fa-envelope mr-3 text-brand-orange"></i> <a href="mailto:hello@genweb.in" class="hover:text-brand-orange transition-colors">hello@genweb.in</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-10 text-center text-sm text-gray-600">
+                &copy; 2026 Vector Web Technologies. All rights reserved. Made with <i class="fas fa-heart text-red-500 mx-1"></i> in India.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Init GSAP ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Animate Timeline Steps
+        gsap.utils.toArray('.timeline-step').forEach(step => {
+            const side = step.querySelector('[data-aos-side]');
+            const direction = side.getAttribute('data-aos-side');
+            const xVal = direction === 'left' ? -50 : 50;
+
+            gsap.from(side.children[0], {
+                scrollTrigger: {
+                    trigger: step,
+                    start: "top 80%",
+                    toggleActions: "play none none reverse"
+                },
+                x: xVal,
+                opacity: 0,
+                duration: 0.8,
+                ease: "power2.out"
+            });
+        });
+    </script>
+</body>
+</html>
