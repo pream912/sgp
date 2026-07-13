@@ -51,6 +51,12 @@ R2_HOSTING_BUCKET = "genweb-hosting"
 R2_SITES_BUCKET = "genweb-sites"
 R2_PUBLIC_DOMAIN = "pub-r2.genweb.in"
 AI_JOB_WORKER_URL = "https://genweb-ai-jobs.preamkumar912.workers.dev"
+# Genni redesign — agent pipeline + Gemini via AI Gateway (BYOK: Google creds
+# live in the gateway; CF_AIG_TOKEN is a secret).
+AGENT_CODEGEN = "gemini"
+AGENT_RENDER_MODE = "raw-html"
+GCP_PROJECT = "learnitha"
+CF_AIG_BYOK = "1"
 
 # Secrets to set with `wrangler secret put`:
 #   CF_ACCOUNT_ID
