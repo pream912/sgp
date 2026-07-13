@@ -1,0 +1,28 @@
+name = "genweb-pub-r2"
+main = "pub-r2-worker.js"
+compatibility_date = "2024-12-01"
+account_id = "6f192f9074e96c46bff187631f5d3568"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "SITES_BUCKET"
+bucket_name = "genweb-sites"
+
+[[r2_buckets]]
+binding = "HOSTING_BUCKET"
+bucket_name = "genweb-hosting"
+
+[env.production]
+workers_dev = false
+
+[[env.production.r2_buckets]]
+binding = "SITES_BUCKET"
+bucket_name = "genweb-sites"
+
+[[env.production.r2_buckets]]
+binding = "HOSTING_BUCKET"
+bucket_name = "genweb-hosting"
+
+[[env.production.routes]]
+pattern = "pub-r2.genweb.in/*"
+zone_name = "genweb.in"

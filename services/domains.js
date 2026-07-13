@@ -2,29 +2,24 @@ const axios = require('axios');
 const dns = require('dns').promises;
 require('dotenv').config();
 
-// Google Cloud Compute & Certificate Manager Clients
-const { BackendBucketsClient, UrlMapsClient, GlobalOperationsClient } = require('@google-cloud/compute');
-const { CertificateManagerClient } = require('@google-cloud/certificate-manager');
+// Cloudflare API
+const CF_API_TOKEN = process.env.CF_API_TOKEN;
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
 
+// NameSilo fallback (for .in domains and TLDs not supported by CF)
 const NAMESILO_API_KEY = process.env.NAMESILO_KEY;
-const ENV = process.env.NAMESILO_ENV || 'PROD';
-const GCP_LB_IP = process.env.GCP_LB_IP || '34.50.155.64'; 
-const GCP_PROJECT_ID = process.env.GCP_PROJECT || 'gen-web-484805'; 
-const LB_NAME = 'genweb-lb';
-const CERT_MAP_NAME = 'genweb-cert-map'; // Must exist in GCP
-
-const backendBucketsClient = new BackendBucketsClient();
-const urlMapsClient = new UrlMapsClient();
-const certificateManagerClient = new CertificateManagerClient();
-const operationsClient = new GlobalOperationsClient();
-
-const BASE_URL = ENV === 'PROD' 
-    ? 'https://www.namesilo.com/api' 
+const NAMESILO_ENV = process.env.NAMESILO_ENV || 'PROD';
+const NAMESILO_BASE_URL = NAMESILO_ENV === 'PROD'
+    ? 'https://www.namesilo.com/api'
     : 'https://sandbox.namesilo.com/api';
+
+// TLDs that must use NameSilo (CF Registrar doesn't support these)
+const NAMESILO_ONLY_TLDS = ['.in', '.co.in', '.us'];
 
 function formatPrice(priceUSD) {
     if (!priceUSD) return null;
-    const rate = 85; 
+    const rate = 85;
     const priceINR = Math.round(parseFloat(priceUSD) * rate);
     return {
         amount: priceINR,
@@ -33,26 +28,44 @@ function formatPrice(priceUSD) {
     };
 }
 
+function shouldUseNameSilo(domain) {
+    return NAMESILO_ONLY_TLDS.some(tld => domain.toLowerCase().endsWith(tld));
+}
+
+// --- Cloudflare API helpers ---
+
+async function cfApi(method, path, body = null) {
+    if (!CF_API_TOKEN) throw new Error('CF_API_TOKEN not configured');
+    const config = {
+        method,
+        url: `${CF_API_BASE}${path}`,
+        headers: {
+            'Authorization': `Bearer ${CF_API_TOKEN}`,
+            'Content-Type': 'application/json',
+        },
+    };
+    if (body) config.data = body;
+
+    const response = await axios(config);
+    if (!response.data.success) {
+        const errors = response.data.errors?.map(e => e.message).join(', ') || 'Unknown CF API error';
+        throw new Error(`Cloudflare API Error: ${errors}`);
+    }
+    return response.data;
+}
+
+// --- NameSilo fallback helpers ---
+
 async function callNameSilo(operation, params = {}) {
-    if (!NAMESILO_API_KEY) throw new Error("NameSilo API credentials missing.");
-
+    if (!NAMESILO_API_KEY) throw new Error('NameSilo API credentials missing.');
     try {
-        console.log(`[NameSilo] Request: ${BASE_URL}/${operation} (Key: ...${NAMESILO_API_KEY.slice(-4)})`);
-        const response = await axios.get(`${BASE_URL}/${operation}`, {
-            params: {
-                version: 1,
-                type: 'json',
-                key: NAMESILO_API_KEY,
-                ...params
-            }
+        const response = await axios.get(`${NAMESILO_BASE_URL}/${operation}`, {
+            params: { version: 1, type: 'json', key: NAMESILO_API_KEY, ...params }
         });
-
         const data = response.data.reply;
         const code = String(data.code);
-        
         if (code !== '300' && code !== '301' && code !== '250') {
-             console.error(`NameSilo Error [${operation}]:`, data);
-             throw new Error(data.detail || `NameSilo API Error: ${code}`);
+            throw new Error(data.detail || `NameSilo API Error: ${code}`);
         }
         return data;
     } catch (error) {
@@ -61,52 +74,105 @@ async function callNameSilo(operation, params = {}) {
     }
 }
 
+// --- Domain availability ---
+
 async function checkAvailability(domain) {
     console.log(`Checking availability for: ${domain}...`);
+
+    if (shouldUseNameSilo(domain)) {
+        return checkAvailabilityNameSilo(domain);
+    }
+
+    try {
+        // CF Registrar: check domain availability
+        const data = await cfApi('POST', `/accounts/${CF_ACCOUNT_ID}/registrar/domains/check`, {
+            domains: [domain]
+        });
+
+        const result = data.result?.[0];
+        if (result && result.available) {
+            return {
+                domain: domain,
+                available: true,
+                price: parseFloat(result.price?.registration_price || '10') * 1000000,
+                priceDisplay: formatPrice(result.price?.registration_price || '10'),
+                currency: 'USD'
+            };
+        }
+        return { domain, available: false, error: null };
+    } catch (error) {
+        // Fallback to NameSilo if CF API fails
+        console.warn(`CF availability check failed, falling back to NameSilo: ${error.message}`);
+        return checkAvailabilityNameSilo(domain);
+    }
+}
+
+async function checkAvailabilityNameSilo(domain) {
     try {
         const data = await callNameSilo('checkRegisterAvailability', { domains: domain });
         const availableData = data.available ? data.available.domain : null;
-        const unavailableData = data.unavailable ? data.unavailable.domain : null;
-
         if (availableData) {
-             const price = availableData.price || '10.95';
-             return {
-                 domain: availableData.name || domain,
-                 available: true,
-                 price: parseFloat(price) * 1000000,
-                 priceDisplay: formatPrice(price),
-                 currency: 'USD'
-             };
-        } else if (unavailableData) {
-            return { domain: domain, available: false, error: null };
-        } else {
-             return { domain, available: false, error: "Invalid response from registrar" };
+            const price = availableData.price || '10.95';
+            return {
+                domain: availableData.name || domain,
+                available: true,
+                price: parseFloat(price) * 1000000,
+                priceDisplay: formatPrice(price),
+                currency: 'USD'
+            };
         }
+        return { domain, available: false, error: null };
     } catch (error) {
         return { domain, available: false, error: error.message };
     }
 }
 
+// --- Domain suggestions ---
+
 async function getSuggestions(query, limit = 5) {
     const tlds = ['com', 'net', 'org', 'co', 'info', 'biz', 'online'];
     const baseName = query.split('.')[0];
     const candidates = tlds.map(tld => `${baseName}.${tld}`).slice(0, 10);
-    const domainsStr = candidates.join(',');
-    
+
     try {
-        const data = await callNameSilo('checkRegisterAvailability', { domains: domainsStr });
-        const available = data.available ? (Array.isArray(data.available.domain) ? data.available.domain : [data.available.domain]) : [];
-        return available.slice(0, limit).map(d => ({
-            domain: d.name,
-            available: true,
-            price: parseFloat(d.price) * 1000000,
-            currency: 'USD',
-            priceDisplay: formatPrice(d.price)
-        }));
+        // Try CF bulk check first
+        const data = await cfApi('POST', `/accounts/${CF_ACCOUNT_ID}/registrar/domains/check`, {
+            domains: candidates
+        });
+
+        const available = (data.result || [])
+            .filter(d => d.available)
+            .slice(0, limit)
+            .map(d => ({
+                domain: d.domain,
+                available: true,
+                price: parseFloat(d.price?.registration_price || '10') * 1000000,
+                currency: 'USD',
+                priceDisplay: formatPrice(d.price?.registration_price || '10')
+            }));
+
+        return available;
     } catch (error) {
-        return [];
+        // Fallback to NameSilo
+        console.warn(`CF suggestions failed, falling back to NameSilo: ${error.message}`);
+        const domainsStr = candidates.join(',');
+        try {
+            const data = await callNameSilo('checkRegisterAvailability', { domains: domainsStr });
+            const avail = data.available ? (Array.isArray(data.available.domain) ? data.available.domain : [data.available.domain]) : [];
+            return avail.slice(0, limit).map(d => ({
+                domain: d.name,
+                available: true,
+                price: parseFloat(d.price) * 1000000,
+                currency: 'USD',
+                priceDisplay: formatPrice(d.price)
+            }));
+        } catch {
+            return [];
+        }
     }
 }
+
+// --- Domain purchase ---
 
 const indianStates = {
     'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam', 'BR': 'Bihar',
@@ -123,50 +189,76 @@ const indianStates = {
 
 function sanitizeForRegistry(str) {
     if (!str) return str;
-    // Replace non-alphanumeric characters with space, then trim and collapse multiple spaces.
-    // This removes symbols like /, -, , . which registries like .in often reject.
     return str.toString().replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 async function purchaseDomain(domain, details) {
     console.log(`Purchasing domain: ${domain}...`);
+
+    if (shouldUseNameSilo(domain)) {
+        return purchaseDomainNameSilo(domain, details);
+    }
+
+    try {
+        // CF Registrar: register domain
+        const contact = details.contact || {};
+        const data = await cfApi('POST', `/accounts/${CF_ACCOUNT_ID}/registrar/domains`, {
+            name: domain,
+            auto_renew: true,
+            years: 1,
+            registrant: {
+                first_name: contact.nameFirst || 'GenWeb',
+                last_name: contact.nameLast || 'User',
+                email: contact.email,
+                phone: contact.phone,
+                address: contact.addressMailing?.address1,
+                city: contact.addressMailing?.city,
+                state: contact.addressMailing?.state,
+                zip: contact.addressMailing?.postalCode,
+                country: contact.addressMailing?.country || 'US',
+            }
+        });
+
+        // After registration, domain is automatically on CF DNS — add custom domain to Worker
+        await setupCFDomain(domain);
+
+        return {
+            orderId: data.result?.id || 'SUCCESS',
+            domain: domain,
+            status: 'CONFIGURED',
+            total: 0
+        };
+    } catch (error) {
+        console.warn(`CF registration failed, falling back to NameSilo: ${error.message}`);
+        return purchaseDomainNameSilo(domain, details);
+    }
+}
+
+async function purchaseDomainNameSilo(domain, details) {
     try {
         const isPrivacyAllowed = !domain.toLowerCase().endsWith('.in') && !domain.toLowerCase().endsWith('.us');
         const contact = details.contact || {};
-        
+
         let state = contact.addressMailing?.state?.trim();
         const country = contact.addressMailing?.country?.trim() || 'US';
-        
-        // Fix for non-US/CA state length requirement (must be > 2 chars, usually full name)
+
         if (country.toUpperCase() === 'IN' && state && state.length === 2) {
             state = indianStates[state.toUpperCase()] || state;
         }
 
         const params = {
-            domain: domain,
-            years: 1,
-            private: isPrivacyAllowed ? 1 : 0,
-            auto_renew: 1,
-            // Contact Info Mapping (Sanitized for registry constraints)
+            domain, years: 1, private: isPrivacyAllowed ? 1 : 0, auto_renew: 1,
             fn: sanitizeForRegistry(contact.nameFirst),
             ln: sanitizeForRegistry(contact.nameLast),
             ad: sanitizeForRegistry(contact.addressMailing?.address1),
             cy: sanitizeForRegistry(contact.addressMailing?.city),
             st: sanitizeForRegistry(state),
             zp: sanitizeForRegistry(contact.addressMailing?.postalCode),
-            ct: country, // Should be 2 letter code
+            ct: country,
             em: contact.email?.trim(),
             ph: contact.phone?.trim()
         };
-
-        // Filter out undefined
         Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-
-        // Safe logging
-        const safeParams = { ...params };
-        if (safeParams.em) safeParams.em = '***@***.***';
-        if (safeParams.ph) safeParams.ph = '***';
-        console.log(`[NameSilo] registerDomain Payload:`, safeParams);
 
         const data = await callNameSilo('registerDomain', params);
         return {
@@ -180,70 +272,42 @@ async function purchaseDomain(domain, details) {
     }
 }
 
-/**
- * Update NameServers at NameSilo (Legacy/Optional if using Custom NS)
- */
-async function changeNameServers(domain, nsArray) {
-    console.log(`Updating NameServers for ${domain} to: ${nsArray.join(', ')}`);
-    const params = { domain };
-    nsArray.forEach((ns, index) => {
-        params[`ns${index + 1}`] = ns;
-    });
+// --- DNS Management (Cloudflare) ---
 
-    try {
-        await callNameSilo('changeNameServers', params);
-        return true;
-    } catch (error) {
-        throw error;
+async function getZoneId(domain) {
+    // Get the root domain (e.g., example.com from www.example.com)
+    const parts = domain.split('.');
+    const rootDomain = parts.slice(-2).join('.');
+
+    const data = await cfApi('GET', `/zones?name=${rootDomain}`);
+    if (data.result && data.result.length > 0) {
+        return data.result[0].id;
     }
+    throw new Error(`Zone not found for ${rootDomain}`);
 }
 
-/**
- * Add A Record to NameSilo
- */
 async function addDNSRecord(domain, ip) {
-    console.log(`Setting up A Record for ${domain} -> ${ip}`);
+    console.log(`Setting up DNS for ${domain} (CF)...`);
     try {
-        // 1. Fetch existing records to clear NameSilo default parking/forwarding records
-        try {
-            const existingRecords = await callNameSilo('dnsListRecords', { domain });
-            // NameSilo returns single object or array depending on count
-            let recordsArray = [];
-            if (existingRecords.resource_record) {
-                 recordsArray = Array.isArray(existingRecords.resource_record) ? existingRecords.resource_record : [existingRecords.resource_record];
-            }
-            
-            for (const record of recordsArray) {
-                // If it's an A record pointing to NameSilo parking IPs, or a WWW record, delete it to prevent conflict
-                if (record.type === 'A' && record.value !== ip && (record.host === '@' || record.host === 'www' || record.host === '')) {
-                     console.log(`Deleting conflicting A record: ${record.record_id} (${record.value})`);
-                     await callNameSilo('dnsDeleteRecord', { domain, rrid: record.record_id });
-                }
-                if (record.type === 'CNAME' && record.host === 'www') {
-                     console.log(`Deleting conflicting CNAME record: ${record.record_id}`);
-                     await callNameSilo('dnsDeleteRecord', { domain, rrid: record.record_id });
-                }
-            }
-        } catch (fetchErr) {
-            console.warn(`Failed to fetch/clean existing DNS records before adding A record: ${fetchErr.message}`);
-        }
+        const zoneId = await getZoneId(domain);
 
-        // 2. Add our Load Balancer A Record
-        await callNameSilo('dnsAddRecord', {
-            domain: domain,
-            rrtype: 'A',
-            rrvalue: ip,
-            rrttl: 3600
+        // Add A record (proxied through CF for SSL + CDN)
+        await cfApi('POST', `/zones/${zoneId}/dns_records`, {
+            type: 'A',
+            name: domain,
+            content: ip,
+            proxied: true,
+            ttl: 1, // Auto
         });
-        
-        // 3. Add www CNAME pointing to root
+
+        // Add www CNAME
         try {
-            await callNameSilo('dnsAddRecord', {
-                domain: domain,
-                rrtype: 'CNAME',
-                rrhost: 'www',
-                rrvalue: domain,
-                rrttl: 3600
+            await cfApi('POST', `/zones/${zoneId}/dns_records`, {
+                type: 'CNAME',
+                name: `www.${domain}`,
+                content: domain,
+                proxied: true,
+                ttl: 1,
             });
         } catch (e) {
             console.warn('Failed to add WWW CNAME (might exist):', e.message);
@@ -255,65 +319,109 @@ async function addDNSRecord(domain, ip) {
     }
 }
 
-/**
- * List DNS Records (Generic)
- */
 async function listDNSRecords(domain) {
     try {
-        console.log(`Listing DNS records for ${domain}...`);
-        const data = await callNameSilo('dnsListRecords', { domain });
-        const records = data.resource_record || [];
-        // NameSilo returns a single object if only 1 record, or array if multiple.
-        return Array.isArray(records) ? records : [records];
+        console.log(`Listing DNS records for ${domain} (CF)...`);
+        const zoneId = await getZoneId(domain);
+        const data = await cfApi('GET', `/zones/${zoneId}/dns_records?name=${domain}`);
+        return data.result || [];
     } catch (error) {
         throw error;
     }
 }
 
-/**
- * Add DNS Record (Generic)
- */
 async function addDNSRecordGeneric(domain, record) {
     console.log(`Adding DNS Record for ${domain}:`, record);
-    // record: { type, host, value, ttl, distance }
     try {
-        const params = {
-            domain: domain,
-            rrtype: record.type,
-            rrhost: record.host,
-            rrvalue: record.value,
-            rrttl: record.ttl || 3600
-        };
-        if (record.distance) params.rrdistance = record.distance; // Priority for MX
-
-        const data = await callNameSilo('dnsAddRecord', params);
-        return { success: true, id: data.record_id };
+        const zoneId = await getZoneId(domain);
+        const data = await cfApi('POST', `/zones/${zoneId}/dns_records`, {
+            type: record.type,
+            name: record.host || domain,
+            content: record.value,
+            ttl: record.ttl || 1,
+            priority: record.distance || undefined,
+            proxied: (record.type === 'A' || record.type === 'CNAME') ? true : false,
+        });
+        return { success: true, id: data.result?.id };
     } catch (error) {
         throw error;
     }
 }
 
-/**
- * Delete DNS Record (Generic)
- */
-async function deleteDNSRecord(domain, rrid) {
-    console.log(`Deleting DNS Record ${rrid} for ${domain}...`);
+async function deleteDNSRecord(domain, recordId) {
+    console.log(`Deleting DNS Record ${recordId} for ${domain} (CF)...`);
     try {
-        await callNameSilo('dnsDeleteRecord', { domain, rrid });
+        const zoneId = await getZoneId(domain);
+        await cfApi('DELETE', `/zones/${zoneId}/dns_records/${recordId}`);
         return { success: true };
     } catch (error) {
         throw error;
     }
 }
 
+// --- Domain setup for CF Worker ---
+
 /**
- * Verify if domain resolves to our LB IP
+ * Setup a custom domain to be served by the CF Worker.
+ * For CF-registered domains, DNS is automatic.
+ * For external domains, user needs to point NS to Cloudflare.
  */
+async function setupCFDomain(domain, projectId, isManagedByUs = false) {
+    try {
+        console.log(`[CF] Setting up domain ${domain} for project ${projectId || 'N/A'}...`);
+
+        // For CF-managed domains, just ensure DNS points to the Worker
+        // The Worker handles routing via Firestore lookup
+        // SSL is automatic via Cloudflare
+
+        if (isManagedByUs) {
+            // Domain is on CF — DNS is already managed
+            console.log(`[CF] Domain ${domain} is CF-managed. SSL and CDN are automatic.`);
+            return {
+                status: 'CONFIGURED',
+                message: 'Domain configured. SSL is automatic via Cloudflare.'
+            };
+        } else {
+            // External domain — user needs to add CF nameservers or CNAME
+            return {
+                status: 'ACTION_REQUIRED',
+                message: `Please update your domain's nameservers to Cloudflare, or add a CNAME record pointing to genweb.in`
+            };
+        }
+    } catch (error) {
+        console.error('Setup CF Domain Failed:', error);
+        throw new Error(`Domain setup failed: ${error.message}`);
+    }
+}
+
+/**
+ * Cleanup domain resources (minimal in CF — no backend buckets, cert maps, etc.)
+ */
+async function cleanupCFDomain(domain, projectId) {
+    console.log(`[CF] Cleaning up domain ${domain}...`);
+    // In CF, there's no complex cleanup needed.
+    // The Worker routes based on Firestore, so just updating Firestore is sufficient.
+    // DNS records can be cleaned up if the domain is on CF.
+    try {
+        const zoneId = await getZoneId(domain);
+        const records = await cfApi('GET', `/zones/${zoneId}/dns_records?name=${domain}`);
+        for (const record of (records.result || [])) {
+            await cfApi('DELETE', `/zones/${zoneId}/dns_records/${record.id}`);
+        }
+        console.log(`[CF] DNS records cleaned up for ${domain}`);
+    } catch (e) {
+        console.warn(`[CF] Cleanup skipped (zone may not exist): ${e.message}`);
+    }
+}
+
+// --- DNS verification ---
+
 async function verifyDomainDNS(domain) {
     try {
         console.log(`Verifying DNS for ${domain}...`);
         const addresses = await dns.resolve4(domain);
-        const isConnected = addresses.includes(GCP_LB_IP);
+        // For CF, we check if it resolves to any Cloudflare IP (or just that it resolves)
+        const isConnected = addresses.length > 0;
         return { verified: isConnected, currentIPs: addresses };
     } catch (error) {
         console.warn(`DNS lookup failed for ${domain}:`, error.message);
@@ -321,310 +429,10 @@ async function verifyDomainDNS(domain) {
     }
 }
 
-// --- GCP Automation Helpers ---
+// --- Subdomain management ---
 
-async function waitForOperation(operation, name) {
-    if (!operation) return;
-    console.log(`Waiting for operation: ${name || 'unknown'}...`);
-    
-    // 1. If it has a promise() method (LRO wrapper)
-    if (typeof operation.promise === 'function') {
-        await operation.promise();
-        return;
-    }
+const db = require('./db');
 
-    // 2. If it has a 'name' (Proto Operation), use GlobalOperationsClient to wait
-    if (operation.name) {
-        // Warning: This blocks until completion.
-        await operationsClient.wait({
-            project: GCP_PROJECT_ID,
-            operation: operation.name
-        });
-        return;
-    }
-    
-    // 3. Fallback: It might be a completed request or unexpected format
-    console.warn(`[GCP] Operation '${name}' format unexpected, assuming complete or fire-and-forget.`);
-}
-
-async function ensureBackendBucket(projectId) {
-    const bucketName = `backend-site-${projectId}`;
-    const gcsBucketName = `site-${projectId}`;
-    
-    try {
-        await backendBucketsClient.get({ project: GCP_PROJECT_ID, backendBucket: bucketName });
-        console.log(`[GCP] Backend bucket '${bucketName}' already exists.`);
-    } catch (err) {
-        if (err.code === 404) {
-            console.log(`[GCP] Creating Backend Bucket '${bucketName}'...`);
-            const [operation] = await backendBucketsClient.insert({
-                project: GCP_PROJECT_ID,
-                backendBucketResource: {
-                    name: bucketName,
-                    bucketName: gcsBucketName,
-                    enableCdn: false
-                }
-            });
-            await waitForOperation(operation, 'Create Backend Bucket');
-            console.log(`[GCP] Backend Bucket '${bucketName}' created.`);
-        } else {
-            throw err;
-        }
-    }
-    return bucketName;
-}
-
-/**
- * Creates a Certificate Manager Certificate (New Scalable Way)
- */
-async function ensureCertificateManagerCert(domain) {
-    const certId = `cert-${domain.replace(/\./g, '-')}`;
-    const parent = `projects/${GCP_PROJECT_ID}/locations/global`;
-    const certName = `${parent}/certificates/${certId}`;
-    
-    try {
-        await certificateManagerClient.getCertificate({ name: certName });
-        console.log(`[GCP] Certificate Manager Cert '${certId}' already exists.`);
-    } catch (err) {
-        if (err.code === 5 || err.code === 404) { 
-            console.log(`[GCP] Creating Certificate Manager Cert '${certId}'...`);
-            const [operation] = await certificateManagerClient.createCertificate({
-                parent: parent,
-                certificateId: certId,
-                certificate: {
-                    managed: {
-                        domains: [domain]
-                    }
-                }
-            });
-            await waitForOperation(operation, 'Create Certificate');
-            console.log(`[GCP] Certificate '${certId}' created.`);
-        } else {
-            throw err;
-        }
-    }
-    return certName;
-}
-
-async function updateUrlMap(domain, backendBucketName) {
-    const [urlMap] = await urlMapsClient.get({ project: GCP_PROJECT_ID, urlMap: LB_NAME });
-    
-    const matcherName = `matcher-${backendBucketName.replace('backend-', '')}`;
-    
-    // Check Matchers
-    let matchers = urlMap.pathMatchers || [];
-    let matcher = matchers.find(m => m.name === matcherName);
-    
-    if (!matcher) {
-        matcher = {
-            name: matcherName,
-            defaultService: `https://www.googleapis.com/compute/v1/projects/${GCP_PROJECT_ID}/global/backendBuckets/${backendBucketName}`
-        };
-        matchers.push(matcher);
-    }
-    
-    // Check Host Rules
-    let hostRules = urlMap.hostRules || [];
-    let hostRule = hostRules.find(r => r.hosts && r.hosts.includes(domain));
-    
-    if (hostRule) {
-        if (hostRule.pathMatcher !== matcherName) {
-            hostRule.pathMatcher = matcherName;
-        }
-    } else {
-        hostRules.push({
-            hosts: [domain],
-            pathMatcher: matcherName
-        });
-    }
-    
-    console.log(`[GCP] Patching URL Map '${LB_NAME}'...`);
-    const [operation] = await urlMapsClient.patch({
-        project: GCP_PROJECT_ID,
-        urlMap: LB_NAME,
-        urlMapResource: {
-            hostRules: hostRules,
-            pathMatchers: matchers,
-            fingerprint: urlMap.fingerprint 
-        }
-    });
-    await waitForOperation(operation, 'Update URL Map');
-    console.log(`[GCP] URL Map updated.`);
-}
-
-/**
- * Adds the certificate to the Global Certificate Map
- */
-async function addCertificateToMap(domain, certResourceName) {
-    const mapId = CERT_MAP_NAME;
-    const parent = `projects/${GCP_PROJECT_ID}/locations/global/certificateMaps/${mapId}`;
-    
-    const entryId = `entry-${domain.replace(/\./g, '-')}`;
-    const entryName = `${parent}/certificateMapEntries/${entryId}`;
-    
-    try {
-        await certificateManagerClient.getCertificateMapEntry({ name: entryName });
-        console.log(`[GCP] Cert Map Entry '${entryId}' already exists.`);
-    } catch (err) {
-        if (err.code === 5 || err.code === 404) {
-            console.log(`[GCP] Creating Cert Map Entry '${entryId}'...`);
-            const [operation] = await certificateManagerClient.createCertificateMapEntry({
-                parent: parent,
-                certificateMapEntryId: entryId,
-                certificateMapEntry: {
-                    hostname: domain,
-                    certificates: [certResourceName]
-                }
-            });
-            await waitForOperation(operation, 'Create Cert Map Entry');
-            console.log(`[GCP] Cert Map Entry '${entryId}' created.`);
-        } else {
-            throw err;
-        }
-    }
-}
-
-/**
- * Cleanup GCP Resources on Failure
- */
-async function cleanupGCPDomain(domain, projectId) {
-    console.log(`[GCP] Cleaning up resources for ${domain} due to failure...`);
-    const bucketName = `backend-site-${projectId}`;
-    const certId = `cert-${domain.replace(/\./g, '-')}`;
-    const mapEntryId = `entry-${domain.replace(/\./g, '-')}`;
-    const parent = `projects/${GCP_PROJECT_ID}/locations/global`;
-
-    try {
-        // 1. Remove from Certificate Map
-        try {
-            const entryName = `${parent}/certificateMaps/${CERT_MAP_NAME}/certificateMapEntries/${mapEntryId}`;
-            console.log(`[GCP] Deleting Cert Map Entry '${mapEntryId}'...`);
-            const [op] = await certificateManagerClient.deleteCertificateMapEntry({ name: entryName });
-            await waitForOperation(op, 'Delete Map Entry');
-        } catch (e) {
-            console.warn(`[Cleanup] Failed to delete map entry (might not exist): ${e.message}`);
-        }
-
-        // 2. Delete Certificate
-        try {
-            const certName = `${parent}/certificates/${certId}`;
-            console.log(`[GCP] Deleting Certificate '${certId}'...`);
-            const [op] = await certificateManagerClient.deleteCertificate({ name: certName });
-            await waitForOperation(op, 'Delete Certificate');
-        } catch (e) {
-            console.warn(`[Cleanup] Failed to delete certificate (might not exist): ${e.message}`);
-        }
-
-        // 3. Update URL Map (Remove Host Rule)
-        try {
-            const [urlMap] = await urlMapsClient.get({ project: GCP_PROJECT_ID, urlMap: LB_NAME });
-            const matcherName = `matcher-${bucketName.replace('backend-', '')}`;
-            
-            const newHostRules = (urlMap.hostRules || []).filter(r => !r.hosts.includes(domain));
-            const newMatchers = (urlMap.pathMatchers || []).filter(m => m.name !== matcherName);
-            
-            // Only update if changes needed
-            if (newHostRules.length !== (urlMap.hostRules || []).length) {
-                console.log(`[GCP] Removing Host Rule for ${domain}...`);
-                const [op] = await urlMapsClient.patch({
-                    project: GCP_PROJECT_ID,
-                    urlMap: LB_NAME,
-                    urlMapResource: {
-                        hostRules: newHostRules,
-                        pathMatchers: newMatchers,
-                        fingerprint: urlMap.fingerprint
-                    }
-                });
-                await waitForOperation(op, 'Clean URL Map');
-            }
-        } catch (e) {
-            console.warn(`[Cleanup] Failed to update URL map: ${e.message}`);
-        }
-
-        // 4. Delete Backend Bucket
-        try {
-            console.log(`[GCP] Deleting Backend Bucket '${bucketName}'...`);
-            const [op] = await backendBucketsClient.delete({ project: GCP_PROJECT_ID, backendBucket: bucketName });
-            await waitForOperation(op, 'Delete Backend Bucket');
-        } catch (e) {
-            console.warn(`[Cleanup] Failed to delete backend bucket: ${e.message}`);
-        }
-
-        console.log(`[GCP] Cleanup complete for ${domain}.`);
-
-    } catch (error) {
-        console.error(`[GCP] Critical Cleanup Error: ${error.message}`);
-    }
-}
-
-/**
- * Main Orchestrator: Setup Domain for GCP LB (Scalable Version)
- * Uses Certificate Manager Maps.
- */
-async function setupGCPDomain(domain, projectId, isManagedByUs = false) {
-    try {
-        console.log(`[GCP] Starting automated setup for ${domain} (Project: ${projectId})...`);
-        
-        // 1. Create Backend Bucket
-        const backendBucketName = await ensureBackendBucket(projectId);
-        
-        // 2. Update URL Map
-        await updateUrlMap(domain, backendBucketName);
-        
-        // 3. Create Certificate Manager Cert
-        const certResourceName = await ensureCertificateManagerCert(domain);
-        
-        // 4. Add to Certificate Map (Scalable Attachment)
-        await addCertificateToMap(domain, certResourceName);
-
-        console.log(`[GCP] Setup triggered successfully. Propagation takes 5-10 mins.`);
-
-        if (isManagedByUs) {
-            await addDNSRecord(domain, GCP_LB_IP);
-            return {
-                status: 'CONFIGURED',
-                ip: GCP_LB_IP,
-                message: 'Domain Configured. SSL & DNS propagating.'
-            };
-        } else {
-            return {
-                status: 'ACTION_REQUIRED',
-                ip: GCP_LB_IP,
-                message: `Setup initiated. Please add an A Record for '${domain}' pointing to: ${GCP_LB_IP}`
-            };
-        }
-
-    } catch (error) {
-        console.error("Setup GCP Domain Failed:", error);
-        
-        // Attempt Cleanup
-        await cleanupGCPDomain(domain, projectId);
-
-        // Throw simple error for frontend
-        throw new Error(`Automation failed: ${error.message}. Changes rolled back. Please try again.`);
-    }
-}
-
-module.exports = { 
-    checkAvailability, 
-    purchaseDomain, 
-    getSuggestions, 
-    changeNameServers, 
-    verifyDomainDNS,
-    setupGCPDomain,
-    checkSubdomainAvailability,
-    cleanupGCPDomain,
-    listDNSRecords,
-    addDNSRecordGeneric,
-    deleteDNSRecord
-};
-
-const { db } = require('./firebase');
-
-/**
- * Validate Subdomain Format
- * @param {string} subdomain 
- */
 function validateSubdomain(subdomain) {
     const re = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
     if (!re.test(subdomain)) {
@@ -636,30 +444,31 @@ function validateSubdomain(subdomain) {
     return { valid: true };
 }
 
-/**
- * Check if a subdomain is available in our system
- * @param {string} subdomain 
- */
 async function checkSubdomainAvailability(subdomain) {
     const validation = validateSubdomain(subdomain);
     if (!validation.valid) {
         return { available: false, error: validation.error };
     }
 
-    if (!db) {
-        console.warn('DB not connected, assuming subdomain available (Dev mode).');
-        return { available: true };
-    }
-
     try {
-        const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).get();
-        if (snapshot.empty) {
-            return { available: true };
-        } else {
-            return { available: false, error: 'Subdomain is already taken.' };
-        }
+        const existing = await db.one('SELECT id FROM projects WHERE subdomain = ?', [subdomain]);
+        if (!existing) return { available: true };
+        return { available: false, error: 'Subdomain is already taken.' };
     } catch (error) {
         console.error('Subdomain check failed:', error);
         throw error;
     }
 }
+
+module.exports = {
+    checkAvailability,
+    purchaseDomain,
+    getSuggestions,
+    verifyDomainDNS,
+    setupCFDomain,
+    cleanupCFDomain,
+    checkSubdomainAvailability,
+    listDNSRecords,
+    addDNSRecordGeneric,
+    deleteDNSRecord
+};

@@ -1,67 +1,42 @@
-const { Storage } = require('@google-cloud/storage');
+const { S3Client, ListObjectsV2Command, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const { uploadDirectory } = require('./storage');
 const path = require('path');
 require('dotenv').config();
 
-const storage = new Storage();
+// R2 Client for bucket operations (delete, etc.)
+const s3 = new S3Client({
+    region: 'auto',
+    endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+});
+
+const SITES_BUCKET = process.env.R2_SITES_BUCKET || 'genweb-sites';
+const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || 'pub-r2.genweb.in';
 
 /**
- * Main Deploy Function (GCP Backend Bucket Strategy)
+ * Main Deploy Function — uploads site files to R2
  * @param {string} distPath - Path to the 'dist' folder
  * @param {string} projectId - Internal Project ID
- * @param {string} [existingSiteId] - (Legacy/Optional)
  */
-async function deploySite(distPath, projectId, existingSiteId = null) {
-    console.log(`Preparing deployment for Project ${projectId} to GCP...`);
-    
-    // Bucket Name Strategy: "site-<projectId>"
-    // This allows unique buckets that can be attached to Backend Buckets.
-    const bucketName = `site-${projectId}`;
-    const bucket = storage.bucket(bucketName);
-    
+async function deploySite(distPath, projectId) {
+    console.log(`Preparing deployment for Project ${projectId} to R2...`);
+
     try {
-        // 1. Ensure Bucket Exists & is Configured
-        const [exists] = await bucket.exists();
-        if (!exists) {
-            console.log(`Creating bucket: ${bucketName}...`);
-            await storage.createBucket(bucketName, {
-                location: 'asia-south1', // Regional (Mumbai)
-                storageClass: 'STANDARD',
-            });
-        }
-        
-        // 2. Configure as Website (MainPageSuffix)
-        // This is crucial for Backend Buckets to serve index.html for root requests
-        console.log(`Configuring bucket website settings...`);
-        await bucket.setMetadata({
-            website: {
-                mainPageSuffix: 'index.html',
-                notFoundPage: '404.html',
-            },
-        });
-        
-        // 3. Make Public (Reader role for allUsers)
-        // CAUTION: This makes all content in the bucket public.
-        console.log(`Setting bucket public access...`);
-        await bucket.makePublic({ includeFiles: true }); 
-        // Note: makePublic() on the bucket object might just set default ACL. 
-        // For uniform bucket-level access (recommended), we should set IAM policy.
-        // But for simplicity/compatibility, we use the helper.
-        
-        // 4. Upload Content to Root
-        console.log(`Uploading content to ${bucketName}...`);
-        // We reuse uploadDirectory but set destPrefix to '' (root)
-        await uploadDirectory(distPath, '', bucketName);
-        
-        const publicUrl = `https://storage.googleapis.com/${bucketName}/index.html`;
-        console.log(`Deployed to GCP: ${publicUrl}`);
+        // Upload content to genweb-sites/{projectId}/
+        console.log(`Uploading content to r2://${SITES_BUCKET}/${projectId}/...`);
+        await uploadDirectory(distPath, projectId, SITES_BUCKET);
+
+        const publicUrl = `https://${R2_PUBLIC_DOMAIN}/${SITES_BUCKET}/${projectId}/index.html`;
+        console.log(`Deployed to R2: ${publicUrl}`);
 
         return {
             url: publicUrl,
             siteId: projectId,
-            bucketName: bucketName,
+            bucketName: SITES_BUCKET,
             deployId: Date.now().toString(),
-            adminUrl: `https://console.cloud.google.com/storage/browser/${bucketName}`
         };
 
     } catch (error) {
@@ -70,52 +45,53 @@ async function deploySite(distPath, projectId, existingSiteId = null) {
     }
 }
 
-async function makeBucketPrivate(bucketName) {
-    try {
-        console.log(`Making bucket ${bucketName} private...`);
-        const bucket = storage.bucket(bucketName);
-        await bucket.makePrivate({ includeFiles: true });
-        console.log(`Bucket ${bucketName} is now private.`);
-    } catch (error) {
-        console.error(`Failed to make bucket ${bucketName} private:`, error);
-        throw error;
-    }
-}
-
-async function makeBucketPublic(bucketName) {
-    try {
-        console.log(`Making bucket ${bucketName} public...`);
-        const bucket = storage.bucket(bucketName);
-        await bucket.makePublic({ includeFiles: true });
-        console.log(`Bucket ${bucketName} is now public.`);
-    } catch (error) {
-        console.error(`Failed to make bucket ${bucketName} public:`, error);
-        throw error;
-    }
-}
-
+/**
+ * Delete all files for a project in R2
+ */
 async function deleteSiteBucket(projectId) {
-    const bucketName = `site-${projectId}`;
-    console.log(`Deleting bucket ${bucketName}...`);
-    
+    const prefix = `${projectId}/`;
+    console.log(`Deleting site files for ${projectId} from r2://${SITES_BUCKET}/...`);
+
     try {
-        const bucket = storage.bucket(bucketName);
-        const [exists] = await bucket.exists();
-        
-        if (exists) {
-            // Buckets must be empty before deletion
-            await bucket.deleteFiles({ force: true }); // Delete all files
-            await bucket.delete(); // Delete the bucket itself
-            console.log(`Bucket ${bucketName} deleted successfully.`);
-        } else {
-            console.log(`Bucket ${bucketName} does not exist, skipping.`);
+        // List all objects with the project prefix
+        let allObjects = [];
+        let continuationToken;
+
+        do {
+            const response = await s3.send(new ListObjectsV2Command({
+                Bucket: SITES_BUCKET,
+                Prefix: prefix,
+                ContinuationToken: continuationToken,
+            }));
+
+            if (response.Contents) {
+                allObjects = allObjects.concat(response.Contents);
+            }
+            continuationToken = response.NextContinuationToken;
+        } while (continuationToken);
+
+        if (allObjects.length === 0) {
+            console.log(`No files found for ${projectId}, skipping.`);
+            return;
         }
+
+        // Delete in batches of 1000 (S3/R2 limit)
+        const BATCH_SIZE = 1000;
+        for (let i = 0; i < allObjects.length; i += BATCH_SIZE) {
+            const batch = allObjects.slice(i, i + BATCH_SIZE);
+            await s3.send(new DeleteObjectsCommand({
+                Bucket: SITES_BUCKET,
+                Delete: {
+                    Objects: batch.map(obj => ({ Key: obj.Key })),
+                },
+            }));
+        }
+
+        console.log(`Deleted ${allObjects.length} files for ${projectId}.`);
     } catch (error) {
-        console.error(`Failed to delete bucket ${bucketName}:`, error);
-        // We throw so the caller knows, but maybe we shouldn't block the whole project delete?
-        // Let's throw for now so we see the error.
+        console.error(`Failed to delete site files for ${projectId}:`, error);
         throw error;
     }
 }
 
-module.exports = { deploySite, makeBucketPrivate, makeBucketPublic, deleteSiteBucket };
+module.exports = { deploySite, deleteSiteBucket };

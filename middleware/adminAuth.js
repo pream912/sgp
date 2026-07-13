@@ -1,32 +1,24 @@
-const { auth } = require('../services/firebase');
+const { verifyToken } = require('../services/auth');
 
-const verifyAdmin = async (req, res, next) => {
+module.exports = function (req, res, next) {
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
-
   const token = authHeader.split(' ')[1];
-
   try {
-    if (!auth) {
-      console.warn('Firebase Auth not initialized. Blocking admin access.');
-      return res.status(503).json({ error: 'Auth service unavailable' });
-    }
-
-    const decodedToken = await auth.verifyIdToken(token);
-
-    if (decodedToken.admin !== true) {
+    const claims = verifyToken(token);
+    if (!claims.is_admin) {
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
-
-    req.user = decodedToken;
+    req.user = {
+      uid: claims.uid,
+      email: claims.email,
+      is_admin: true,
+    };
     next();
-  } catch (error) {
-    console.error('Admin token verification failed:', error);
-    res.status(403).json({ error: 'Unauthorized: Invalid token' });
+  } catch (err) {
+    console.error('Admin token verification failed:', err.message);
+    return res.status(403).json({ error: 'Unauthorized: Invalid token' });
   }
 };
-
-module.exports = verifyAdmin;

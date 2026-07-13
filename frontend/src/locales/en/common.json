@@ -1,0 +1,9 @@
+{
+  "chat": {
+    "subtitle": "Your website assistant",
+    "typing": "typing…",
+    "placeholder": "Type a message",
+    "chooseLanguage": "Chat language",
+    "mySites": "My sites"
+  }
+}

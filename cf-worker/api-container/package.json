@@ -1,0 +1,9 @@
+{
+  "name": "genweb-api-container-shim",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.18"
+  }
+}

@@ -1,0 +1,17 @@
+name = "genweb-ai-jobs"
+main = "index.js"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "6f192f9074e96c46bff187631f5d3568"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "genweb-db"
+database_id = "025545f3-7732-439f-a6f0-5e38dbcee2ab"
+
+[observability]
+enabled = true

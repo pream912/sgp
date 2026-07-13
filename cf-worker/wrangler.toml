@@ -1,0 +1,62 @@
+name = "genweb-site-router"
+main = "site-router.js"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "6f192f9074e96c46bff187631f5d3568"
+
+# Phase A: deploy to genweb-site-router.workers.dev (no zone routes).
+# Phase B (after NS migrates to CF) will move routes under [env.production].
+workers_dev = true
+
+# R2 bucket for built sites
+[[r2_buckets]]
+binding = "SITES_BUCKET"
+bucket_name = "genweb-sites"
+
+# KV cache for hostname → projectId lookups
+[[kv_namespaces]]
+binding = "DOMAIN_CACHE"
+id = "06831080bd974067b2b31450ec354cf0"
+
+# D1 database — projects lookup for hostname → projectId
+[[d1_databases]]
+binding = "DB"
+database_name = "genweb-db"
+database_id = "025545f3-7732-439f-a6f0-5e38dbcee2ab"
+
+[vars]
+ANALYTICS_API_URL = "https://api.genweb.in"
+
+# Phase B production env (deploy with: wrangler deploy --env production)
+[env.production]
+workers_dev = false
+
+[[env.production.routes]]
+pattern = "*.genweb.in/*"
+zone_name = "genweb.in"
+
+[[env.production.routes]]
+pattern = "genweb.in/*"
+zone_name = "genweb.in"
+
+[[env.production.r2_buckets]]
+binding = "SITES_BUCKET"
+bucket_name = "genweb-sites"
+
+[[env.production.kv_namespaces]]
+binding = "DOMAIN_CACHE"
+id = "06831080bd974067b2b31450ec354cf0"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "genweb-db"
+database_id = "025545f3-7732-439f-a6f0-5e38dbcee2ab"
+
+# API_CONTAINER binding deliberately omitted until Cloudflare Containers
+# is enrolled and `genweb-api` is deployed. Site-router falls back to
+# returning 502 on /api/* paths, which is fine — those should go to
+# api.genweb.in (Express deployment) directly via separate routing.
+
+[env.production.vars]
+ANALYTICS_API_URL = "https://api.genweb.in"

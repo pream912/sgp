@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const Referral = () => {
   const [loading, setLoading] = useState(true);
@@ -11,7 +11,7 @@ const Referral = () => {
 
   const fetchStats = async () => {
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
       const { data } = await axios.get('/api/referral/stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -29,7 +29,7 @@ const Referral = () => {
   const generateCode = async () => {
     setGenerating(true);
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
       const { data } = await axios.post('/api/referral/generate', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });

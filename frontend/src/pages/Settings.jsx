@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const indianStates = {
   'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam', 'BR': 'Bihar',
@@ -36,7 +36,7 @@ const Settings = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = await auth.currentUser.getIdToken();
+        const token = getToken();
         const { data } = await axios.get('/api/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -60,7 +60,7 @@ const Settings = () => {
     setProfileMsg('');
     setEmailMsg('');
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
 
       // Save name if changed
       if (profile.name !== origName) {
@@ -93,7 +93,7 @@ const Settings = () => {
     setEmailSending(true);
     setEmailMsg('');
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
       await axios.post('/api/auth/update-email', { email: profile.email }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -110,7 +110,7 @@ const Settings = () => {
     setBillingSaving(true);
     setBillingMsg('');
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
       await axios.put('/api/profile/billing-address', billing, {
         headers: { Authorization: `Bearer ${token}` }
       });

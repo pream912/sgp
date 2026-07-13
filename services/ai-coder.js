@@ -1,19 +1,5 @@
-const { VertexAI } = require('@google-cloud/vertexai');
+const { generateContent } = require('./ai-gateway');
 const cheerio = require('cheerio');
-
-const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT,
-  location: 'global',
-  apiEndpoint: 'aiplatform.googleapis.com'
-});
-const model = vertex_ai.preview.getGenerativeModel({
-  model: 'gemini-2.5-pro',
-  generationConfig: {
-    'maxOutputTokens': 16384,
-    'temperature': 0.5,
-    'topP': 0.95,
-  },
-});
 
 const BASE_PROMPT_START = `
 You are an expert Frontend Developer specializing in Tailwind CSS and semantic HTML5.
@@ -247,23 +233,26 @@ async function generateCode(designSystem, userContext, pageName = 'Home', allPag
     Generate the HTML file for ${pageName}.
     `;
     
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: getSystemPrompt(stylePreset) + "\n" + prompt }] }],
+    const result = await generateContent(getSystemPrompt(stylePreset) + "\n" + prompt, {
+        model: '@cf/moonshotai/kimi-k2.6',
+        maxTokens: 16384,
+        temperature: 0.5,
     });
-    
-    const response = await result.response;
-    const candidate = response.candidates[0];
-    
-    console.log(`[AI Coder] Finish Reason: ${candidate.finishReason}`);
-    if (candidate.finishReason !== 'STOP') {
-        console.warn(`[AI Coder] Warning: Generation stopped due to ${candidate.finishReason}`);
+
+    console.log(`[AI Coder] ${pageName} Finish Reason: ${result.finishReason}, raw chars=${result.text?.length ?? 0}`);
+    if (result.finishReason !== 'STOP') {
+        console.warn(`[AI Coder] Warning: Generation stopped due to ${result.finishReason}`);
     }
 
-    let text = candidate.content.parts[0].text;
-
-    // Clean up markdown
+    let text = result.text;
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return { code: text, usage: response.usageMetadata || null };
+    const endIdx = text.lastIndexOf('</html>');
+    if (endIdx >= 0) {
+        text = text.slice(0, endIdx + 7);
+    } else {
+        console.warn(`[AI Coder] ${pageName} OUTPUT MISSING </html>. Last 300 chars: ${JSON.stringify(text.slice(-300))}`);
+    }
+    return { code: text, usage: result.usage };
 }
 
 async function fixCode(badCode, errorLog, stylePreset = null) {
@@ -280,15 +269,17 @@ async function fixCode(badCode, errorLog, stylePreset = null) {
     SAME CONSTRAINTS APPLY: RAW CODE ONLY, NO MARKDOWN.
     `;
     
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: getSystemPrompt(stylePreset) + "\n" + prompt }] }],
+    const result = await generateContent(getSystemPrompt(stylePreset) + "\n" + prompt, {
+        model: '@cf/moonshotai/kimi-k2.6',
+        maxTokens: 16384,
+        temperature: 0.5,
     });
-    
-    const response = await result.response;
-    let text = response.candidates[0].content.parts[0].text;
 
+    let text = result.text;
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return { code: text, usage: response.usageMetadata || null };
+    const endIdx = text.lastIndexOf('</html>');
+    if (endIdx >= 0) text = text.slice(0, endIdx + 7);
+    return { code: text, usage: result.usage };
 }
 
 async function regenerateSection(code, sectionId, instruction) {
@@ -326,15 +317,12 @@ async function regenerateSection(code, sectionId, instruction) {
     - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
     `;
     
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
-    
-    const response = await result.response;
-    let text = response.candidates[0].content.parts[0].text;
-
+    const result = await generateContent(prompt, { model: '@cf/moonshotai/kimi-k2.6', maxTokens: 16384, temperature: 0.5 });
+    let text = result.text;
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return { code: text, usage: response.usageMetadata || null };
+    const endIdx = text.lastIndexOf('</html>');
+    if (endIdx >= 0) text = text.slice(0, endIdx + 7);
+    return { code: text, usage: result.usage };
 }
 
 async function regeneratePage(code, instruction) {
@@ -370,15 +358,12 @@ async function regeneratePage(code, instruction) {
     - OUTPUT RAW CODE ONLY. NO MARKDOWN BLOCKS.
     `;
     
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
-    
-    const response = await result.response;
-    let text = response.candidates[0].content.parts[0].text;
-
+    const result = await generateContent(prompt, { model: '@cf/moonshotai/kimi-k2.6', maxTokens: 16384, temperature: 0.5 });
+    let text = result.text;
     text = text.replace(/```html/g, '').replace(/```/g, '');
-    return { code: text, usage: response.usageMetadata || null };
+    const endIdx = text.lastIndexOf('</html>');
+    if (endIdx >= 0) text = text.slice(0, endIdx + 7);
+    return { code: text, usage: result.usage };
 }
 
 async function updateSectionContent(code, sectionId, type, originalValue, newValue) {
@@ -485,4 +470,4 @@ async function updateSectionContent(code, sectionId, type, originalValue, newVal
     return $.html();
 }
 
-module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage };
+module.exports = { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage, getSystemPrompt };

@@ -28,3 +28,40 @@
     @apply bg-background-light text-slate-900 dark:bg-background-dark dark:text-white transition-colors duration-200;
   }
 }
+
+/* ---- Build experience (/build/:id) ---- */
+
+/* Diagonal "developer bath" wipe for incoming page screenshots */
+@keyframes build-wipe {
+  from { clip-path: polygon(0 0, 0 0, -18% 100%, -18% 100%); }
+  to   { clip-path: polygon(0 0, 118% 0, 100% 100%, -18% 100%); }
+}
+.build-wipe-in {
+  animation: build-wipe 0.9s cubic-bezier(0.6, 0.05, 0.25, 1) forwards;
+}
+
+/* Holding-canvas shimmer before the first screenshot arrives */
+@keyframes build-shimmer-sweep {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+.build-shimmer {
+  background-image: linear-gradient(105deg, transparent 42%, rgba(251, 146, 60, 0.07) 50%, transparent 58%);
+  background-size: 220% 100%;
+  animation: build-shimmer-sweep 2.6s ease-in-out infinite;
+}
+
+/* Log lines slide up as they arrive */
+@keyframes build-log-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { transform: translateY(0); }
+}
+.build-log-line {
+  animation: build-log-enter 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-wipe-in { animation: fade-in 0.4s ease-out forwards; }
+  .build-shimmer { animation: none; }
+  .build-log-line { animation: none; }
+}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { getCurrentUser, logout } from '../lib/auth';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -18,8 +17,9 @@ const AdminLayout = ({ children }) => {
   const navigate = useNavigate();
   const isActive = (path) => location.pathname === path;
 
+  const currentUser = getCurrentUser();
   const handleLogout = async () => {
-    await signOut(auth);
+    await logout();
     navigate('/login');
   };
 
@@ -33,7 +33,7 @@ const AdminLayout = ({ children }) => {
           <h2 className="text-lg font-bold tracking-tight">GenWeb Admin</h2>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-500 dark:text-slate-400 hidden sm:inline">{auth.currentUser?.email}</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400 hidden sm:inline">{currentUser?.email}</span>
           <button
             onClick={handleLogout}
             className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

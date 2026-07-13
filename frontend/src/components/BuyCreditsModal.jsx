@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 import { X, ExternalLink } from 'lucide-react';
 
 const BuyCreditsModal = ({ isOpen, onClose }) => {
@@ -20,13 +20,13 @@ const BuyCreditsModal = ({ isOpen, onClose }) => {
 
         setLoading(true);
         try {
-            const user = auth.currentUser;
+            const user = getCurrentUser();
             if (!user) {
                 alert('You must be logged in.');
                 return;
             }
-            
-            const token = await user.getIdToken();
+
+            const token = getToken();
             const uid = user.uid;
             
             // Construct Redirect URL

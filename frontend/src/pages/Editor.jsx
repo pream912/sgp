@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 import PublishModal from '../components/PublishModal';
 import BuyCreditsModal from '../components/BuyCreditsModal';
 
@@ -71,7 +71,7 @@ const Editor = () => {
           }
 
           try {
-              const token = await auth.currentUser?.getIdToken();
+              const token = getToken();
               if (!token) return;
               
               // Set cookie for iframe/asset access
@@ -122,7 +122,7 @@ const Editor = () => {
 
   const fetchTheme = async () => {
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const res = await axios.get(`/api/project/${projectId}/theme`, {
               headers: { Authorization: `Bearer ${token}` }
           });
@@ -132,7 +132,7 @@ const Editor = () => {
 
   const fetchSiteConfig = async () => {
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const res = await axios.get(`/api/project/${projectId}/site-config`, {
               headers: { Authorization: `Bearer ${token}` }
           });
@@ -144,7 +144,7 @@ const Editor = () => {
       if (!newPageName.trim()) return;
       setAddingPage(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const res = await axios.post(`/api/project/${projectId}/pages/add`, {
               pageName: newPageName.trim(),
               pagePrompt: newPagePrompt.trim() || null,
@@ -163,7 +163,7 @@ const Editor = () => {
       if (!newSubPageName.trim()) return;
       setAddingSubPage(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const res = await axios.post(`/api/project/${projectId}/pages/add`, {
               pageName: newSubPageName.trim(),
               pagePrompt: newSubPagePrompt.trim() || null,
@@ -183,7 +183,7 @@ const Editor = () => {
       if (!file) return;
       setLogoUploading(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const formData = new FormData();
           formData.append('logo', file);
           const res = await axios.post(`/api/project/${projectId}/logo`, formData, {
@@ -198,7 +198,7 @@ const Editor = () => {
 
   const handleUpdateNavOrder = async (newNav) => {
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           const updated = { ...siteConfig, navigation: newNav };
           await axios.put(`/api/project/${projectId}/site-config`, updated, {
               headers: { Authorization: `Bearer ${token}` }
@@ -357,7 +357,7 @@ const Editor = () => {
         const gcsBase = `https://storage.googleapis.com/sgp1-sites-hosting/${projectId}/`;
         
         try {
-            const token = await auth.currentUser?.getIdToken();
+            const token = getToken();
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
             const res = await fetch(localUrl, { headers });
@@ -385,7 +385,7 @@ const Editor = () => {
       setTextValue('');
       setImageFile(null);
       setIframeKey(k => k + 1);
-      auth.currentUser?.getIdToken().then(t => 
+      Promise.resolve(getToken()).then(t => 
         axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
         .then(r => setCredits(r.data.credits))
       );
@@ -395,7 +395,7 @@ const Editor = () => {
     if (!selectedItem || !instruction) return;
     setLoading(true);
     try {
-        const token = await auth.currentUser.getIdToken();
+        const token = getToken();
         await axios.post(`/api/project/${projectId}/section`, {
             sectionId: selectedItem.sectionId, instruction
         }, { headers: { Authorization: `Bearer ${token}` } });
@@ -409,7 +409,7 @@ const Editor = () => {
       
       setLoading(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           await axios.post(`/api/project/${projectId}/regenerate-page`, {
               instruction: globalInstruction
           }, { headers: { Authorization: `Bearer ${token}` } });
@@ -421,7 +421,7 @@ const Editor = () => {
       if (!selectedItem || !textValue) return;
       setLoading(true);
       try {
-        const token = await auth.currentUser.getIdToken();
+        const token = getToken();
         await axios.post(`/api/project/${projectId}/content`, {
             sectionId: selectedItem.sectionId, type: 'text', originalValue: selectedItem.value, newValue: textValue
         }, { headers: { Authorization: `Bearer ${token}` } });
@@ -433,7 +433,7 @@ const Editor = () => {
       if (!selectedItem || !imageFile) return;
       setLoading(true);
       try {
-        const token = await auth.currentUser.getIdToken();
+        const token = getToken();
         const formData = new FormData();
         formData.append('file', imageFile);
         const uploadRes = await axios.post(`/api/project/${projectId}/upload`, formData, {
@@ -450,7 +450,7 @@ const Editor = () => {
       if (!window.confirm('Undo last change?')) return;
       setLoading(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           await axios.post(`/api/project/${projectId}/undo`, {}, { headers: { Authorization: `Bearer ${token}` } });
           reloadFrame();
       } catch { alert('Undo failed'); } finally { setLoading(false); }
@@ -459,7 +459,7 @@ const Editor = () => {
   const handleSaveTheme = async () => {
       setLoading(true);
       try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           await axios.post(`/api/project/${projectId}/theme`, { colors }, { headers: { Authorization: `Bearer ${token}` } });
           reloadFrame();
       } catch { alert('Theme update failed'); } finally { setLoading(false); }
@@ -1025,7 +1025,7 @@ const Editor = () => {
             setIsPublished(true);
             setCredits(prev => prev - 500); 
             // Refresh
-            auth.currentUser?.getIdToken().then(t => 
+            Promise.resolve(getToken()).then(t => 
                 axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
                 .then(r => setCredits(r.data.credits))
             );
@@ -1035,7 +1035,7 @@ const Editor = () => {
         isOpen={showBuyCredits}
         onClose={() => setShowBuyCredits(false)}
         onSuccess={() => {
-            auth.currentUser?.getIdToken().then(t => 
+            Promise.resolve(getToken()).then(t => 
                 axios.get('/api/credits', { headers: { Authorization: `Bearer ${t}` } })
                 .then(r => setCredits(r.data.credits))
             );

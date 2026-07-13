@@ -1,4 +1,10 @@
 node_modules
 public
 package-lock.json
-.envenv.yaml
+.env
+env.yaml
+.secrets/
+.claude/
+temp/
+projects_source/
+.DS_Store

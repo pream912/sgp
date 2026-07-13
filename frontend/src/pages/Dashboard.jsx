@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -11,9 +11,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!auth.currentUser) return;
+      if (!getCurrentUser()) return;
       try {
-        const token = await auth.currentUser.getIdToken();
+        const token = getToken();
         const { data } = await axios.get('/api/dashboard/stats', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -29,7 +29,7 @@ const Dashboard = () => {
 
   const generateReferralCode = async () => {
     try {
-      const token = await auth.currentUser.getIdToken();
+      const token = getToken();
       const { data } = await axios.post('/api/referral/generate', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -89,7 +89,7 @@ const Dashboard = () => {
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-500/30"
         >
           <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-          New Project
+          Create with Genni
         </Link>
       </div>
 
@@ -154,7 +154,7 @@ const Dashboard = () => {
                     className="flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 rounded-xl transition-colors group"
                   >
                     <span className="material-symbols-outlined text-orange-500 text-[20px]">add_circle</span>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Create New Site</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Create with Genni</span>
                   </Link>
                   <Link
                     to="/sites"

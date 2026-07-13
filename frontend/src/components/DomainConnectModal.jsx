@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 // This should be the Public IP of your Caddy/Proxy VM
 const PROXY_IP = "34.50.155.64"; 
@@ -65,7 +65,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
             // Pre-populate contact from billing address
             const fetchBilling = async () => {
                 try {
-                    const token = await auth.currentUser.getIdToken();
+                    const token = getToken();
                     const { data } = await axios.get('/api/profile', {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -99,7 +99,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
         if (projectData?.publishedPlan === 'basic') {
             const determinePlan = async () => {
                 try {
-                    const token = await auth.currentUser.getIdToken();
+                    const token = getToken();
                     const res = await axios.get(`/api/project/${projectId}/pages`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -129,7 +129,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const handleUpgrade = async () => {
         setLoadingProject(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             await axios.post(`/api/project/${projectId}/publish`, { 
                 plan: planType,
                 years: selectedYears
@@ -147,7 +147,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const fetchProjectDetails = async () => {
         setLoadingProject(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             // We don't have a direct "get project" endpoint that returns just one, 
             // but we can filter the list or add one. 
             // For now, let's assume we can get it from the projects list or add a quick endpoint?
@@ -190,7 +190,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
 
         setSubdomainStatus('checking');
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get(`/api/subdomain/check?name=${name}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -220,7 +220,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
         if (subdomainStatus !== 'available' && subdomain !== projectData?.subdomain) return;
         setIsSavingSubdomain(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             await axios.post(`/api/project/${projectId}/subdomain`, { subdomain }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -243,7 +243,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
 
 
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get(`/api/domains/verify-setup`, {
                 params: { domain, expectedIp: PROXY_IP },
                 headers: { Authorization: `Bearer ${token}` }
@@ -269,7 +269,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const handleConnect = async () => {
         setStatus('linking');
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             await axios.post(`/api/project/${projectId}/domain`, { domain }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -302,7 +302,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
 
 
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get(`/api/domains/check?domain=${claimDomain}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -335,7 +335,7 @@ const DomainConnectModal = ({ isOpen, onClose, projectId, onDomainUpdated }) => 
     const handleClaim = async () => {
         setClaimStatus('claiming');
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             await axios.post(`/api/domains/claim`, {
                 domain: claimDomain,
                 projectId,

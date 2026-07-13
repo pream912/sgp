@@ -1,16 +1,4 @@
-const { VertexAI } = require('@google-cloud/vertexai');
-
-const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT,
-  location: 'global',
-  apiEndpoint: 'aiplatform.googleapis.com'
-});
-const model = vertex_ai.preview.getGenerativeModel({
-  model: 'gemini-3.1-flash-lite-preview',
-   generationConfig: {
-    'responseMimeType': 'application/json',
-  },
-});
+const { generateContent } = require('./ai-gateway');
 
 const SYSTEM_PROMPT = `
 You are an AI Architect.
@@ -38,49 +26,70 @@ Output JSON only.
 `;
 
 async function generateDesign(userInfo, logoBuffer, logoMimeType) {
-    const parts = [{ text: SYSTEM_PROMPT + "\n" + userInfo }];
-    
+    let prompt = SYSTEM_PROMPT + "\n" + userInfo;
+    let parts = null;
+
     if (logoBuffer && logoMimeType) {
-        parts.push({
-            inline_data: {
-                mime_type: logoMimeType,
-                data: logoBuffer.toString('base64')
-            }
-        });
-        parts.push({ text: "\nIMPORTANT: The user has provided a logo (attached above). \n1. DERIVE a professional, web-ready color palette inspired by this logo. \n2. DO NOT just extract raw pixel colors if they are too neon/cartoonish. Adjust saturation/brightness to create a sophisticated look suitable for the business type. \n3. Ensure the 'primary' color matches the brand, but 'background' and 'text' remain readable and professional. \n4. The 'vibe' must harmonize with the logo style." });
+        parts = [
+            { text: SYSTEM_PROMPT + "\n" + userInfo },
+            {
+                inline_data: {
+                    mime_type: logoMimeType,
+                    data: logoBuffer.toString('base64')
+                }
+            },
+            { text: "\nIMPORTANT: The user has provided a logo (attached above). \n1. DERIVE a professional, web-ready color palette inspired by this logo. \n2. DO NOT just extract raw pixel colors if they are too neon/cartoonish. Adjust saturation/brightness to create a sophisticated look suitable for the business type. \n3. Ensure the 'primary' color matches the brand, but 'background' and 'text' remain readable and professional. \n4. The 'vibe' must harmonize with the logo style." }
+        ];
     }
 
-     const result = await model.generateContent({
-        contents: [{ role: 'user', parts: parts }],
+    // Llama 3.3 70B Fast is text-only; switch to Gemma 3 12B (multimodal) when a logo is provided.
+    const model = parts
+        ? '@cf/google/gemma-3-12b-it'
+        : '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+
+    const result = await generateContent(prompt, {
+        model,
+        maxTokens: 8192,
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+        parts,
     });
-    
-    const response = await result.response;
-    return { design: JSON.parse(response.candidates[0].content.parts[0].text), usage: response.usageMetadata || null };
+
+    const cleaned = (result.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    try {
+        return { design: JSON.parse(cleaned), usage: result.usage };
+    } catch (e) {
+        console.error('[architect] JSON parse failed. finishReason=%s, len=%d, head=%s', result.finishReason, cleaned.length, cleaned.slice(0, 200));
+        throw new Error(`Architect returned invalid JSON (${e.message}; finishReason=${result.finishReason}; len=${cleaned.length})`);
+    }
 }
 
 async function generatePalette(userInfo) {
     const prompt = `
     Based on the following User Context, generate a new Color Palette.
     USER CONTEXT: ${userInfo}
-    
+
     Output JSON object with key 'colorPalette' containing:
     - primary, secondary, accent (HEX)
     - background (HEX)
     - text (HEX, readable on background)
     - buttonBackground (HEX)
     - buttonText (HEX, readable on buttonBackground)
-    
+
     Ensure WCAG AA contrast compliance.
     Vary the style (e.g., Dark Mode, Pastel, High Contrast, Modern Gradient-Ready, Glassmorphic Base) to be distinct from a standard look, but appropriate for the business.
     `;
-    
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+
+    const result = await generateContent(prompt, {
+        model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+        maxTokens: 4096,
+        temperature: 0.7,
+        responseMimeType: 'application/json',
     });
-    
-    const response = await result.response;
-    const json = JSON.parse(response.candidates[0].content.parts[0].text);
-    return { palette: json.colorPalette, usage: response.usageMetadata || null };
+
+    const cleaned = (result.text || '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const json = JSON.parse(cleaned);
+    return { palette: json.colorPalette, usage: result.usage };
 }
 
 module.exports = { generateDesign, generatePalette };

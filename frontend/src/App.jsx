@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MySites from './pages/MySites';
-import Builder from './pages/Builder'; // Updated Builder Flow
+import GenniChat from './pages/GenniChat';
+import BuildExperience from './pages/BuildExperience';
 import Editor from './pages/Editor';
 import Domains from './pages/Domains';
 import Leads from './pages/Leads';
@@ -46,9 +47,15 @@ function App() {
               path="/builder"
               element={
                 <PrivateRoute>
-                  <Layout>
-                    <Builder />
-                  </Layout>
+                  <GenniChat mode="onboarding" />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <PrivateRoute>
+                  <GenniChat mode="assistant" />
                 </PrivateRoute>
               }
             />
@@ -99,6 +106,14 @@ function App() {
                   <Layout>
                     <Settings />
                   </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/build/:projectId"
+              element={
+                <PrivateRoute>
+                  <BuildExperience />
                 </PrivateRoute>
               }
             />

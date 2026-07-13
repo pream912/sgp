@@ -1,16 +1,17 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
+import { getCurrentUser, logout } from '../lib/auth';
 import ThemeToggle from './ThemeToggle';
 import CreditsDisplay from './CreditsDisplay';
+import GenniWidget from './genni/GenniWidget';
 
 const Layout = ({ children }) => {
     const location = useLocation();
     const navigate = useNavigate();
+    const currentUser = getCurrentUser();
 
     const handleLogout = async () => {
-        await signOut(auth);
+        await logout();
         navigate('/login');
     };
 
@@ -44,7 +45,7 @@ const Layout = ({ children }) => {
                         </button>
                         
                         <Link to="/settings" className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border-2 border-white dark:border-slate-800 shadow-sm flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-600 font-bold overflow-hidden hover:ring-2 hover:ring-orange-500 transition-all">
-                             {auth.currentUser?.email?.[0]?.toUpperCase() || auth.currentUser?.phoneNumber?.slice(-2) || <span className="material-symbols-outlined text-[20px]">person</span>}
+                             {currentUser?.email?.[0]?.toUpperCase() || <span className="material-symbols-outlined text-[20px]">person</span>}
                         </Link>
                     </div>
                 </div>
@@ -147,6 +148,7 @@ const Layout = ({ children }) => {
                     </div>
                 </main>
             </div>
+            <GenniWidget />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const Leads = () => {
     const [leads, setLeads] = useState([]);
@@ -13,7 +13,7 @@ const Leads = () => {
         // Initial fetch
         const init = async () => {
             // Wait for auth to be ready if needed, but usually handled by PrivateRoute
-            if (auth.currentUser) {
+            if (getCurrentUser()) {
                 fetchData();
             } else {
                  // Retry once if auth not ready (edge case)
@@ -29,7 +29,7 @@ const Leads = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const token = await auth.currentUser?.getIdToken();
+            const token = getToken();
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };

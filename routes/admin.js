@@ -1,342 +1,313 @@
 const express = require('express');
 const router = express.Router();
 const verifyAdmin = require('../middleware/adminAuth');
-const { db, admin, auth } = require('../services/firebase');
+const db = require('../services/db');
 const { getUserCredits, addCredits } = require('../services/credits');
 
-// All routes use admin middleware
 router.use(verifyAdmin);
 
 // --- Dashboard Stats ---
 router.get('/stats', async (req, res) => {
-    try {
-        // Parallel queries
-        const [usersSnap, projectsSnap, transactionsSnap, tokenUsageSnap] = await Promise.all([
-            db.collection('users').get(),
-            db.collection('projects').get(),
-            db.collection('transactions').where('type', '==', 'credit').get(),
-            db.collection('tokenUsage').orderBy('createdAt', 'desc').limit(1000).get()
-        ]);
+  try {
+    const [users, projects, revenueRow, tokens] = await Promise.all([
+      db.one('SELECT COUNT(*) AS c FROM users'),
+      db.query('SELECT id, status, is_published FROM projects'),
+      db.one(
+        `SELECT COALESCE(SUM(amount), 0) AS amt FROM transactions
+         WHERE type = 'credit' AND description LIKE 'Purchased%'`
+      ),
+      db.one(`SELECT COALESCE(SUM(total_tokens), 0) AS total FROM token_usage`),
+    ]);
 
-        const totalUsers = usersSnap.size;
-        const totalSites = projectsSnap.size;
-        const publishedSites = projectsSnap.docs.filter(d => d.data().isPublished).length;
-        const failedSites = projectsSnap.docs.filter(d => d.data().status === 'failed').length;
-        const failureRate = totalSites > 0 ? ((failedSites / totalSites) * 100).toFixed(1) : 0;
+    const totalUsers = users ? (users.c || 0) : 0;
+    const totalSites = projects.length;
+    const publishedSites = projects.filter(p => p.is_published).length;
+    const failedSites = projects.filter(p => p.status === 'failed').length;
+    const failureRate = totalSites > 0 ? ((failedSites / totalSites) * 100).toFixed(1) : 0;
 
-        // Revenue: sum of credit purchase amounts
-        let totalRevenue = 0;
-        transactionsSnap.docs.forEach(doc => {
-            const d = doc.data();
-            if (d.description && d.description.includes('Purchased')) {
-                // Extract INR amount from description like "Purchased 500 credits for ₹99"
-                const match = d.description.match(/₹(\d+)/);
-                if (match) totalRevenue += parseInt(match[1]);
-            }
-        });
-
-        // Token usage totals
-        let totalTokens = 0;
-        tokenUsageSnap.docs.forEach(doc => {
-            totalTokens += doc.data().totalTokens || 0;
-        });
-
-        const avgTokensPerSite = totalSites > 0 ? Math.round(totalTokens / totalSites) : 0;
-
-        res.json({
-            totalUsers,
-            totalSites,
-            publishedSites,
-            totalRevenue,
-            totalTokens,
-            avgTokensPerSite,
-            failureRate: parseFloat(failureRate)
-        });
-    } catch (error) {
-        console.error('Admin stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
+    // Revenue: extract from "Purchased X credits for ₹Y" descriptions
+    const txRows = await db.query(
+      `SELECT description FROM transactions WHERE type = 'credit' AND description LIKE '%₹%'`
+    );
+    let totalRevenue = 0;
+    for (const r of txRows) {
+      const m = r.description && r.description.match(/₹(\d+)/);
+      if (m) totalRevenue += parseInt(m[1]);
     }
+
+    const totalTokens = tokens ? (tokens.total || 0) : 0;
+    const avgTokensPerSite = totalSites > 0 ? Math.round(totalTokens / totalSites) : 0;
+
+    res.json({
+      totalUsers,
+      totalSites,
+      publishedSites,
+      totalRevenue,
+      totalTokens,
+      avgTokensPerSite,
+      failureRate: parseFloat(failureRate),
+    });
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
 });
 
 // --- Users ---
 router.get('/users', async (req, res) => {
-    try {
-        const { search, limit = 50, pageToken } = req.query;
-        const maxResults = Math.min(parseInt(limit) || 50, 100);
+  try {
+    const { search, limit = 50, offset = 0 } = req.query;
+    const lim = Math.min(parseInt(limit) || 50, 100);
+    const off = parseInt(offset) || 0;
 
-        // List users from Firebase Auth
-        const listResult = await auth.listUsers(maxResults, pageToken || undefined);
-
-        // Get Firestore user data for credits
-        const uids = listResult.users.map(u => u.uid);
-        const userDocs = {};
-        // Firestore 'in' queries limited to 30
-        for (let i = 0; i < uids.length; i += 30) {
-            const chunk = uids.slice(i, i + 30);
-            const snap = await db.collection('users').where('__name__', 'in', chunk).get();
-            snap.docs.forEach(d => { userDocs[d.id] = d.data(); });
-        }
-
-        // Get project counts per user
-        const projectCounts = {};
-        for (let i = 0; i < uids.length; i += 30) {
-            const chunk = uids.slice(i, i + 30);
-            const snap = await db.collection('projects').where('userId', 'in', chunk).get();
-            snap.docs.forEach(d => {
-                const uid = d.data().userId;
-                projectCounts[uid] = (projectCounts[uid] || 0) + 1;
-            });
-        }
-
-        let users = listResult.users.map(u => ({
-            uid: u.uid,
-            email: u.email || null,
-            phoneNumber: u.phoneNumber || null,
-            displayName: u.displayName || userDocs[u.uid]?.name || null,
-            credits: userDocs[u.uid]?.credits || 0,
-            sitesCount: projectCounts[u.uid] || 0,
-            createdAt: u.metadata.creationTime,
-            lastSignIn: u.metadata.lastSignInTime,
-            disabled: u.disabled,
-            referralCode: userDocs[u.uid]?.referralCode || null
-        }));
-
-        // Client-side search filter
-        if (search) {
-            const s = search.toLowerCase();
-            users = users.filter(u =>
-                (u.email && u.email.toLowerCase().includes(s)) ||
-                (u.phoneNumber && u.phoneNumber.includes(s)) ||
-                (u.displayName && u.displayName.toLowerCase().includes(s)) ||
-                u.uid.includes(s)
-            );
-        }
-
-        res.json({
-            users,
-            nextPageToken: listResult.pageToken || null
-        });
-    } catch (error) {
-        console.error('Admin users error:', error);
-        res.status(500).json({ error: 'Failed to fetch users' });
+    let where = '';
+    const params = [];
+    if (search) {
+      where = 'WHERE u.email LIKE ? OR u.name LIKE ? OR u.id LIKE ?';
+      const s = `%${search}%`;
+      params.push(s, s, s);
     }
+
+    const rows = await db.query(
+      `SELECT u.id, u.email, u.name, u.credits, u.referral_code, u.created_at, u.is_admin,
+              (SELECT COUNT(*) FROM projects p WHERE p.user_id = u.id) AS sites_count
+       FROM users u
+       ${where}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, lim, off]
+    );
+
+    const users = rows.map(r => ({
+      uid: r.id,
+      email: r.email,
+      displayName: r.name,
+      credits: r.credits || 0,
+      sitesCount: r.sites_count || 0,
+      createdAt: r.created_at,
+      isAdmin: !!r.is_admin,
+      referralCode: r.referral_code,
+    }));
+
+    res.json({ users, nextOffset: rows.length === lim ? off + lim : null });
+  } catch (error) {
+    console.error('Admin users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
 });
 
 // --- User Detail ---
 router.get('/users/:uid', async (req, res) => {
-    try {
-        const { uid } = req.params;
+  try {
+    const { uid } = req.params;
+    const [user, projects, transactions, domains] = await Promise.all([
+      db.one('SELECT * FROM users WHERE id = ?', [uid]),
+      db.query('SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC', [uid]),
+      db.query(
+        `SELECT id, user_id AS userId, amount, type, description, balance_after AS balanceAfter,
+                razorpay_id AS transactionId, created_at AS createdAt
+         FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+        [uid]
+      ),
+      db.query(
+        `SELECT domain, user_id AS userId, order_id AS orderId, provider, status, created_at AS createdAt
+         FROM domains WHERE user_id = ? ORDER BY created_at DESC`,
+        [uid]
+      ),
+    ]);
 
-        const [userRecord, userDoc, projectsSnap, transactionsSnap, domainsSnap] = await Promise.all([
-            auth.getUser(uid),
-            db.collection('users').doc(uid).get(),
-            db.collection('projects').where('userId', '==', uid).get(),
-            db.collection('transactions').where('userId', '==', uid).orderBy('createdAt', 'desc').limit(50).get(),
-            db.collection('domains').where('userId', '==', uid).get()
-        ]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const userData = userDoc.exists ? userDoc.data() : {};
-
-        res.json({
-            uid: userRecord.uid,
-            email: userRecord.email,
-            phoneNumber: userRecord.phoneNumber,
-            displayName: userRecord.displayName || userData.name,
-            credits: userData.credits || 0,
-            referralCode: userData.referralCode || null,
-            setupComplete: userData.setupComplete || false,
-            createdAt: userRecord.metadata.creationTime,
-            lastSignIn: userRecord.metadata.lastSignInTime,
-            projects: projectsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-            transactions: transactionsSnap.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-                createdAt: d.data().createdAt?.toDate() || null
-            })),
-            domains: domainsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-        });
-    } catch (error) {
-        console.error('Admin user detail error:', error);
-        res.status(500).json({ error: 'Failed to fetch user detail' });
-    }
+    res.json({
+      uid: user.id,
+      email: user.email,
+      displayName: user.name,
+      credits: user.credits || 0,
+      referralCode: user.referral_code,
+      setupComplete: !!user.setup_complete,
+      isAdmin: !!user.is_admin,
+      emailVerified: !!user.email_verified,
+      createdAt: user.created_at,
+      projects,
+      transactions,
+      domains,
+    });
+  } catch (error) {
+    console.error('Admin user detail error:', error);
+    res.status(500).json({ error: 'Failed to fetch user detail' });
+  }
 });
 
 // --- Add Credits to User ---
 router.post('/users/:uid/credits', async (req, res) => {
-    try {
-        const { uid } = req.params;
-        const { amount, description } = req.body;
-
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ error: 'Valid amount required' });
-        }
-
-        await addCredits(uid, parseInt(amount), description || `Admin credit grant by ${req.user.uid}`);
-        const newBalance = await getUserCredits(uid);
-
-        res.json({ success: true, newBalance });
-    } catch (error) {
-        console.error('Admin add credits error:', error);
-        res.status(500).json({ error: 'Failed to add credits' });
-    }
+  try {
+    const { uid } = req.params;
+    const { amount, description } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Valid amount required' });
+    await addCredits(uid, parseInt(amount), description || `Admin credit grant by ${req.user.uid}`);
+    const newBalance = await getUserCredits(uid);
+    res.json({ success: true, newBalance });
+  } catch (error) {
+    console.error('Admin add credits error:', error);
+    res.status(500).json({ error: 'Failed to add credits' });
+  }
 });
 
 // --- Projects ---
 router.get('/projects', async (req, res) => {
-    try {
-        const { status, userId, limit = 50 } = req.query;
-        let query = db.collection('projects').orderBy('createdAt', 'desc');
+  try {
+    const { status, userId, limit = 50 } = req.query;
+    const lim = Math.min(parseInt(limit) || 50, 200);
+    const conditions = [];
+    const params = [];
+    if (status) { conditions.push('status = ?'); params.push(status); }
+    if (userId) { conditions.push('user_id = ?'); params.push(userId); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-        if (status) query = query.where('status', '==', status);
-        if (userId) query = query.where('userId', '==', userId);
-        query = query.limit(parseInt(limit) || 50);
-
-        const snap = await query.get();
-        const projects = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate() || null,
-            completedAt: d.data().completedAt?.toDate() || null
-        }));
-
-        res.json({ projects });
-    } catch (error) {
-        console.error('Admin projects error:', error);
-        res.status(500).json({ error: 'Failed to fetch projects' });
-    }
+    const rows = await db.query(
+      `SELECT * FROM projects ${where} ORDER BY created_at DESC LIMIT ?`,
+      [...params, lim]
+    );
+    res.json({ projects: rows });
+  } catch (error) {
+    console.error('Admin projects error:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
 });
 
 // --- Transactions ---
 router.get('/transactions', async (req, res) => {
-    try {
-        const { userId, type, limit = 50 } = req.query;
-        let query = db.collection('transactions').orderBy('createdAt', 'desc');
+  try {
+    const { userId, type, limit = 50 } = req.query;
+    const lim = Math.min(parseInt(limit) || 50, 500);
+    const conditions = [];
+    const params = [];
+    if (userId) { conditions.push('user_id = ?'); params.push(userId); }
+    if (type) { conditions.push('type = ?'); params.push(type); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-        if (userId) query = query.where('userId', '==', userId);
-        if (type) query = query.where('type', '==', type);
-        query = query.limit(parseInt(limit) || 50);
-
-        const snap = await query.get();
-        const transactions = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate() || null
-        }));
-
-        res.json({ transactions });
-    } catch (error) {
-        console.error('Admin transactions error:', error);
-        res.status(500).json({ error: 'Failed to fetch transactions' });
-    }
+    const rows = await db.query(
+      `SELECT id, user_id AS userId, amount, type, description, balance_after AS balanceAfter,
+              razorpay_id AS transactionId, created_at AS createdAt
+       FROM transactions ${where} ORDER BY created_at DESC LIMIT ?`,
+      [...params, lim]
+    );
+    res.json({ transactions: rows });
+  } catch (error) {
+    console.error('Admin transactions error:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
 });
 
 // --- Token Usage ---
 router.get('/token-usage', async (req, res) => {
-    try {
-        const { days = 30 } = req.query;
-        const since = new Date();
-        since.setDate(since.getDate() - parseInt(days));
+  try {
+    const { days = 30 } = req.query;
+    const since = new Date();
+    since.setDate(since.getDate() - parseInt(days));
+    const sinceIso = since.toISOString();
 
-        const snap = await db.collection('tokenUsage')
-            .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(since))
-            .orderBy('createdAt', 'desc')
-            .get();
+    const rows = await db.query(
+      `SELECT service, model, input_tokens, output_tokens, total_tokens
+       FROM token_usage WHERE created_at >= ?`,
+      [sinceIso]
+    );
 
-        let totalInput = 0, totalOutput = 0, totalTokens = 0;
-        const byService = {};
-        const byModel = {};
+    let totalInput = 0, totalOutput = 0, totalTokens = 0;
+    const byService = {};
+    const byModel = {};
+    for (const d of rows) {
+      totalInput += d.input_tokens || 0;
+      totalOutput += d.output_tokens || 0;
+      totalTokens += d.total_tokens || 0;
 
-        snap.docs.forEach(d => {
-            const data = d.data();
-            totalInput += data.inputTokens || 0;
-            totalOutput += data.outputTokens || 0;
-            totalTokens += data.totalTokens || 0;
+      const svc = d.service || 'unknown';
+      if (!byService[svc]) byService[svc] = { input: 0, output: 0, total: 0, count: 0 };
+      byService[svc].input += d.input_tokens || 0;
+      byService[svc].output += d.output_tokens || 0;
+      byService[svc].total += d.total_tokens || 0;
+      byService[svc].count += 1;
 
-            const svc = data.service || 'unknown';
-            if (!byService[svc]) byService[svc] = { input: 0, output: 0, total: 0, count: 0 };
-            byService[svc].input += data.inputTokens || 0;
-            byService[svc].output += data.outputTokens || 0;
-            byService[svc].total += data.totalTokens || 0;
-            byService[svc].count += 1;
-
-            const mdl = data.model || 'gemini';
-            if (!byModel[mdl]) byModel[mdl] = { input: 0, output: 0, total: 0, count: 0 };
-            byModel[mdl].input += data.inputTokens || 0;
-            byModel[mdl].output += data.outputTokens || 0;
-            byModel[mdl].total += data.totalTokens || 0;
-            byModel[mdl].count += 1;
-        });
-
-        // Estimate cost (rough: $0.075/1M input, $0.30/1M output for Flash)
-        const estimatedCost = (totalInput * 0.000000075) + (totalOutput * 0.0000003);
-
-        res.json({
-            totalInput,
-            totalOutput,
-            totalTokens,
-            totalCalls: snap.size,
-            estimatedCost: parseFloat(estimatedCost.toFixed(4)),
-            byService,
-            byModel,
-            days: parseInt(days)
-        });
-    } catch (error) {
-        console.error('Admin token usage error:', error);
-        res.status(500).json({ error: 'Failed to fetch token usage' });
+      const mdl = d.model || 'gemini';
+      if (!byModel[mdl]) byModel[mdl] = { input: 0, output: 0, total: 0, count: 0 };
+      byModel[mdl].input += d.input_tokens || 0;
+      byModel[mdl].output += d.output_tokens || 0;
+      byModel[mdl].total += d.total_tokens || 0;
+      byModel[mdl].count += 1;
     }
+
+    const estimatedCost = (totalInput * 0.000000075) + (totalOutput * 0.0000003);
+    res.json({
+      totalInput,
+      totalOutput,
+      totalTokens,
+      totalCalls: rows.length,
+      estimatedCost: parseFloat(estimatedCost.toFixed(4)),
+      byService,
+      byModel,
+      days: parseInt(days),
+    });
+  } catch (error) {
+    console.error('Admin token usage error:', error);
+    res.status(500).json({ error: 'Failed to fetch token usage' });
+  }
 });
 
 // --- Referrals ---
 router.get('/referrals', async (req, res) => {
-    try {
-        const { status } = req.query;
-        let query = db.collection('referrals').orderBy('createdAt', 'desc');
-        if (status) query = query.where('status', '==', status);
-
-        const snap = await query.get();
-        const referrals = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate() || null,
-            completedAt: d.data().completedAt?.toDate() || null
-        }));
-
-        res.json({ referrals });
-    } catch (error) {
-        console.error('Admin referrals error:', error);
-        res.status(500).json({ error: 'Failed to fetch referrals' });
-    }
+  try {
+    const { status } = req.query;
+    let where = '';
+    const params = [];
+    if (status) { where = 'WHERE status = ?'; params.push(status); }
+    const rows = await db.query(
+      `SELECT id, referrer_user_id AS referrerUserId, referred_user_id AS referredUserId,
+              status, reward_amount AS rewardAmount,
+              created_at AS createdAt, completed_at AS completedAt
+       FROM referrals ${where} ORDER BY created_at DESC`,
+      params
+    );
+    res.json({ referrals: rows });
+  } catch (error) {
+    console.error('Admin referrals error:', error);
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
 });
 
 // --- Platform Config ---
 router.get('/config', async (req, res) => {
-    try {
-        const doc = await db.collection('platformConfig').doc('general').get();
-        const defaults = {
-            signupGiftCredits: 200,
-            referralEnabled: true,
-            referralRewardAmount: 100,
-            referralBonusAmount: 50
-        };
-        res.json(doc.exists ? { ...defaults, ...doc.data() } : defaults);
-    } catch (error) {
-        console.error('Admin config error:', error);
-        res.status(500).json({ error: 'Failed to fetch config' });
-    }
+  try {
+    const row = await db.one("SELECT value FROM platform_config WHERE key = 'general'");
+    const defaults = {
+      signupGiftCredits: 200,
+      referralEnabled: true,
+      referralRewardAmount: 100,
+      referralBonusAmount: 50,
+    };
+    res.json(row ? { ...defaults, ...db.parseJSON(row.value, {}) } : defaults);
+  } catch (error) {
+    console.error('Admin config error:', error);
+    res.status(500).json({ error: 'Failed to fetch config' });
+  }
 });
 
 router.put('/config', async (req, res) => {
-    try {
-        const updates = req.body;
-        updates.updatedAt = admin.firestore.FieldValue.serverTimestamp();
-        updates.updatedBy = req.user.uid;
-
-        await db.collection('platformConfig').doc('general').set(updates, { merge: true });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Admin config update error:', error);
-        res.status(500).json({ error: 'Failed to update config' });
-    }
+  try {
+    const updates = req.body;
+    const existing = await db.one("SELECT value FROM platform_config WHERE key = 'general'");
+    const current = existing ? db.parseJSON(existing.value, {}) : {};
+    const merged = { ...current, ...updates };
+    await db.exec(
+      `INSERT INTO platform_config (key, value, updated_at, updated_by)
+       VALUES ('general', ?, datetime('now'), ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+      [db.J(merged), req.user.uid]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Admin config update error:', error);
+    res.status(500).json({ error: 'Failed to update config' });
+  }
 });
 
 module.exports = router;

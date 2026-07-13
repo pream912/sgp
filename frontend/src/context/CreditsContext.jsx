@@ -1,53 +1,46 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { getCurrentUser } from '../lib/auth';
+import { subscribe } from '../lib/sse';
 
 const CreditsContext = createContext();
-
 export const useCredits = () => useContext(CreditsContext);
 
 export const CreditsProvider = ({ children }) => {
-    const [credits, setCredits] = useState(0);
-    const [loading, setLoading] = useState(true);
+  const [credits, setCredits] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        let unsubscribeCredits = null;
+  const fetchCredits = useCallback(async () => {
+    if (!getCurrentUser()) {
+      setCredits(0);
+      setLoading(false);
+      return;
+    }
+    try {
+      const { data } = await axios.get('/api/credits');
+      setCredits(data.credits || 0);
+    } catch (err) {
+      console.error('Failed to fetch credits:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Real-time listener for user credits
-                const userRef = doc(db, 'users', user.uid);
-                unsubscribeCredits = onSnapshot(userRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setCredits(docSnap.data().credits || 0);
-                    } else {
-                        setCredits(0);
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Error listening to credits:", error);
-                    setLoading(false);
-                });
-            } else {
-                setCredits(0);
-                setLoading(false);
-                if (unsubscribeCredits) unsubscribeCredits();
-            }
-        });
+  useEffect(() => {
+    if (!getCurrentUser()) {
+      setLoading(false);
+      return;
+    }
+    fetchCredits();
+    const off = subscribe('credits', (data) => {
+      if (data && typeof data.balance === 'number') setCredits(data.balance);
+    });
+    return () => off && off();
+  }, [fetchCredits]);
 
-        return () => {
-            unsubscribeAuth();
-            if (unsubscribeCredits) unsubscribeCredits();
-        };
-    }, []);
-
-    // Real-time listener handles updates automatically.
-    const fetchCredits = () => {};
-
-    return (
-        <CreditsContext.Provider value={{ credits, loading, fetchCredits }}>
-            {children}
-        </CreditsContext.Provider>
-    );
+  return (
+    <CreditsContext.Provider value={{ credits, loading, fetchCredits }}>
+      {children}
+    </CreditsContext.Provider>
+  );
 };

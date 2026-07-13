@@ -1,35 +1,25 @@
+#!/usr/bin/env node
+/**
+ * Add credits to a user (manual adjustment).
+ * Usage: node scripts/add_credits.js <uid> <amount>
+ */
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { addCredits } = require('../services/credits');
-const { admin } = require('../services/firebase');
-
-// Usage: node scripts/add_credits.js <UID> <AMOUNT>
-// Example: node scripts/add_credits.js abc12345 1000
 
 async function main() {
-    const args = process.argv.slice(2);
-    
-    if (args.length < 2) {
-        console.error('Usage: node scripts/add_credits.js <UID> <AMOUNT>');
-        process.exit(1);
-    }
-
-    const userId = args[0];
-    const amount = parseInt(args[1], 10);
-
-    if (isNaN(amount)) {
-        console.error('Amount must be a number');
-        process.exit(1);
-    }
-
-    console.log(`Adding ${amount} credits to user: ${userId}...`);
-
-    try {
-        await addCredits(userId, amount, 'Manual adjustment via CLI script', 'manual-' + Date.now());
-        console.log('Success!');
-        process.exit(0);
-    } catch (error) {
-        console.error('Failed:', error.message);
-        process.exit(1);
-    }
+  const [uid, amountStr] = process.argv.slice(2);
+  if (!uid || !amountStr) {
+    console.error('Usage: node scripts/add_credits.js <uid> <amount>');
+    process.exit(1);
+  }
+  const amount = parseInt(amountStr, 10);
+  if (isNaN(amount)) {
+    console.error('Amount must be a number');
+    process.exit(1);
+  }
+  console.log(`Adding ${amount} credits to user ${uid}...`);
+  await addCredits(uid, amount, 'Manual adjustment via CLI script', 'manual-' + Date.now());
+  console.log('Success!');
 }
 
-main();
+main().catch((err) => { console.error(err); process.exit(1); });

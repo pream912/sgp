@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 import { useCredits } from '../context/CreditsContext';
 import BuyCreditsModal from '../components/BuyCreditsModal';
 
@@ -17,7 +17,7 @@ const Credits = () => {
     const fetchHistory = async () => {
         setLoadingHistory(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get('/api/credits/history', {
                 headers: { Authorization: `Bearer ${token}` }
             });

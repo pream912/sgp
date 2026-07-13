@@ -1,14 +1,5 @@
 const { google } = require('googleapis');
-const { VertexAI } = require('@google-cloud/vertexai');
-
-const vertex_ai = new VertexAI({
-  project: process.env.GCP_PROJECT,
-  location: 'global',
-  apiEndpoint: 'aiplatform.googleapis.com'
-});
-const model = vertex_ai.preview.getGenerativeModel({
-  model: 'gemini-3.1-flash-lite-preview',
-});
+const { generateContent } = require('./ai-gateway');
 
 const customsearch = google.customsearch('v1');
 
@@ -80,6 +71,90 @@ Output JSON Format:
 Ensure valid JSON. Do not include markdown code blocks.
 `;
 
+// --- CANDIDATE SEARCH (multi-result, for Genni's "pick your business" cards) ---
+
+// Places text-search results cached briefly so a user refining their pick
+// doesn't burn quota; only populated on explicit submits, never per keystroke.
+const searchCache = new Map(); // normalizedQuery -> { at, places }
+const SEARCH_CACHE_TTL_MS = 15 * 60 * 1000;
+const SEARCH_CACHE_MAX = 200;
+
+function cacheGet(query) {
+    const entry = searchCache.get(query);
+    if (!entry) return null;
+    if (Date.now() - entry.at > SEARCH_CACHE_TTL_MS) {
+        searchCache.delete(query);
+        return null;
+    }
+    // Refresh recency for LRU eviction
+    searchCache.delete(query);
+    searchCache.set(query, entry);
+    return entry.places;
+}
+
+function cacheSet(query, places) {
+    if (searchCache.size >= SEARCH_CACHE_MAX) {
+        searchCache.delete(searchCache.keys().next().value);
+    }
+    searchCache.set(query, { at: Date.now(), places });
+}
+
+/**
+ * Search Google Places and return up to `maxResults` candidates for user selection.
+ * Cheap mapping only — full extraction happens in extractFromPlace() after the pick.
+ */
+async function searchBusinessCandidates(query, maxResults = 5) {
+    const places = await fetchPlacesCandidates(query, maxResults);
+    if (!places) return [];
+    return places.map(p => ({
+        placeId: p.id || null,
+        name: p.displayName?.text || '',
+        address: p.formattedAddress || '',
+        phone: p.nationalPhoneNumber || '',
+        rating: p.rating || null,
+        ratingCount: p.userRatingCount || 0,
+        website: p.websiteUri || '',
+        mapsUrl: p.googleMapsUri || '',
+        primaryType: prettifyType(p.primaryType),
+    }));
+}
+
+/**
+ * Full extraction for a specific candidate previously returned by
+ * searchBusinessCandidates (looked up from the cache by placeId).
+ */
+async function extractFromPlace(query, placeId) {
+    const normalized = query.trim().toLowerCase();
+    let places = cacheGet(normalized);
+    if (!places) places = await fetchPlacesCandidates(query, 5);
+    const place = (places || []).find(p => p.id === placeId);
+    if (!place) throw new Error('Selected business not found. Please search again.');
+    const { data, usage } = await formatPlacesData(place);
+    data.placePhotos = await resolvePlacePhotos(place);
+    return { data, usageLog: usage ? [usage] : [] };
+}
+
+/**
+ * Resolve Places photo references into public image URLs (Places Photo API media
+ * redirect). Capped small — these are hero/gallery candidates, not a full album.
+ */
+async function resolvePlacePhotos(place, max = 6) {
+    const key = process.env.GOOGLE_SEARCH_API_KEY;
+    if (!key || !Array.isArray(place.photos)) return [];
+    return place.photos
+        .slice(0, max)
+        .filter(p => p.name)
+        .map(p => `https://places.googleapis.com/v1/${p.name}/media?maxWidthPx=1200&key=${key}`);
+}
+
+function prettifyType(primaryType) {
+    // "pizza_restaurant" -> "Pizza Restaurant"
+    return (primaryType || '')
+        .split('_').filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 // --- MAIN FUNCTION ---
 
 async function extractFromUrl(query) {
@@ -89,10 +164,11 @@ async function extractFromUrl(query) {
 
         // 1. Try Google Places API (New) - Preferred for local businesses
         try {
-            const placesData = await fetchPlacesData(query);
-            if (placesData) {
+            const places = await fetchPlacesCandidates(query, 1);
+            if (places && places.length > 0) {
                 console.log('Successfully fetched data from Google Places API.');
-                const { data, usage } = await formatPlacesData(placesData);
+                const { data, usage } = await formatPlacesData(places[0]);
+                data.placePhotos = await resolvePlacePhotos(places[0]);
                 if (usage) usageLog.push(usage);
                 return { data, usageLog };
             }
@@ -114,22 +190,31 @@ async function extractFromUrl(query) {
 
 // --- PLACES API STRATEGY ---
 
-async function fetchPlacesData(query) {
+async function fetchPlacesCandidates(query, maxResults = 5) {
     const key = process.env.GOOGLE_SEARCH_API_KEY;
     if (!key) return null;
 
+    const normalized = query.trim().toLowerCase();
+    const cached = cacheGet(normalized);
+    if (cached) return cached.slice(0, maxResults);
+
     const url = `https://places.googleapis.com/v1/places:searchText`;
     const fieldMask = [
+        'places.id',
         'places.displayName',
         'places.formattedAddress',
         'places.nationalPhoneNumber',
         'places.regularOpeningHours',
-        'places.reviews.rating', // Explicitly request rating
+        'places.rating',
+        'places.userRatingCount',
+        'places.googleMapsUri',
+        'places.reviews.rating',
         'places.reviews.text',
         'places.reviews.authorAttribution',
         'places.editorialSummary',
         'places.websiteUri',
-        'places.primaryType' 
+        'places.primaryType',
+        'places.photos.name'
     ].join(',');
 
     const response = await fetch(url, {
@@ -143,23 +228,22 @@ async function fetchPlacesData(query) {
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
         throw new Error(data.error.message);
     }
 
     if (!data.places || data.places.length === 0) {
-        return null; 
+        return null;
     }
 
-    return data.places[0];
+    cacheSet(normalized, data.places);
+    return data.places.slice(0, maxResults);
 }
 
 async function formatPlacesData(place) {
-    // 1. Prepare raw data for AI to refine
-    // Explicitly format reviews with author names here, filtering for positive ones (4+ stars)
     const reviews = place.reviews
-        ?.filter(r => r.rating >= 4) // Only positive reviews
+        ?.filter(r => r.rating >= 4)
         .slice(0, 5)
         .map(r => {
             const text = r.text?.text || r.originalText?.text || "Great service!";
@@ -167,41 +251,23 @@ async function formatPlacesData(place) {
             return `"${text}" - ${author}`;
         }) || [];
 
-    const rawDataSummary = JSON.stringify({
-        name: place.displayName?.text,
-        summary: place.editorialSummary?.text,
-        type: place.primaryType,
-        reviews: reviews,
-        address: place.formattedAddress,
-        phone: place.nationalPhoneNumber,
-        website: place.websiteUri,
-        hours: place.regularOpeningHours?.weekdayDescriptions
-    });
+    const prettyIndustry = prettifyType(place.primaryType);
 
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT.replace('{DATA}', rawDataSummary) }] }],
-    });
-
-    const usage = result.response.usageMetadata || null;
-    let textResponse = result.response.candidates[0].content.parts[0].text;
-    textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    try {
-        return { data: JSON.parse(textResponse), usage };
-    } catch (e) {
-        console.error("Failed to parse AI JSON response", textResponse);
-        return {
-            data: {
-                name: place.displayName?.text || '',
-                address: place.formattedAddress || '',
-                phone: place.nationalPhoneNumber || '',
-                website: place.websiteUri || '',
-                description: place.editorialSummary?.text || '',
-                reviews: reviews
-            },
-            usage
-        };
-    }
+    return {
+        data: {
+            name: place.displayName?.text || '',
+            industry: prettyIndustry,
+            description: place.editorialSummary?.text || '',
+            address: place.formattedAddress || '',
+            phone: place.nationalPhoneNumber || '',
+            website: place.websiteUri || '',
+            email: '',
+            socials: { facebook: '', instagram: '', twitter: '', linkedin: '', youtube: '' },
+            openingHours: place.regularOpeningHours?.weekdayDescriptions?.join('\n') || '',
+            reviews,
+        },
+        usage: null,
+    };
 }
 
 // --- CUSTOM SEARCH STRATEGY ---
@@ -232,16 +298,31 @@ SchemaData: ${schema}
         `;
     }).join('\n---\n');
 
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: SEARCH_PROMPT.replace('{SEARCH_RESULTS}', searchContext) }] }],
-    });
+    let result;
+    try {
+        result = await generateContent(SEARCH_PROMPT.replace('{SEARCH_RESULTS}', searchContext), {
+            model: '@cf/meta/llama-3.1-8b-instruct-fast',
+            maxTokens: 1024,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+        });
+    } catch (aiError) {
+        console.warn('AI synthesis failed for search results:', aiError.message);
+        const first = items[0] || {};
+        return {
+            data: {
+                name: first.title || query,
+                description: first.snippet || '',
+                website: first.link || ''
+            },
+            usage: null
+        };
+    }
 
-    const usage = result.response.usageMetadata || null;
-    let textResponse = result.response.candidates[0].content.parts[0].text;
-    textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    let textResponse = result.text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     try {
-        return { data: JSON.parse(textResponse), usage };
+        return { data: JSON.parse(textResponse), usage: result.usage };
     } catch (e) {
         console.error("Failed to parse AI JSON response (Search)", textResponse);
         return {
@@ -249,9 +330,9 @@ SchemaData: ${schema}
                 name: query,
                 description: "Could not automatically extract details."
             },
-            usage
+            usage: result.usage
         };
     }
 }
 
-module.exports = { extractFromUrl };
+module.exports = { extractFromUrl, searchBusinessCandidates, extractFromPlace };

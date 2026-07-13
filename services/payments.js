@@ -2,40 +2,31 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 require('dotenv').config();
 
-console.log('Razorpay Init - ID:', process.env.RAZORPAY_KEY_ID ? 'Exists' : 'Missing');
-console.log('Razorpay Init - Secret:', process.env.RAZORPAY_KEY_SECRET ? 'Exists' : 'Missing');
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+let _client = null;
+function razorpay() {
+    if (_client) return _client;
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!key_id || !key_secret) {
+        throw new Error('Razorpay not configured: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET');
+    }
+    _client = new Razorpay({ key_id, key_secret });
+    return _client;
+}
 
 async function createOrder(amount, currency = 'INR', receipt) {
-    try {
-        const options = {
-            amount: amount, // Amount in smallest currency unit (e.g., paise)
-            currency: currency,
-            receipt: receipt
-        };
-        const order = await razorpay.orders.create(options);
-        return order;
-    } catch (error) {
-        console.error('Razorpay Create Order Error:', error);
-        throw error;
-    }
+    const options = { amount, currency, receipt };
+    return razorpay().orders.create(options);
 }
 
 function verifyPayment(orderId, paymentId, signature) {
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) throw new Error('RAZORPAY_KEY_SECRET not set');
     const generatedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(orderId + "|" + paymentId)
+        .createHmac('sha256', secret)
+        .update(orderId + '|' + paymentId)
         .digest('hex');
-
-    if (generatedSignature === signature) {
-        return true;
-    } else {
-        return false;
-    }
+    return generatedSignature === signature;
 }
 
 module.exports = { createOrder, verifyPayment };

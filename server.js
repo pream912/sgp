@@ -3,2983 +3,1815 @@ console.log("Starting Server...");
 const express = require('express');
 const fs = require('fs-extra');
 const path = require('path');
+const crypto = require('crypto');
 const multer = require('multer');
-const nodemailer = require('nodemailer');
 const cron = require('node-cron');
-const { buildSite, rebuildSite } = require('./services/builder');
-const { deploySite, makeBucketPrivate, makeBucketPublic, deleteSiteBucket } = require('./services/deploy');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+
+const { sendEmail, EMAIL_FROM } = require('./services/email');
+const { buildSite, rebuildSite, rebuildForEdit, prepareForPublish } = require('./services/builder');
+const { deploySite, deleteSiteBucket } = require('./services/deploy');
 const { uploadDirectory, downloadDirectory, uploadPreview } = require('./services/storage');
 const { createOrder, verifyPayment } = require('./services/payments');
 const { extractFromUrl } = require('./services/business-extractor');
-const { checkAvailability, purchaseDomain, getSuggestions, setupGCPDomain, verifyDomainDNS, checkSubdomainAvailability, cleanupGCPDomain, listDNSRecords, addDNSRecordGeneric, deleteDNSRecord } = require('./services/domains');
+const { checkAvailability, purchaseDomain, getSuggestions, setupCFDomain, verifyDomainDNS, checkSubdomainAvailability, cleanupCFDomain, listDNSRecords, addDNSRecordGeneric, deleteDNSRecord } = require('./services/domains');
 const { generateCode, fixCode, regenerateSection, updateSectionContent, regeneratePage } = require('./services/ai-coder');
 const { generateDesign, generatePalette } = require('./services/ai-architect');
 const { captureScreenshot } = require('./services/screenshot');
 const { getUserCredits, addCredits, deductCredits, getTransactions } = require('./services/credits');
-const { db, admin, auth } = require('./services/firebase');
+
+const db = require('./services/db');
+const { issueToken, generateOtp, hashOtp, sendOtpEmail, OTP_TTL_SECONDS, OTP_MAX_ATTEMPTS } = require('./services/auth');
+const { hub, sseHandler } = require('./services/sse');
+const { saveTokenUsage, saveBuildArtifacts, sendBuildNotification, appendProjectLog, retryWithBackoff, ensureProjectSource } = require('./services/build-support');
+const { startBuild, runAgentBuildProcess, registerLegacyRunner } = require('./services/build-runner');
+const pageService = require('./services/page-service');
 const verifyToken = require('./middleware/auth');
 const verifyAdmin = require('./middleware/adminAuth');
 
-const cookieParser = require('cookie-parser'); // Import cookie-parser
-const cors = require('cors'); // Import cors
-
 const app = express();
-app.use(cors({ origin: true, credentials: true })); // Enable CORS for all origins with credentials
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
-app.use(cookieParser()); // Use cookie-parser
+app.use(cookieParser());
 
-// --- Token Usage Tracking ---
-async function saveTokenUsage(entries, projectId, userId) {
-    if (!db || !entries || entries.length === 0) return;
-    try {
-        const batch = db.batch();
-        for (const entry of entries) {
-            const ref = db.collection('tokenUsage').doc();
-            batch.set(ref, {
-                projectId: projectId || null,
-                userId: userId || null,
-                model: entry.model || 'gemini',
-                service: entry.service || 'unknown',
-                action: entry.action || null,
-                inputTokens: entry.promptTokenCount || 0,
-                outputTokens: entry.candidatesTokenCount || 0,
-                totalTokens: entry.totalTokenCount || 0,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        await batch.commit();
-        console.log(`[TokenUsage] Saved ${entries.length} usage entries for project ${projectId}`);
-    } catch (err) {
-        console.error('[TokenUsage] Failed to save:', err.message);
-    }
+const PORT = process.env.PORT || 3000;
+
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+// ------------------------------------------------------------------
+// Helpers — DB row → API JSON shape
+// ------------------------------------------------------------------
+
+function projectRow(r) {
+  if (!r) return null;
+  return {
+    id: r.id,
+    projectId: r.id,
+    userId: r.user_id,
+    status: r.status,
+    query: r.query,
+    subdomain: r.subdomain,
+    customDomain: r.custom_domain,
+    isPublished: !!r.is_published,
+    publishedPlan: r.published_plan,
+    subscriptionStartDate: r.subscription_start,
+    subscriptionExpiryDate: r.subscription_expiry,
+    isExpired: !!r.is_expired,
+    pages: db.parseJSON(r.pages, []),
+    buildProgress: r.build_progress || 0,
+    buildProgressMessage: r.build_progress_message,
+    logs: db.parseJSON(r.logs, []),
+    url: r.url,
+    deployUrl: r.deploy_url,
+    bucketUrl: r.bucket_url,
+    stylePreset: r.style_preset,
+    userContext: db.parseJSON(r.user_context, null),
+    pipeline: r.pipeline || 'legacy',
+    compileState: r.compile_state || 'compiled',
+    isFreeBuild: !!r.is_free_build,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    completedAt: r.completed_at,
+  };
 }
 
-// --- Retry with Exponential Backoff (for 429 / RESOURCE_EXHAUSTED) ---
-async function retryWithBackoff(fn, maxRetries = 3) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            return await fn();
-        } catch (err) {
-            const msg = err.message || '';
-            const is429 = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
-            if (!is429 || attempt === maxRetries) {
-                if (is429) {
-                    const highDemandError = new Error('Our AI services are currently experiencing high demand. Please try again in a few minutes.');
-                    highDemandError.statusCode = 503;
-                    throw highDemandError;
-                }
-                throw err;
-            }
-            const delay = 10000 * Math.pow(2, attempt - 1) + Math.random() * 2000;
-            console.warn(`[Retry] 429 hit, attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay / 1000)}s...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
+function userRow(r) {
+  if (!r) return null;
+  return {
+    id: r.id,
+    uid: r.id,
+    email: r.email,
+    name: r.name,
+    credits: r.credits || 0,
+    isAdmin: !!r.is_admin,
+    emailVerified: !!r.email_verified,
+    referralCode: r.referral_code,
+    setupComplete: !!r.setup_complete,
+    preferredLanguage: r.preferred_language || null,
+    freeBuildUsed: !!r.free_build_used,
+    createdAt: r.created_at,
+  };
 }
 
-// --- Analytics Buffer ---
-const analyticsBuffer = new Map(); // projectId -> { pageviews, bandwidth }
+async function findProjectById(id) {
+  const r = await db.one('SELECT * FROM projects WHERE id = ?', [id]);
+  return projectRow(r);
+}
+
+async function findProjectOwned(id, userId) {
+  const r = await db.one('SELECT * FROM projects WHERE id = ? AND user_id = ?', [id, userId]);
+  return projectRow(r);
+}
+
+// ------------------------------------------------------------------
+// Analytics (buffered → D1 batched flush every 60s)
+// ------------------------------------------------------------------
+
+const analyticsBuffer = new Map();   // projectId -> { pageviews, bandwidth }
 const projectOwnerCache = new Map(); // projectId -> userId
 
 function trackPageview(projectId, contentLength, userId) {
-    const entry = analyticsBuffer.get(projectId) || { pageviews: 0, bandwidth: 0 };
-    entry.pageviews += 1;
-    entry.bandwidth += (contentLength || 0);
-    analyticsBuffer.set(projectId, entry);
-    if (userId) projectOwnerCache.set(projectId, userId);
+  const entry = analyticsBuffer.get(projectId) || { pageviews: 0, bandwidth: 0 };
+  entry.pageviews += 1;
+  entry.bandwidth += (contentLength || 0);
+  analyticsBuffer.set(projectId, entry);
+  if (userId) projectOwnerCache.set(projectId, userId);
 }
 
 async function flushAnalytics() {
-    if (!db || analyticsBuffer.size === 0) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const entries = Array.from(analyticsBuffer.entries());
-    analyticsBuffer.clear();
+  if (analyticsBuffer.size === 0) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const entries = Array.from(analyticsBuffer.entries());
+  analyticsBuffer.clear();
 
-    // Group by userId for userStats aggregation
-    const userAgg = new Map(); // userId -> { pageviews, bandwidth }
+  const userAgg = new Map();
+  for (const [projectId, data] of entries) {
+    try {
+      await db.transaction([
+        {
+          sql: `INSERT INTO analytics_totals (project_id, total_pageviews, total_bandwidth, last_updated)
+                VALUES (?, ?, ?, datetime('now'))
+                ON CONFLICT(project_id) DO UPDATE SET
+                  total_pageviews = total_pageviews + excluded.total_pageviews,
+                  total_bandwidth = total_bandwidth + excluded.total_bandwidth,
+                  last_updated = datetime('now')`,
+          params: [projectId, data.pageviews, data.bandwidth],
+        },
+        {
+          sql: `INSERT INTO analytics_daily (project_id, date, pageviews, bandwidth)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(project_id, date) DO UPDATE SET
+                  pageviews = pageviews + excluded.pageviews,
+                  bandwidth = bandwidth + excluded.bandwidth`,
+          params: [projectId, today, data.pageviews, data.bandwidth],
+        },
+      ]);
 
-    for (const [projectId, data] of entries) {
-        try {
-            // Per-project analytics (kept for per-site breakdown)
-            const analyticsRef = db.collection('analytics').doc(projectId);
-            const dailyRef = analyticsRef.collection('daily').doc(today);
-            const batch = db.batch();
-            batch.set(analyticsRef, {
-                totalPageviews: admin.firestore.FieldValue.increment(data.pageviews),
-                totalBandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
-                lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-            batch.set(dailyRef, {
-                pageviews: admin.firestore.FieldValue.increment(data.pageviews),
-                bandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
-                date: today
-            }, { merge: true });
-            await batch.commit();
-
-            // Accumulate per-user totals
-            let userId = projectOwnerCache.get(projectId);
-            if (!userId) {
-                const snap = await db.collection('projects').where('projectId', '==', projectId).limit(1).get();
-                if (!snap.empty) {
-                    userId = snap.docs[0].data().userId;
-                    projectOwnerCache.set(projectId, userId);
-                }
-            }
-            if (userId) {
-                const u = userAgg.get(userId) || { pageviews: 0, bandwidth: 0 };
-                u.pageviews += data.pageviews;
-                u.bandwidth += data.bandwidth;
-                userAgg.set(userId, u);
-            }
-        } catch (err) {
-            console.error(`[Analytics] Flush failed for ${projectId}:`, err.message);
+      let userId = projectOwnerCache.get(projectId);
+      if (!userId) {
+        const owner = await db.one('SELECT user_id FROM projects WHERE id = ?', [projectId]);
+        if (owner) {
+          userId = owner.user_id;
+          projectOwnerCache.set(projectId, userId);
         }
+      }
+      if (userId) {
+        const u = userAgg.get(userId) || { pageviews: 0, bandwidth: 0 };
+        u.pageviews += data.pageviews;
+        u.bandwidth += data.bandwidth;
+        userAgg.set(userId, u);
+      }
+    } catch (err) {
+      console.error(`[Analytics] Flush failed for ${projectId}:`, err.message);
     }
+  }
 
-    // Flush user-level aggregates
-    for (const [userId, data] of userAgg) {
-        try {
-            const batch = db.batch();
-            const userStatsRef = db.collection('userStats').doc(userId);
-            const userDailyRef = userStatsRef.collection('daily').doc(today);
-            batch.set(userStatsRef, {
-                totalPageviews: admin.firestore.FieldValue.increment(data.pageviews),
-                totalBandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
-                lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-            batch.set(userDailyRef, {
-                pageviews: admin.firestore.FieldValue.increment(data.pageviews),
-                bandwidth: admin.firestore.FieldValue.increment(data.bandwidth),
-                date: today
-            }, { merge: true });
-            await batch.commit();
-        } catch (err) {
-            console.error(`[Analytics] User stats flush failed for ${userId}:`, err.message);
-        }
+  for (const [userId, data] of userAgg) {
+    try {
+      await db.transaction([
+        {
+          sql: `INSERT INTO user_stats_totals (user_id, total_pageviews, total_bandwidth, last_updated)
+                VALUES (?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                  total_pageviews = total_pageviews + excluded.total_pageviews,
+                  total_bandwidth = total_bandwidth + excluded.total_bandwidth,
+                  last_updated = datetime('now')`,
+          params: [userId, data.pageviews, data.bandwidth],
+        },
+        {
+          sql: `INSERT INTO user_stats_daily (user_id, date, pageviews, bandwidth)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(user_id, date) DO UPDATE SET
+                  pageviews = pageviews + excluded.pageviews,
+                  bandwidth = bandwidth + excluded.bandwidth`,
+          params: [userId, today, data.pageviews, data.bandwidth],
+        },
+      ]);
+    } catch (err) {
+      console.error(`[Analytics] User stats flush failed for ${userId}:`, err.message);
     }
+  }
 
-    console.log(`[Analytics] Flushed ${entries.length} project(s), ${userAgg.size} user(s) to Firestore`);
+  console.log(`[Analytics] Flushed ${entries.length} project(s), ${userAgg.size} user(s)`);
 }
 
 setInterval(flushAnalytics, 60000);
 process.on('SIGTERM', async () => { await flushAnalytics(); process.exit(0); });
 process.on('SIGINT', async () => { await flushAnalytics(); process.exit(0); });
 
-// --- Wildcard Subdomain & Custom Domain Routing ---
-app.use(async (req, res, next) => {
-    const host = req.headers.host;
-    const DOMAIN_SUFFIX = '.genweb.in';
-    
-    // Exclude reserved subdomains/hosts
-    const RESERVED_HOSTS = [`www${DOMAIN_SUFFIX}`, `api${DOMAIN_SUFFIX}`, `app${DOMAIN_SUFFIX}`, `localhost:${PORT}`];
+// ------------------------------------------------------------------
+// Pageview tracking (called by CF Worker site-router)
+// ------------------------------------------------------------------
 
-    // Bypass routing for API, Sites, Reserved Hosts, and Cloud Run default domains
-    if (!host || RESERVED_HOSTS.includes(host) || host.includes('run.app') || req.path.startsWith('/api/') || req.path.startsWith('/sites/')) {
-        return next();
-    }
-
-    try {
-        let projectId = null;
-
-        let projectUserId = null;
-
-        // 1. Check if it's a *.genweb.in subdomain
-        if (host.endsWith(DOMAIN_SUFFIX)) {
-            const subdomain = host.slice(0, -DOMAIN_SUFFIX.length);
-            console.log(`[Router] Checking subdomain: ${subdomain}`);
-
-            if (db) {
-                const snapshot = await db.collection('projects').where('subdomain', '==', subdomain).limit(1).get();
-                if (!snapshot.empty) {
-                    const pData = snapshot.docs[0].data();
-                    projectId = pData.projectId;
-                    projectUserId = pData.userId;
-                }
-            }
-        }
-        // 2. Check if it's a Custom Domain
-        else {
-            console.log(`[Router] Checking custom domain: ${host}`);
-            if (db) {
-                const snapshot = await db.collection('projects').where('customDomain', '==', host).limit(1).get();
-                if (!snapshot.empty) {
-                    const pData = snapshot.docs[0].data();
-                    projectId = pData.projectId;
-                    projectUserId = pData.userId;
-                }
-            }
-        }
-
-        // 3. Proxy if Project Found
-        if (projectId) {
-            console.log(`[Router] Proxying for Project ID: ${projectId}`);
-            
-            const bucketName = `site-${projectId}`;
-            const filePath = req.url === '/' ? '/index.html' : req.url;
-            const gcsUrl = `https://storage.googleapis.com/${bucketName}${filePath}`;
-            
-            const https = require('https');
-            
-            return https.get(gcsUrl, (proxyRes) => {
-                if (proxyRes.statusCode === 404 && req.url !== '/') {
-                     res.status(404).send('Not Found');
-                     return;
-                }
-
-                // Track pageviews for HTML pages
-                const contentType = proxyRes.headers['content-type'] || '';
-                if (proxyRes.statusCode === 200 && contentType.includes('text/html')) {
-                    const cl = parseInt(proxyRes.headers['content-length'] || '0', 10);
-                    trackPageview(projectId, cl, projectUserId);
-                }
-
-                res.status(proxyRes.statusCode);
-                Object.keys(proxyRes.headers).forEach(key => {
-                     res.setHeader(key, proxyRes.headers[key]);
-                });
-
-                proxyRes.pipe(res);
-            }).on('error', (e) => {
-                console.error('Proxy Stream Error:', e);
-                res.status(502).send('Upstream Error');
-            });
-        }
-        
-        // If it was a *.genweb.in request but no project found -> 404
-        if (host.endsWith(DOMAIN_SUFFIX)) {
-            return res.status(404).send('Site not found');
-        }
-
-        // For custom domains not found, we might want to let it fall through 
-        // (maybe it's a misconfigured DNS hitting our IP) or 404.
-        // If we are the default backend, we should probably 404 if not found in DB.
-        // But for safety, let's next() if it's just some random hit, 
-        // unless we want to be strict.
-        // Being strict is better for a "Catch All" backend.
-        if (!projectId && host.includes('.')) { 
-             // It looks like a domain request but we don't know it.
-             return res.status(404).send('Site not found on GenWeb.');
-        }
-
-    } catch (error) {
-        console.error('Routing error:', error);
-        return res.status(500).send('Internal Server Error');
-    }
-    
-    next();
+app.post('/api/analytics/pageview', async (req, res) => {
+  const { projectId } = req.body;
+  if (!projectId) return res.status(400).json({ error: 'Missing projectId' });
+  trackPageview(projectId, 0, null);
+  res.json({ ok: true });
 });
 
-// Configure Multer for file uploads
 const upload = multer({ dest: path.join(__dirname, 'temp/uploads') });
 
-// Helper: Ensure Project Source Exists (Download from GCS if missing)
-async function ensureProjectSource(id) {
-    const projectDir = path.join(__dirname, 'projects_source', id);
-    if (await fs.pathExists(projectDir)) {
-        return true;
-    }
-    
-    console.log(`[${id}] Project source missing locally. Attempting to download from GCS...`);
-    try {
-        await fs.ensureDir(projectDir);
-        // Download from GCS: prefix 'projects/{id}' -> local 'projects_source/{id}'
-        // Our storage structure is projects/{id}/...
-        const success = await downloadDirectory(`projects/${id}`, projectDir);
-        if (success) {
-            console.log(`[${id}] Project source restored.`);
-
-            // Ensure the site is available in public/sites for the editor preview
-            try {
-                const distPath = path.join(projectDir, 'dist');
-                const publicSitePath = path.join(__dirname, 'public/sites', id);
-                if (await fs.pathExists(distPath)) {
-                    await fs.copy(distPath, publicSitePath);
-                    console.log(`[${id}] Restored site copied to public/sites for preview.`);
-                }
-            } catch (copyErr) {
-                 console.warn(`[${id}] Failed to copy to public/sites:`, copyErr.message);
-            }
-
-            return true;
-        } else {
-            console.warn(`[${id}] Project source not found in GCS.`);
-            // Cleanup empty dir
-            await fs.remove(projectDir); 
-            return false;
-        }
-    } catch (error) {
-        console.error(`[${id}] Failed to restore project source:`, error);
-        return false;
-    }
-}
-
+// ------------------------------------------------------------------
 // Protect Static Sites
+// ------------------------------------------------------------------
+
 app.use('/sites/:projectId', async (req, res, next) => {
-    const { projectId } = req.params;
-    
-    // Ensure project source and public site files exist (Hydrate from Private Bucket if needed)
-    try {
-        await ensureProjectSource(projectId);
-        
-        // Double check: Ensure public/sites/${projectId} exists (Sync from projects_source if needed)
-        // ensureProjectSource only copies if it downloads. If source exists but public doesn't, we need to copy.
-        const publicSitePath = path.join(__dirname, 'public/sites', projectId);
-        const sourceDistPath = path.join(__dirname, 'projects_source', projectId, 'dist');
-        
-        if (!await fs.pathExists(publicSitePath) && await fs.pathExists(sourceDistPath)) {
-            console.log(`[${projectId}] Syncing dist to public/sites for preview...`);
-            await fs.copy(sourceDistPath, publicSitePath);
-        }
-    } catch (err) {
-        console.error(`[${projectId}] Failed to ensure site files:`, err);
-        // Continue anyway? Or fail? If files are missing, static middleware will 404.
+  const { projectId } = req.params;
+
+  try {
+    await ensureProjectSource(projectId);
+    const publicSitePath = path.join(__dirname, 'public/sites', projectId);
+    const sourceDistPath = path.join(__dirname, 'projects_source', projectId, 'dist');
+    if (!await fs.pathExists(publicSitePath) && await fs.pathExists(sourceDistPath)) {
+      console.log(`[${projectId}] Syncing dist to public/sites for preview...`);
+      await fs.copy(sourceDistPath, publicSitePath);
     }
-    
-    // Allow if verifying ownership via token or if published
-    try {
-        if (!db) return next(); // Fallback if no DB
+  } catch (err) {
+    console.error(`[${projectId}] Failed to ensure site files:`, err);
+  }
 
-        const projectRef = db.collection('projects').where('projectId', '==', projectId);
-        const snapshot = await projectRef.get();
-        
-        if (snapshot.empty) {
-            // If project doesn't exist in DB but exists on disk? 
-            // Maybe it's a temp one or deleted. Block to be safe.
-            return res.status(404).send('Site not found');
-        }
+  try {
+    const project = await findProjectById(projectId);
+    if (!project) return res.status(404).send('Site not found');
 
-        const projectData = snapshot.docs[0].data();
+    if (project.isPublished) return next();
 
-        // 1. Public Access (Published)
-        if (projectData.isPublished) {
-            return next();
-        }
+    let token = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
+    if (!token && req.query.token) token = req.query.token;
 
-        // 2. Owner Access (via Cookie or Header)
-        let token = req.cookies?.access_token || req.headers.authorization?.split(' ')[1];
-        
-        // Check query param for initial iframe load if cookie fails/cross-site issues (fallback)
-        if (!token && req.query.token) {
-            token = req.query.token;
-        }
-
-        if (token) {
-            try {
-                const decoded = await admin.auth().verifyIdToken(token);
-                if (decoded.uid === projectData.userId) {
-                    return next();
-                }
-            } catch (e) {
-                // Token invalid
-            }
-        }
-
-        return res.status(403).send('Access Denied. This site is not published yet. <a href="/">Go Back</a>');
-
-    } catch (error) {
-        console.error('Site protection error:', error);
-        return res.status(500).send('Server Error');
+    if (token) {
+      try {
+        const { verifyToken: verifyJwt } = require('./services/auth');
+        const claims = verifyJwt(token);
+        if (claims.uid === project.userId) return next();
+      } catch (_) { /* invalid token */ }
     }
+
+    return res.status(403).send('Access Denied. This site is not published yet. <a href="/">Go Back</a>');
+  } catch (error) {
+    console.error('Site protection error:', error);
+    return res.status(500).send('Server Error');
+  }
 });
 
-// Serve generated sites statically (fallback, main hosting is GCS)
 app.use('/sites', express.static(path.join(__dirname, 'public/sites')));
 
-const PORT = process.env.PORT || 3000;
+// ------------------------------------------------------------------
+// Dashboard stats
+// ------------------------------------------------------------------
 
-// Email Transporter (Configure with your SMTP settings)
-const transporter = nodemailer.createTransport({
-    host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-    port: parseInt(process.env.BREVO_SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_KEY
-    }
-});
-const SMTP_FROM = process.env.BREVO_SMTP_FROM || 'noreply@genweb.in';
-
-// Helper: Save Artifacts (GCS Only - No Cloudflare Deploy)
-async function saveBuildArtifacts(id, distPath, userId) {
-    try {
-        console.log(`[${id}] Saving build artifacts to GCS...`);
-        
-        // 1. Upload DIST to GCS (projects/{id}/dist)
-        await uploadDirectory(distPath, `projects/${id}/dist`);
-
-        // 2. Update Local Preview (public/sites) & Generate Screenshot
-        const localSitePath = path.join(__dirname, 'public/sites', id);
-        await fs.copy(distPath, localSitePath);
-
-        // 3. Generate screenshot, upload to GCS, and store URL in Firebase
-        let previewUrl = null;
-        try {
-            console.log(`[${id}] Auto-generating preview screenshot...`);
-            const previewPath = path.join(localSitePath, 'preview.jpg');
-            await captureScreenshot(path.join(localSitePath, 'index.html'), previewPath);
-            previewUrl = await uploadPreview(previewPath, id);
-        } catch (e) {
-            console.warn(`[${id}] Preview generation/upload failed:`, e.message);
-        }
-
-        const localUrl = `http://localhost:${PORT}/sites/${id}/index.html`;
-
-        // Update DB with timestamp and preview URL
-        if (db) {
-            const updateData = {
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
-            };
-            if (previewUrl) {
-                updateData.previewUrl = previewUrl;
-            }
-
-            const snapshot = await db.collection('projects').where('projectId', '==', id).get();
-            if (!snapshot.empty) {
-                await snapshot.docs[0].ref.update(updateData);
-            }
-        }
-
-        return localUrl;
-    } catch (error) {
-        console.error(`[${id}] Save artifacts failed:`, error);
-        throw error; 
-    }
-}
-
-// Dashboard Stats (optimized: reads from pre-aggregated userStats)
 app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
+  try {
+    const userId = req.user.uid;
 
-        // Build date keys for last 7 days
-        const now = new Date();
-        const dateKeys = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(now);
-            d.setDate(d.getDate() - i);
-            dateKeys.push(d.toISOString().slice(0, 10));
-        }
-
-        // Run all reads in parallel: projects, leads count, userStats, 7 daily docs
-        const projectsPromise = db.collection('projects').where('userId', '==', userId).get();
-        const userStatsPromise = db.collection('userStats').doc(userId).get();
-        const dailyPromises = dateKeys.map(date =>
-            db.collection('userStats').doc(userId).collection('daily').doc(date).get()
-        );
-
-        const [projectsSnap, userStatsDoc, ...dailyDocs] = await Promise.all([
-            projectsPromise, userStatsPromise, ...dailyPromises
-        ]);
-
-        const totalSites = projectsSnap.size;
-        const publishedSites = projectsSnap.docs.filter(d => d.data().isPublished).length;
-
-        // Count leads (single query, not per-project)
-        const projectIds = projectsSnap.docs.map(d => d.data().projectId);
-        let totalLeads = 0;
-        if (projectIds.length > 0) {
-            const chunks = [];
-            for (let i = 0; i < projectIds.length; i += 30) {
-                chunks.push(projectIds.slice(i, i + 30));
-            }
-            const leadsResults = await Promise.all(
-                chunks.map(chunk => db.collection('leads').where('projectId', 'in', chunk).get())
-            );
-            totalLeads = leadsResults.reduce((sum, snap) => sum + snap.size, 0);
-        }
-
-        const statsData = userStatsDoc.exists ? userStatsDoc.data() : {};
-        const totalPageviews = statsData.totalPageviews || 0;
-        const totalBandwidth = statsData.totalBandwidth || 0;
-
-        const recentPageviews = dateKeys.map((date, i) => ({
-            date,
-            pageviews: dailyDocs[i].exists ? (dailyDocs[i].data().pageviews || 0) : 0
-        }));
-
-        res.json({ totalSites, publishedSites, totalLeads, totalPageviews, totalBandwidth, recentPageviews });
-    } catch (error) {
-        console.error('Dashboard stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    const now = new Date();
+    const dateKeys = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      dateKeys.push(d.toISOString().slice(0, 10));
     }
+
+    const [projects, totals, daily, leadsCount] = await Promise.all([
+      db.query('SELECT id, is_published FROM projects WHERE user_id = ?', [userId]),
+      db.one('SELECT total_pageviews, total_bandwidth FROM user_stats_totals WHERE user_id = ?', [userId]),
+      db.query(
+        `SELECT date, pageviews FROM user_stats_daily WHERE user_id = ? AND date IN (${dateKeys.map(() => '?').join(',')})`,
+        [userId, ...dateKeys]
+      ),
+      db.one('SELECT COUNT(*) AS c FROM leads WHERE user_id = ?', [userId]),
+    ]);
+
+    const totalSites = projects.length;
+    const publishedSites = projects.filter(p => p.is_published).length;
+    const totalLeads = leadsCount ? (leadsCount.c || 0) : 0;
+    const totalPageviews = totals ? (totals.total_pageviews || 0) : 0;
+    const totalBandwidth = totals ? (totals.total_bandwidth || 0) : 0;
+
+    const dailyMap = new Map(daily.map(d => [d.date, d.pageviews]));
+    const recentPageviews = dateKeys.map(date => ({ date, pageviews: dailyMap.get(date) || 0 }));
+
+    res.json({ totalSites, publishedSites, totalLeads, totalPageviews, totalBandwidth, recentPageviews });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
 });
 
-// Extract Business Info (Pre-build step)
+// ------------------------------------------------------------------
+// Business extraction
+// ------------------------------------------------------------------
+
 app.post('/api/extract-info', verifyToken, async (req, res) => {
-    const { query } = req.body;
-    if (!query) return res.status(400).json({ error: 'Query is required' });
-
-    try {
-        console.log(`Extracting info for query: "${query}"...`);
-        const extractResult = await retryWithBackoff(() => extractFromUrl(query));
-        const userContext = extractResult.data;
-        if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
-        res.json({ userContext });
-    } catch (error) {
-        console.error('Extraction failed:', error);
-        const status = error.statusCode || 500;
-        res.status(status).json({ error: error.message });
-    }
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+  try {
+    console.log(`Extracting info for query: "${query}"...`);
+    const extractResult = await retryWithBackoff(() => extractFromUrl(query));
+    const userContext = extractResult.data;
+    if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
+    res.json({ userContext });
+  } catch (error) {
+    console.error('Extraction failed:', error);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
 });
 
-// Submit Lead (Public Endpoint for Generated Sites)
+// ------------------------------------------------------------------
+// Submit lead (public)
+// ------------------------------------------------------------------
+
 app.post('/api/submit-lead', async (req, res) => {
-    const { projectId, formData } = req.body;
-    
-    try {
-        if (!projectId || !formData) {
-            return res.status(400).json({ error: 'Missing projectId or formData' });
-        }
+  const { projectId, formData } = req.body;
 
-        // 1. Get Project Owner
-        let userId = null;
-        let userEmail = null;
-        
-        if (db) {
-            const projectsRef = db.collection('projects');
-            const snapshot = await projectsRef.where('projectId', '==', projectId).get();
-            
-            if (snapshot.empty) {
-                return res.status(404).json({ error: 'Project not found' });
-            }
-            
-            const projectData = snapshot.docs[0].data();
-            userId = projectData.userId;
-            
-            // Get User Email from Auth
-            try {
-                const userRecord = await admin.auth().getUser(userId);
-                userEmail = userRecord.email;
-            } catch (err) {
-                console.error('Error fetching user for email:', err);
-            }
-            
-            // 2. Save Lead to Firestore
-            await db.collection('leads').add({
-                projectId,
-                userId,
-                formData,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                status: 'new'
-            });
-        }
-
-        // 3. Send Email Notification (only if email is verified)
-        let emailVerified = false;
-        if (userId) {
-            try {
-                const ownerDoc = await db.collection('users').doc(userId).get();
-                emailVerified = ownerDoc.exists && ownerDoc.data().emailVerified === true;
-            } catch { /* ignore */ }
-        }
-        if (userEmail && process.env.BREVO_SMTP_USER && emailVerified) {
-            const mailOptions = {
-                from: `"GenWeb" <${SMTP_FROM}>`,
-                to: userEmail,
-                subject: `New Lead for Project ${projectId}`,
-                text: `You have a new submission on your website!\n\nDetails:\n${JSON.stringify(formData, null, 2)}`,
-                html: `<h3>New Lead Received</h3><p>You have a new submission on your website.</p><pre>${JSON.stringify(formData, null, 2)}</pre>`
-            };
-            
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.log('Error sending email:', error);
-                } else {
-                    console.log('Email sent:', info.response);
-                }
-            });
-        } else {
-            console.log(`[Mock Email] To: ${userEmail}, Body:`, formData);
-        }
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error('Submit lead failed:', error);
-        res.status(500).json({ error: error.message });
+  try {
+    if (!projectId || !formData) {
+      return res.status(400).json({ error: 'Missing projectId or formData' });
     }
+
+    const project = await findProjectById(projectId);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const userId = project.userId;
+    const owner = await db.one('SELECT email, email_verified FROM users WHERE id = ?', [userId]);
+
+    await db.exec(
+      `INSERT INTO leads (id, project_id, user_id, form_data) VALUES (?, ?, ?, ?)`,
+      [crypto.randomUUID(), projectId, userId, db.J(formData)]
+    );
+
+    if (owner && owner.email && owner.email_verified) {
+      sendEmail({
+        to: owner.email,
+        subject: `New Lead for Project ${projectId}`,
+        text: `You have a new submission on your website!\n\nDetails:\n${JSON.stringify(formData, null, 2)}`,
+        html: `<h3>New Lead Received</h3><p>You have a new submission on your website.</p><pre>${JSON.stringify(formData, null, 2)}</pre>`
+      }).catch(err => console.error('Error sending lead email:', err.message));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Submit lead failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Get All Leads for User
 app.get('/api/leads', verifyToken, async (req, res) => {
-    try {
-        if (!db) {
-            return res.json([]);
-        }
-
-        let snapshot;
-        try {
-            snapshot = await db.collection('leads')
-                .where('userId', '==', req.user.uid)
-                .orderBy('createdAt', 'desc')
-                .get();
-        } catch (queryError) {
-            console.warn('Sorted query failed (api/leads), falling back to unsorted:', queryError.message);
-            // Fallback to unsorted if index is missing
-            snapshot = await db.collection('leads')
-                .where('userId', '==', req.user.uid)
-                .get();
-        }
-            
-        const leads = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-        }));
-        
-        res.json(leads);
-        
-    } catch (error) {
-        console.error('Fetch all leads failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const rows = await db.query(
+      `SELECT id, project_id AS projectId, user_id AS userId, form_data, created_at AS createdAt
+       FROM leads WHERE user_id = ? ORDER BY created_at DESC`,
+      [req.user.uid]
+    );
+    res.json(rows.map(r => ({ ...r, formData: db.parseJSON(r.form_data, {}), form_data: undefined })));
+  } catch (error) {
+    console.error('Fetch all leads failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Get Leads for a Project
 app.get('/api/project/:id/leads', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    
-    try {
-        if (!db) {
-            return res.json([]);
-        }
+  const { id } = req.params;
+  try {
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(403).json({ error: 'Unauthorized' });
 
-        // Verify ownership
-        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
-        const projectSnap = await projectRef.get();
-        
-        if (projectSnap.empty) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        let snapshot;
-        try {
-            snapshot = await db.collection('leads')
-                .where('projectId', '==', id)
-                .orderBy('createdAt', 'desc')
-                .get();
-        } catch (queryError) {
-            console.warn('Sorted query failed, falling back to unsorted:', queryError.message);
-            // Fallback to unsorted if index is missing
-            snapshot = await db.collection('leads')
-                .where('projectId', '==', id)
-                .get();
-        }
-            
-        const leads = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-        }));
-        
-        res.json(leads);
-        
-    } catch (error) {
-        console.error('Fetch leads failed:', error);
-        await fs.appendFile('backend-error.log', `${new Date().toISOString()} - Fetch leads error: ${error.message}\n${error.stack}\n`);
-        res.status(500).json({ error: error.message });
-    }
+    const rows = await db.query(
+      `SELECT id, project_id AS projectId, user_id AS userId, form_data, created_at AS createdAt
+       FROM leads WHERE project_id = ? ORDER BY created_at DESC`,
+      [id]
+    );
+    res.json(rows.map(r => ({ ...r, formData: db.parseJSON(r.form_data, {}), form_data: undefined })));
+  } catch (error) {
+    console.error('Fetch leads failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Get User's Projects
+// ------------------------------------------------------------------
+// Projects
+// ------------------------------------------------------------------
+
 app.get('/api/projects', verifyToken, async (req, res) => {
-    try {
-        if (!db) {
-            return res.json([]); // Return empty if DB not configured
-        }
-        const snapshot = await db.collection('projects')
-            .where('userId', '==', req.user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-        
-        const projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(projects);
-    } catch (error) {
-        console.error('Error fetching projects:', error);
-        res.status(500).json({ error: 'Failed to fetch projects' });
-    }
+  try {
+    const rows = await db.query(
+      'SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC',
+      [req.user.uid]
+    );
+    res.json(rows.map(projectRow));
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: 'Failed to fetch projects' });
+  }
 });
 
-// Get Pages List
+app.get('/api/project/:id', verifyToken, async (req, res) => {
+  try {
+    const project = await findProjectOwned(req.params.id, req.user.uid);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
+});
+
 app.get('/api/project/:id/pages', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-        
-        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
-        if (!await fs.pathExists(distPath)) {
-            return res.status(404).json({ error: 'Dist folder not found' });
-        }
-        
-        const files = await fs.readdir(distPath);
-        const htmlFiles = files.filter(f => f.endsWith('.html'));
-        
-        // Ensure index.html is first
-        const sorted = htmlFiles.sort((a, b) => {
-            if (a === 'index.html') return -1;
-            if (b === 'index.html') return 1;
-            return a.localeCompare(b);
-        });
-        
-        res.json({ pages: sorted });
-        
-    } catch (error) {
-        console.error('Fetch pages list failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+    if (!await fs.pathExists(distPath)) return res.status(404).json({ error: 'Dist folder not found' });
+
+    const files = await fs.readdir(distPath);
+    const htmlFiles = files.filter(f => f.endsWith('.html'));
+    const sorted = htmlFiles.sort((a, b) => {
+      if (a === 'index.html') return -1;
+      if (b === 'index.html') return 1;
+      return a.localeCompare(b);
+    });
+    res.json({ pages: sorted });
+  } catch (error) {
+    console.error('Fetch pages list failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// --- Site Config (Dynamic Navigation) ---
+// ------------------------------------------------------------------
+// Site config
+// ------------------------------------------------------------------
 
-// GET site-config.json (auto-generates from HTML if missing)
 app.get('/api/project/:id/site-config', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+    const configPath = path.join(distDir, 'site-config.json');
 
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        const configPath = path.join(distDir, 'site-config.json');
-
-        if (await fs.pathExists(configPath)) {
-            const config = await fs.readJson(configPath);
-            return res.json(config);
-        }
-
-        // Auto-generate from existing HTML files (backward compat)
-        const files = await fs.readdir(distDir);
-        const htmlFiles = files.filter(f => f.endsWith('.html')).sort((a, b) => {
-            if (a === 'index.html') return -1;
-            if (b === 'index.html') return 1;
-            return a.localeCompare(b);
-        });
-
-        const navigation = htmlFiles.map(f => ({
-            name: f === 'index.html' ? 'Home' : f.replace('.html', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            path: f,
-            children: []
-        }));
-
-        const hasLogo = await fs.pathExists(path.join(distDir, 'logo.png'));
-        const config = {
-            businessName: 'Business',
-            logo: hasLogo ? './logo.png' : null,
-            navigation
-        };
-
-        // Try to extract business name from index.html title
-        try {
-            const indexHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf-8');
-            const titleMatch = indexHtml.match(/<title>(.*?)<\/title>/);
-            if (titleMatch) config.businessName = titleMatch[1].split(' - ')[0].trim();
-        } catch (e) { /* ignore */ }
-
-        // Save for future use
-        await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-
-        // Also copy site-nav.js if missing
-        const navJsPath = path.join(distDir, 'site-nav.js');
-        if (!await fs.pathExists(navJsPath)) {
-            const templateNavJs = path.join(__dirname, 'templates/html-skeleton/site-nav.js');
-            if (await fs.pathExists(templateNavJs)) {
-                await fs.copy(templateNavJs, navJsPath);
-            }
-        }
-
-        res.json(config);
-    } catch (error) {
-        console.error('Get site-config failed:', error);
-        res.status(500).json({ error: error.message });
+    if (await fs.pathExists(configPath)) {
+      return res.json(await fs.readJson(configPath));
     }
+
+    const files = await fs.readdir(distDir);
+    const htmlFiles = files.filter(f => f.endsWith('.html')).sort((a, b) => {
+      if (a === 'index.html') return -1;
+      if (b === 'index.html') return 1;
+      return a.localeCompare(b);
+    });
+    const navigation = htmlFiles.map(f => ({
+      name: f === 'index.html' ? 'Home' : f.replace('.html', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      path: f,
+      children: []
+    }));
+    const hasLogo = await fs.pathExists(path.join(distDir, 'logo.png'));
+    const config = { businessName: 'Business', logo: hasLogo ? './logo.png' : null, navigation };
+
+    try {
+      const indexHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf-8');
+      const titleMatch = indexHtml.match(/<title>(.*?)<\/title>/);
+      if (titleMatch) config.businessName = titleMatch[1].split(' - ')[0].trim();
+    } catch (_) {}
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const navJsPath = path.join(distDir, 'site-nav.js');
+    if (!await fs.pathExists(navJsPath)) {
+      const templateNavJs = path.join(__dirname, 'templates/html-skeleton/site-nav.js');
+      if (await fs.pathExists(templateNavJs)) await fs.copy(templateNavJs, navJsPath);
+    }
+
+    res.json(config);
+  } catch (error) {
+    console.error('Get site-config failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// PUT site-config.json (update nav structure/logo/business name)
 app.put('/api/project/:id/site-config', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        const configPath = path.join(distDir, 'site-config.json');
-
-        const newConfig = req.body;
-        await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2));
-
-        // Sync to public/sites
-        const publicConfigPath = path.join(__dirname, 'public/sites', id, 'site-config.json');
-        await fs.copy(configPath, publicConfigPath);
-
-        // Upload to GCS
-        await uploadDirectory(distDir, `projects/${id}/dist`);
-
-        res.json({ success: true, config: newConfig });
-    } catch (error) {
-        console.error('Update site-config failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+    const configPath = path.join(distDir, 'site-config.json');
+    const newConfig = req.body;
+    await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2));
+    const publicConfigPath = path.join(__dirname, 'public/sites', id, 'site-config.json');
+    await fs.copy(configPath, publicConfigPath);
+    await uploadDirectory(distDir, `projects/${id}/dist`);
+    res.json({ success: true, config: newConfig });
+  } catch (error) {
+    console.error('Update site-config failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// POST add new page (AI-generated, matching site style)
 app.post('/api/project/:id/pages/add', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { pageName, isSubPage, pagePrompt } = req.body;
-
-    if (!pageName) return res.status(400).json({ error: 'pageName is required' });
-
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        const sourceDir = path.join(__dirname, 'projects_source', id);
-        const distDir = path.join(sourceDir, 'dist');
-        const configPath = path.join(distDir, 'site-config.json');
-
-        // Read existing config
-        let config;
-        if (await fs.pathExists(configPath)) {
-            config = await fs.readJson(configPath);
-        } else {
-            const files = await fs.readdir(distDir);
-            const htmlFiles = files.filter(f => f.endsWith('.html'));
-            config = {
-                businessName: 'Business',
-                logo: (await fs.pathExists(path.join(distDir, 'logo.png'))) ? './logo.png' : null,
-                navigation: htmlFiles.map(f => ({
-                    name: f === 'index.html' ? 'Home' : f.replace('.html', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    path: f,
-                    children: []
-                }))
-            };
-        }
-
-        // Enforce limits
-        const mainPages = config.navigation.filter(n => n.name !== 'More');
-        const moreItem = config.navigation.find(n => n.name === 'More');
-        const subPages = moreItem?.children || [];
-
-        if (isSubPage) {
-            if (subPages.length >= 30) {
-                return res.status(400).json({ error: 'Maximum of 30 sub-pages reached.' });
-            }
-        } else {
-            if (mainPages.length >= 7) {
-                return res.status(400).json({ error: 'Maximum of 7 main pages reached.' });
-            }
-        }
-
-        // Credit deduction (100 credits for new page)
-        try {
-            await deductCredits(req.user.uid, 100, `Add page "${pageName}" to project ${id}`);
-        } catch (err) {
-            return res.status(402).json({ error: 'Insufficient credits. Need 100 credits to add a page.' });
-        }
-
-        // Build page filename
-        const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
-        const newPagePath = path.join(distDir, filename);
-
-        if (await fs.pathExists(newPagePath)) {
-            return res.status(409).json({ error: `Page "${pageName}" already exists` });
-        }
-
-        // Extract layout reference from index.html
-        let layoutReference = null;
-        try {
-            const homeCode = await fs.readFile(path.join(distDir, 'index.html'), 'utf-8');
-            const headerMatch = homeCode.match(/<(\w+)[^>]*data-section="header"[^>]*>([\s\S]*?)<\/\1>/);
-            const footerMatch = homeCode.match(/<(\w+)[^>]*data-section="footer"[^>]*>([\s\S]*?)<\/\1>/);
-            if (headerMatch && footerMatch) {
-                layoutReference = { header: headerMatch[0], footer: footerMatch[0] };
-            }
-        } catch (e) { console.warn(`[${id}] Could not extract layout reference for new page`); }
-
-        // Get all page names for nav
-        const allPageNames = config.navigation.filter(n => n.name !== 'More').map(n => n.name);
-        subPages.forEach(s => allPageNames.push(s.name));
-        allPageNames.push(pageName);
-
-        // Get designSystem from tailwind config + stylePreset from Firestore
-        let stylePreset = null;
-        const twConfigPath = path.join(sourceDir, 'tailwind.config.js');
-        let designSystem = null;
-        if (await fs.pathExists(twConfigPath)) {
-            delete require.cache[require.resolve(twConfigPath)];
-            const twConfig = require(twConfigPath);
-            const colors = twConfig?.theme?.extend?.colors || {};
-            const fonts = twConfig?.theme?.extend?.fontFamily || {};
-            designSystem = {
-                colorPalette: colors,
-                googleFonts: {
-                    heading: fonts.heading ? fonts.heading[0] : 'sans-serif',
-                    body: fonts.body ? fonts.body[0] : 'sans-serif'
-                },
-                businessName: config.businessName,
-                logoUrl: config.logo,
-                imageUrls: []
-            };
-        }
-
-        // Read userContext and stylePreset from Firestore
-        let userContext = `Business: ${config.businessName}`;
-        try {
-            const snapshot = await db.collection('projects').where('projectId', '==', id).get();
-            if (!snapshot.empty) {
-                const projectData = snapshot.docs[0].data();
-                if (projectData.context) userContext = projectData.context;
-                if (projectData.stylePreset) stylePreset = projectData.stylePreset;
-            }
-        } catch (e) { /* ignore */ }
-
-        // Append page-specific prompt to user context if provided
-        let pageContext = userContext;
-        if (pagePrompt) {
-            pageContext += `\n\nSPECIFIC INSTRUCTIONS FOR THIS PAGE ("${pageName}"): ${pagePrompt}`;
-        }
-
-        // Generate the new page
-        console.log(`[${id}] Generating new page: ${pageName} (${isSubPage ? 'sub-page' : 'main'})...`);
-        const codeResult = await retryWithBackoff(() =>
-            generateCode(designSystem || {}, pageContext, pageName, allPageNames, layoutReference, stylePreset)
-        );
-
-        if (codeResult.usage) {
-            await saveTokenUsage([{ ...codeResult.usage, service: 'coder', action: `addPage:${pageName}` }], id, req.user.uid);
-        }
-
-        // Write the new page
-        await fs.writeFile(newPagePath, codeResult.code);
-
-        // Update site-config.json
-        const newNavEntry = { name: pageName, path: filename, children: [] };
-        if (isSubPage) {
-            // Add under "More" dropdown — create it if it doesn't exist
-            let more = config.navigation.find(n => n.name === 'More');
-            if (!more) {
-                more = { name: 'More', path: '#', children: [] };
-                config.navigation.push(more);
-            }
-            if (!more.children) more.children = [];
-            more.children.push(newNavEntry);
-        } else {
-            config.navigation.push(newNavEntry);
-        }
-        await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-
-        // Rebuild (injects scripts, syncs)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-
-        res.json({ success: true, page: filename, config, url: previewUrl });
-    } catch (error) {
-        console.error('Add page failed:', error);
-        const status = error.statusCode || 500;
-        res.status(status).json({ error: error.message });
-    }
+  const { id } = req.params;
+  const { pageName, isSubPage, pagePrompt } = req.body;
+  try {
+    const result = await pageService.addPage(req.user.uid, id, { pageName, isSubPage, pagePrompt });
+    res.json({ success: true, page: result.page, config: result.config, url: result.url });
+  } catch (error) {
+    console.error('Add page failed:', error);
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
 });
 
-// POST upload/change logo
 app.post('/api/project/:id/logo', verifyToken, upload.single('logo'), async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!req.file) return res.status(400).json({ error: 'No logo file uploaded' });
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+  const { id } = req.params;
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No logo file uploaded' });
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
 
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        const logoDest = path.join(distDir, 'logo.png');
+    const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+    const logoDest = path.join(distDir, 'logo.png');
+    await fs.copy(req.file.path, logoDest);
+    await fs.remove(req.file.path).catch(() => {});
 
-        // Copy uploaded file to dist
-        await fs.copy(req.file.path, logoDest);
-        await fs.remove(req.file.path).catch(() => {});
-
-        // Update site-config.json
-        const configPath = path.join(distDir, 'site-config.json');
-        if (await fs.pathExists(configPath)) {
-            const config = await fs.readJson(configPath);
-            config.logo = './logo.png';
-            await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-        }
-
-        // Sync to public/sites and GCS
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-
-        res.json({ success: true, logo: './logo.png', url: previewUrl });
-    } catch (error) {
-        console.error('Logo upload failed:', error);
-        res.status(500).json({ error: error.message });
+    const configPath = path.join(distDir, 'site-config.json');
+    if (await fs.pathExists(configPath)) {
+      const config = await fs.readJson(configPath);
+      config.logo = './logo.png';
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
     }
+
+    const distPath = await rebuildForEdit(id);
+    const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+    res.json({ success: true, logo: './logo.png', url: previewUrl });
+  } catch (error) {
+    console.error('Logo upload failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Trigger Manual Screenshot
 app.post('/api/project/:id/screenshot', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-        
-        const publicSitePath = path.join(__dirname, 'public/sites', id);
-        // Ensure public site exists
-        if (!await fs.pathExists(publicSitePath)) {
-             const distPath = path.join(__dirname, 'projects_source', id, 'dist');
-             await fs.copy(distPath, publicSitePath);
-        }
-        
-        const previewPath = path.join(publicSitePath, 'preview.jpg');
-        const indexHtmlPath = path.join(publicSitePath, 'index.html');
-        
-        const success = await captureScreenshot(indexHtmlPath, previewPath);
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
 
-        if (success) {
-            const previewUrl = await uploadPreview(previewPath, id);
-            // Update Firestore with new preview URL
-            if (db) {
-                const snapshot = await db.collection('projects').where('projectId', '==', id).get();
-                if (!snapshot.empty) {
-                    await snapshot.docs[0].ref.update({ previewUrl });
-                }
-            }
-            res.json({ success: true, url: previewUrl });
-        } else {
-            res.status(500).json({ error: 'Screenshot generation failed' });
-        }
-    } catch (error) {
-        console.error('Screenshot endpoint failed:', error);
-        res.status(500).json({ error: error.message });
+    const publicSitePath = path.join(__dirname, 'public/sites', id);
+    if (!await fs.pathExists(publicSitePath)) {
+      const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+      await fs.copy(distPath, publicSitePath);
     }
+
+    const previewPath = path.join(publicSitePath, 'preview.jpg');
+    const R2_PUB = process.env.R2_PUBLIC_DOMAIN || 'pub-r2.genweb.in';
+    const SITES_BUCKET = process.env.R2_SITES_BUCKET || 'genweb-sites';
+    const liveSiteUrl = `https://${R2_PUB}/${SITES_BUCKET}/${id}/index.html`;
+
+    const success = await captureScreenshot(liveSiteUrl, previewPath);
+    if (success) {
+      const previewUrl = await uploadPreview(previewPath, id);
+      await db.exec(`UPDATE projects SET url = ? WHERE id = ?`, [previewUrl, id]);
+      res.json({ success: true, url: previewUrl });
+    } else {
+      res.status(500).json({ error: 'Screenshot generation failed' });
+    }
+  } catch (error) {
+    console.error('Screenshot endpoint failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Get Current Theme
 app.get('/api/project/:id/theme', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        const configPath = path.join(__dirname, 'projects_source', id, 'tailwind.config.js');
-        if (!await fs.pathExists(configPath)) {
-            return res.status(404).json({ error: 'Project configuration not found' });
-        }
-        const configContent = await fs.readFile(configPath, 'utf-8');
-        
-        // Extract colors using regex
-        const colors = {};
-        const keys = ['primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'];
-        
-        keys.forEach(key => {
-            const match = configContent.match(new RegExp(`["']?${key}["']?:\\s*["']([^"']+)["']`));
-            if (match) {
-                colors[key] = match[1];
-            }
-        });
-        
-        res.json({ colors });
-    } catch (error) {
-        console.error('Get theme failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const configPath = path.join(__dirname, 'projects_source', id, 'tailwind.config.js');
+    if (!await fs.pathExists(configPath)) return res.status(404).json({ error: 'Project configuration not found' });
+    const configContent = await fs.readFile(configPath, 'utf-8');
+    const colors = {};
+    const keys = ['primary', 'secondary', 'accent', 'background', 'text', 'buttonBackground', 'buttonText'];
+    keys.forEach(key => {
+      const match = configContent.match(new RegExp(`["']?${key}["']?:\\s*["']([^"']+)["']`));
+      if (match) colors[key] = match[1];
+    });
+    res.json({ colors });
+  } catch (error) {
+    console.error('Get theme failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Regenerate Theme Palette
 app.post('/api/project/:id/theme/regenerate', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
 
-        // Fetch project context
-        let context = "Modern Business";
-        if (db) {
-            const snapshot = await db.collection('projects').where('projectId', '==', id).get();
-            if (!snapshot.empty) {
-                context = snapshot.docs[0].data().query;
-            }
-        }
-        
-        const paletteResult = await retryWithBackoff(() => generatePalette(context));
-        if (paletteResult.usage) await saveTokenUsage([{ ...paletteResult.usage, service: 'architect', action: 'generatePalette' }], id, req.user.uid);
-        res.json({ colors: paletteResult.palette });
+    const proj = await findProjectById(id);
+    const context = (proj && proj.query) || 'Modern Business';
 
-    } catch (error) {
-        console.error('Regenerate theme failed:', error);
-        const status = error.statusCode || 500;
-        res.status(status).json({ error: error.message });
-    }
+    const paletteResult = await retryWithBackoff(() => generatePalette(context));
+    if (paletteResult.usage) await saveTokenUsage([{ ...paletteResult.usage, service: 'architect', action: 'generatePalette' }], id, req.user.uid);
+    res.json({ colors: paletteResult.palette });
+  } catch (error) {
+    console.error('Regenerate theme failed:', error);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
 });
 
-// Update a Section (Generic AI Instruction)
 app.post('/api/project/:id/section', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { sectionId, instruction, page } = req.body;
-    
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        // --- Credit Deduction ---
-        try {
-            await deductCredits(req.user.uid, 50, `Redesign section ${sectionId} for project ${id}`);
-        } catch (err) {
-            return res.status(402).json({ error: 'Insufficient credits for AI redesign.' });
-        }
-        // ------------------------
-
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        let targetFile = 'index.html';
-
-        if (page) {
-            targetFile = page;
-        } else {
-             // Auto-discovery
-             try {
-                 const files = await fs.readdir(distDir);
-                 const htmlFiles = files.filter(f => f.endsWith('.html'));
-                 
-                 for (const file of htmlFiles) {
-                     const content = await fs.readFile(path.join(distDir, file), 'utf-8');
-                     if (content.includes(`data-section="${sectionId}"`)) {
-                         targetFile = file;
-                         break;
-                     }
-                 }
-             } catch (e) {
-                 console.warn(`[AutoDiscovery] Failed to scan files: ${e.message}`);
-             }
-        }
-
-        const sourcePath = path.join(distDir, targetFile);
-        
-        if (!await fs.pathExists(sourcePath)) {
-            return res.status(404).json({ error: `Page ${targetFile} not found` });
-        }
-        
-        const currentCode = await fs.readFile(sourcePath, 'utf-8');
-        
-        console.log(`Regenerating section '${sectionId}' in file '${targetFile}' for project ${id}...`);
-        const sectionResult = await retryWithBackoff(() => regenerateSection(currentCode, sectionId, instruction));
-        const newCode = sectionResult.code;
-        if (sectionResult.usage) await saveTokenUsage([{ ...sectionResult.usage, service: 'coder', action: 'regenerateSection' }], id, req.user.uid);
-
-        // Backup old code (simple undo)
-        await fs.writeFile(sourcePath + '.bak', currentCode);
-
-        // Write new code
-        await fs.writeFile(sourcePath, newCode);
-        
-        // Rebuild & Deploy
-        // Rebuild & Save (GCS only)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-        
-        res.json({ success: true, url: previewUrl });
-        
-    } catch (error) {
-        console.error('Update failed:', error);
-        const status = error.statusCode || 500;
-        res.status(status).json({ error: error.message });
-    }
+  const { id } = req.params;
+  const { sectionId, instruction, page } = req.body;
+  try {
+    const result = await pageService.redesignSection(req.user.uid, id, { sectionId, instruction, page });
+    res.json({ success: true, url: result.url });
+  } catch (error) {
+    console.error('Update failed:', error);
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
 });
 
-// Regenerate Entire Page (Global AI Instruction)
 app.post('/api/project/:id/regenerate-page', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { instruction, page } = req.body;
-    
+  const { id } = req.params;
+  const { instruction, page } = req.body;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+
     try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        // --- Credit Deduction ---
-        try {
-            await deductCredits(req.user.uid, 100, `Regenerate page for project ${id}`);
-        } catch (err) {
-            return res.status(402).json({ error: 'Insufficient credits for AI regeneration.' });
-        }
-        // ------------------------
-
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        const targetFile = page || 'index.html';
-        const sourcePath = path.join(distDir, targetFile);
-        
-        if (!await fs.pathExists(sourcePath)) {
-            return res.status(404).json({ error: `Page ${targetFile} not found` });
-        }
-        
-        const currentCode = await fs.readFile(sourcePath, 'utf-8');
-        
-        console.log(`Regenerating page '${targetFile}' for project ${id}...`);
-        const pageResult = await retryWithBackoff(() => regeneratePage(currentCode, instruction));
-        const newCode = pageResult.code;
-        if (pageResult.usage) await saveTokenUsage([{ ...pageResult.usage, service: 'coder', action: 'regeneratePage' }], id, req.user.uid);
-
-        // Backup old code
-        await fs.writeFile(sourcePath + '.bak', currentCode);
-        
-        // Write new code
-        await fs.writeFile(sourcePath, newCode);
-        
-        // Rebuild & Save (GCS only)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-        
-        res.json({ success: true, url: previewUrl });
-        
-    } catch (error) {
-        console.error('Page regeneration failed:', error);
-        const status = error.statusCode || 500;
-        res.status(status).json({ error: error.message });
+      await deductCredits(req.user.uid, 100, `Regenerate page for project ${id}`);
+    } catch (_) {
+      return res.status(402).json({ error: 'Insufficient credits for AI regeneration.' });
     }
+
+    const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+    const targetFile = page || 'index.html';
+    const sourcePath = path.join(distDir, targetFile);
+    if (!await fs.pathExists(sourcePath)) return res.status(404).json({ error: `Page ${targetFile} not found` });
+
+    const currentCode = await fs.readFile(sourcePath, 'utf-8');
+    console.log(`Regenerating page '${targetFile}' for project ${id}...`);
+    const pageResult = await retryWithBackoff(() => regeneratePage(currentCode, instruction));
+    if (pageResult.usage) await saveTokenUsage([{ ...pageResult.usage, service: 'coder', action: 'regeneratePage' }], id, req.user.uid);
+
+    await fs.writeFile(sourcePath + '.bak', currentCode);
+    await fs.writeFile(sourcePath, pageResult.code);
+
+    const distPath = await rebuildForEdit(id);
+    const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+    res.json({ success: true, url: previewUrl });
+  } catch (error) {
+    console.error('Page regeneration failed:', error);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
 });
 
-// Update Specific Content (Text/Image)
 app.post('/api/project/:id/content', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { sectionId, type, originalValue, newValue, page } = req.body; // type: 'text' | 'image'
-    
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+  const { id } = req.params;
+  const { sectionId, type, originalValue, newValue, page } = req.body;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
 
-        const distDir = path.join(__dirname, 'projects_source', id, 'dist');
-        let targetFile = 'index.html';
-
-        if (page) {
-            targetFile = page;
-        } else {
-             // Auto-discovery: Find which file contains the section
-             try {
-                 const files = await fs.readdir(distDir);
-                 const htmlFiles = files.filter(f => f.endsWith('.html'));
-                 
-                 for (const file of htmlFiles) {
-                     const content = await fs.readFile(path.join(distDir, file), 'utf-8');
-                     if (content.includes(`data-section="${sectionId}"`)) {
-                         targetFile = file;
-                         break;
-                     }
-                 }
-             } catch (e) {
-                 console.warn(`[AutoDiscovery] Failed to scan files: ${e.message}`);
-             }
+    const distDir = path.join(__dirname, 'projects_source', id, 'dist');
+    let targetFile = 'index.html';
+    if (page) {
+      targetFile = page;
+    } else {
+      try {
+        const files = await fs.readdir(distDir);
+        const htmlFiles = files.filter(f => f.endsWith('.html'));
+        for (const file of htmlFiles) {
+          const content = await fs.readFile(path.join(distDir, file), 'utf-8');
+          if (content.includes(`data-section="${sectionId}"`)) { targetFile = file; break; }
         }
-
-        const sourcePath = path.join(distDir, targetFile);
-        
-        if (!await fs.pathExists(sourcePath)) {
-            return res.status(404).json({ error: `Page ${targetFile} not found` });
-        }
-        
-        const currentCode = await fs.readFile(sourcePath, 'utf-8');
-        
-        console.log(`Updating ${type} in section '${sectionId}' in file '${targetFile}' for project ${id}...`);
-        const newCode = await updateSectionContent(currentCode, sectionId, type, originalValue, newValue);
-        
-        // Backup
-        await fs.writeFile(sourcePath + '.bak', currentCode);
-        
-        // Write
-        await fs.writeFile(sourcePath, newCode);
-        
-        // Rebuild & Deploy
-        // Rebuild & Save (GCS only)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-        
-        res.json({ success: true, url: previewUrl });
-        
-    } catch (error) {
-        console.error('Content update failed:', error);
-        res.status(500).json({ error: error.message });
+      } catch (e) {
+        console.warn(`[AutoDiscovery] Failed: ${e.message}`);
+      }
     }
+
+    const sourcePath = path.join(distDir, targetFile);
+    if (!await fs.pathExists(sourcePath)) return res.status(404).json({ error: `Page ${targetFile} not found` });
+
+    const currentCode = await fs.readFile(sourcePath, 'utf-8');
+    const newCode = await updateSectionContent(currentCode, sectionId, type, originalValue, newValue);
+    await fs.writeFile(sourcePath + '.bak', currentCode);
+    await fs.writeFile(sourcePath, newCode);
+
+    const distPath = await rebuildForEdit(id);
+    const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+    res.json({ success: true, url: previewUrl });
+  } catch (error) {
+    console.error('Content update failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Undo Last Change
 app.post('/api/project/:id/undo', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
-        const backupPath = sourcePath + '.bak';
-        
-        if (!await fs.pathExists(backupPath)) {
-            return res.status(400).json({ error: 'No undo available' });
-        }
-        
-        // Restore backup
-        await fs.copy(backupPath, sourcePath);
-        
-        console.log(`Undoing changes for project ${id}...`);
-        // Rebuild & Save (GCS only)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-        
-        res.json({ success: true, url: previewUrl });
-    } catch (error) {
-         console.error('Undo failed:', error);
-         res.status(500).json({ error: error.message });
-    }
+  const { id } = req.params;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const sourcePath = path.join(__dirname, 'projects_source', id, 'dist/index.html');
+    const backupPath = sourcePath + '.bak';
+    if (!await fs.pathExists(backupPath)) return res.status(400).json({ error: 'No undo available' });
+    await fs.copy(backupPath, sourcePath);
+    const distPath = await rebuildForEdit(id);
+    const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+    res.json({ success: true, url: previewUrl });
+  } catch (error) {
+    console.error('Undo failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Upload Asset
 app.post('/api/project/:id/upload', verifyToken, upload.single('file'), async (req, res) => {
-    const { id } = req.params;
-    const file = req.file;
-    
-    if (!file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        // Target: projects_source/<id>/dist/assets/
-        const assetsDir = path.join(__dirname, 'projects_source', id, 'dist/assets');
-        await fs.ensureDir(assetsDir);
-        
-        const ext = path.extname(file.originalname);
-        const filename = `${Date.now()}${ext}`;
-        const destPath = path.join(assetsDir, filename);
-        
-        // Move from temp upload to assets
-        await fs.move(file.path, destPath);
-        
-        // Return URL relative to site root
-        res.json({ url: `./assets/${filename}` });
-        
-    } catch (error) {
-        console.error('Upload failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  const { id } = req.params;
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const assetsDir = path.join(__dirname, 'projects_source', id, 'dist/assets');
+    await fs.ensureDir(assetsDir);
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}${ext}`;
+    const destPath = path.join(assetsDir, filename);
+    await fs.move(file.path, destPath);
+    res.json({ url: `./assets/${filename}` });
+  } catch (error) {
+    console.error('Upload failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Update Theme
 app.post('/api/project/:id/theme', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { colors } = req.body; // Expect { primary: '#...', secondary: '#...', ... }
-    
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+  const { id } = req.params;
+  const { colors } = req.body;
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const configPath = path.join(__dirname, 'projects_source', id, 'tailwind.config.js');
+    if (!await fs.pathExists(configPath)) return res.status(404).json({ error: 'Project configuration not found' });
 
-        const configPath = path.join(__dirname, 'projects_source', id, 'tailwind.config.js');
-        
-        if (!await fs.pathExists(configPath)) {
-            return res.status(404).json({ error: 'Project configuration not found' });
-        }
-        
-        let configContent = await fs.readFile(configPath, 'utf-8');
-        
-        // Simple regex replacement for each color key
-        // Assumes format: key: "value",
-        Object.entries(colors).forEach(([key, value]) => {
-             // Regex looks for: "key": "..." or key: "..." (handles both quoted and unquoted keys)
-             const regex = new RegExp(`(["']?)${key}\\1:\\s*["'][^"']*["']`, 'g');
-             configContent = configContent.replace(regex, `$1${key}$1: "${value}"`);
-        });
+    let configContent = await fs.readFile(configPath, 'utf-8');
+    Object.entries(colors).forEach(([key, value]) => {
+      const regex = new RegExp(`(["']?)${key}\\1:\\s*["'][^"']*["']`, 'g');
+      configContent = configContent.replace(regex, `$1${key}$1: "${value}"`);
+    });
+    await fs.writeFile(configPath, configContent);
 
-        await fs.writeFile(configPath, configContent);
-        
-        console.log(`Updating theme for project ${id}...`);
-        // Rebuild & Save (GCS only)
-        const distPath = await rebuildSite(id);
-        const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
-        
-        res.json({ success: true, url: previewUrl });
-        
-    } catch (error) {
-        console.error('Theme update failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+    const distPath = await rebuildForEdit(id);
+    const previewUrl = await saveBuildArtifacts(id, distPath, req.user.uid);
+    res.json({ success: true, url: previewUrl });
+  } catch (error) {
+    console.error('Theme update failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Extract Business Info (Pre-Build)
 app.post('/api/extract', verifyToken, async (req, res) => {
-    const { query } = req.body;
-    try {
-        if (!query) return res.status(400).json({ error: 'Query is required' });
-        
-        console.log(`[API] Extracting info for: "${query}"...`);
-        const extractResult = await extractFromUrl(query);
-        const userContext = extractResult.data;
-        if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
-
-        res.json({ success: true, data: userContext });
-    } catch (error) {
-        console.error('Extraction failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+  const { query } = req.body;
+  try {
+    if (!query) return res.status(400).json({ error: 'Query is required' });
+    const extractResult = await extractFromUrl(query);
+    if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
+    res.json({ success: true, data: extractResult.data });
+  } catch (error) {
+    console.error('Extraction failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Initialize Build (Step 1)
+// ------------------------------------------------------------------
+// Build
+// ------------------------------------------------------------------
+
 app.post('/api/build', verifyToken, upload.single('logo'), async (req, res) => {
-    let { userContext, businessUrl, businessQuery, pages, stylePreset } = req.body;
-    const logoFile = req.file; // Get the uploaded logo file
+  let { userContext, businessUrl, businessQuery, pages, stylePreset } = req.body;
+  const logoFile = req.file;
 
-    // Parse pages if it comes as a string (from FormData)
-    let parsedPages = ['Home'];
-    if (pages) {
-        try {
-            parsedPages = typeof pages === 'string' ? JSON.parse(pages) : pages;
-        } catch (e) {
-            console.error('Error parsing pages:', e);
-        }
+  let parsedPages = ['Home'];
+  if (pages) {
+    try { parsedPages = typeof pages === 'string' ? JSON.parse(pages) : pages; } catch (_) {}
+  }
+
+  const query = businessQuery || businessUrl;
+
+  try {
+    if (!userContext && query) {
+      console.log(`Extracting info for query: "${query}"...`);
+      const extractResult = await extractFromUrl(query);
+      userContext = extractResult.data;
+      if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), null, req.user.uid);
     }
+    if (!userContext) return res.status(400).json({ error: 'userContext or businessQuery is required' });
 
-    const id = Date.now().toString();
-    
-    // Generate default subdomain (project-id based for uniqueness initially)
-    // Users can customize this later.
-    const defaultSubdomain = `site-${id}`; // e.g. site-176...
+    // Engine override is admin-only (used for staged rollout testing).
+    const engineOverride = req.user.is_admin && req.headers['x-build-engine'] ? req.headers['x-build-engine'] : null;
 
-    // Allow businessUrl or businessQuery to drive the extraction
-    const query = businessQuery || businessUrl;
+    const { id, cost, isFree } = await startBuild(req.user.uid, {
+      userContext, pages: parsedPages, logoFile, stylePreset, query, source: 'api', engineOverride,
+    });
 
-    try {
-        // Only extract if userContext is not provided
-        if (!userContext && query) {
-            console.log(`Extracting info for query: "${query}"...`);
-            const extractResult = await extractFromUrl(query);
-            userContext = extractResult.data;
-            if (extractResult.usageLog) await saveTokenUsage(extractResult.usageLog.map(u => ({ ...u, service: 'extractor' })), id, req.user.uid);
-            console.log('Extracted Context:', userContext);
-        }
-
-        if (!userContext) {
-            return res.status(400).json({ error: 'userContext or businessQuery is required' });
-        }
-
-        // --- Credit Check (Pre-Auth) ---
-        const cost = parsedPages.length > 1 ? 400 : 200;
-        const currentCredits = await getUserCredits(req.user.uid);
-        if (currentCredits < cost) {
-            return res.status(402).json({ error: 'Insufficient credits. Please top up your wallet.' });
-        }
-        // -------------------------------
-
-        console.log(`Initializing build for ${id} (Pages: ${parsedPages.join(', ')})...`);
-        
-        // Initialize Firestore Document
-        if (db) {
-            await db.collection('projects').doc(id).set({
-                projectId: id,
-                userId: req.user.uid,
-                query: query || 'Manual Context',
-                status: 'starting',
-                subdomain: defaultSubdomain,
-                logs: [],
-                buildProgress: 0,
-                buildProgressMessage: 'Starting...',
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                isPublished: false,
-                stylePreset: stylePreset || 'standard',
-                userContext: userContext,
-                pages: parsedPages,
-            });
-        }
-
-        // Trigger Background Process (Fire and Forget)
-        runBuildProcess(id, userContext, logoFile, parsedPages, req.user.uid, cost, query, stylePreset)
-            .catch(err => console.error(`Background build ${id} failed hard:`, err));
-
-        // Return immediately
-        res.json({ success: true, id, status: 'processing', message: 'Build started in background.' });
-        
-    } catch (error) {
-        console.error('Build init failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+    res.json({ success: true, id, status: 'processing', cost, isFree, message: 'Build started in background.' });
+  } catch (error) {
+    console.error('Build init failed:', error);
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
 });
 
-// Retry a failed build
 app.post('/api/project/:id/retry', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const doc = await db.collection('projects').doc(id).get();
-        if (!doc.exists) return res.status(404).json({ error: 'Project not found' });
+  const { id } = req.params;
+  try {
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (project.status !== 'failed') return res.status(400).json({ error: 'Project is not in failed state' });
 
-        const project = doc.data();
-        if (project.userId !== req.user.uid) return res.status(403).json({ error: 'Unauthorized' });
-        if (project.status !== 'failed') return res.status(400).json({ error: 'Project is not in failed state' });
+    await db.exec(
+      `UPDATE projects SET status = 'starting', build_progress = 0, build_progress_message = 'Starting...' WHERE id = ?`,
+      [id]
+    );
 
-        // Reset status
-        await db.collection('projects').doc(id).update({
-            status: 'starting',
-            buildProgress: 0,
-            buildProgressMessage: 'Starting...',
-            error: admin.firestore.FieldValue.delete(),
-            isRateLimited: admin.firestore.FieldValue.delete(),
-        });
-
-        // Re-trigger build
-        runBuildProcess(id, project.userContext, null, project.pages || ['Home'], req.user.uid, 0, project.query, project.stylePreset)
-            .catch(err => console.error(`Retry build ${id} failed:`, err));
-
-        res.json({ success: true, message: 'Build retry started.' });
-    } catch (error) {
-        console.error('Retry failed:', error);
-        res.status(500).json({ error: error.message });
+    // Retry on the engine that built the project — semantics stay consistent per
+    // project. isFree carries through so a successful retry of the free first
+    // build still consumes the entitlement.
+    if (project.pipeline === 'agent') {
+      runAgentBuildProcess(id, project.userContext, null, project.pages || ['Home'], req.user.uid, 0, project.query, { isFree: project.isFreeBuild })
+        .catch(err => console.error(`Retry agent build ${id} failed:`, err));
+    } else {
+      runBuildProcess(id, project.userContext, null, project.pages || ['Home'], req.user.uid, 0, project.query, project.stylePreset)
+        .catch(err => console.error(`Retry build ${id} failed:`, err));
     }
+
+    res.json({ success: true, message: 'Build retry started.' });
+  } catch (error) {
+    console.error('Retry failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Background Build Processor
-async function sendBuildNotification(userId, projectId, projectName, status, errorMessage = null) {
-    try {
-        // Only send email if user has verified their email
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.exists ? userDoc.data() : {};
-        if (!userData.emailVerified) {
-            console.log(`[Email] Skipping build notification for ${userId} - email not verified`);
-            return;
-        }
+// Resync a completed project's build artifacts from genweb-projects to genweb-sites
+// so the public preview URL works. Idempotent — safe to call multiple times.
+app.post('/api/project/:id/resync-preview', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (project.status !== 'completed') return res.status(400).json({ error: 'Project is not completed' });
 
-        const userRecord = await admin.auth().getUser(userId);
-        const userEmail = userRecord.email;
-        if (!userEmail || !process.env.BREVO_SMTP_USER) {
-            console.log(`[Email] Skipping build notification - no email or SMTP not configured`);
-            return;
-        }
+    const { S3Client, ListObjectsV2Command, CopyObjectCommand } = require('@aws-sdk/client-s3');
+    const SOURCE_BUCKET = process.env.R2_BUCKET_NAME || 'genweb-projects';
+    const DEST_BUCKET = process.env.R2_SITES_BUCKET || 'genweb-sites';
+    const R2_PUB = process.env.R2_PUBLIC_DOMAIN || 'pub-r2.genweb.in';
 
-        const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
-        const isSuccess = status === 'success';
-        const siteName = projectName || 'your site';
+    const s3 = new S3Client({
+      region: 'auto',
+      endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY },
+    });
 
-        const statusColor = isSuccess ? '#16a34a' : '#dc2626';
-        const statusBg = isSuccess ? '#f0fdf4' : '#fef2f2';
-        const statusIcon = isSuccess ? '&#10003;' : '&#10007;';
-        const statusText = isSuccess ? 'Your site is ready!' : 'Build failed';
-        const subject = isSuccess
-            ? `Your site "${siteName}" is ready! - GenWeb`
-            : `Build failed for "${siteName}" - GenWeb`;
+    const sourcePrefix = `projects/${id}/dist/`;
+    let continuationToken, total = 0;
+    do {
+      const listed = await s3.send(new ListObjectsV2Command({ Bucket: SOURCE_BUCKET, Prefix: sourcePrefix, ContinuationToken: continuationToken }));
+      for (const obj of (listed.Contents || [])) {
+        const destKey = `${id}/${obj.Key.slice(sourcePrefix.length)}`;
+        await s3.send(new CopyObjectCommand({
+          Bucket: DEST_BUCKET,
+          Key: destKey,
+          CopySource: `/${SOURCE_BUCKET}/${encodeURIComponent(obj.Key).replace(/%2F/g, '/')}`,
+        }));
+        total++;
+      }
+      continuationToken = listed.IsTruncated ? listed.NextContinuationToken : undefined;
+    } while (continuationToken);
 
-        const ctaSection = isSuccess
-            ? `<div style="text-align: center; margin: 32px 0;">
-                    <a href="${baseUrl}/my-sites" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
-                        View Your Site
-                    </a>
-                </div>`
-            : `<div style="background: ${statusBg}; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                    <p style="color: #991b1b; font-size: 14px; margin: 0;"><strong>Error:</strong> ${errorMessage || 'An unexpected error occurred.'}</p>
-                </div>
-                <div style="text-align: center; margin: 32px 0;">
-                    <a href="${baseUrl}/my-sites" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
-                        Retry Build
-                    </a>
-                </div>`;
+    if (total === 0) return res.status(404).json({ error: 'No source artifacts found in genweb-projects' });
 
-        const mailOptions = {
-            from: `"GenWeb" <${SMTP_FROM}>`,
-            to: userEmail,
-            subject,
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
-                    <div style="text-align: center; margin-bottom: 32px;">
-                        <h1 style="font-size: 24px; font-weight: 700; color: #1a1a2e; margin: 0;">GenWeb</h1>
-                    </div>
-                    <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px;">
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; background: ${statusBg}; color: ${statusColor}; font-size: 24px; font-weight: bold;">
-                                ${statusIcon}
-                            </div>
-                        </div>
-                        <h2 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0 0 8px; text-align: center;">${statusText}</h2>
-                        <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin: 0 0 8px; text-align: center;">
-                            ${isSuccess
-                                ? `Your website <strong>"${siteName}"</strong> has been built successfully and is ready to preview and publish.`
-                                : `We couldn't build your website <strong>"${siteName}"</strong>. You can retry the build from your dashboard.`
-                            }
-                        </p>
-                        ${ctaSection}
-                    </div>
-                    <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
-                        &copy; GenWeb &middot; <a href="https://genweb.in" style="color: #9ca3af;">genweb.in</a>
-                    </p>
-                </div>
-            `
-        };
+    const publicUrl = `https://${R2_PUB}/${DEST_BUCKET}/${id}/index.html`;
+    await db.exec(`UPDATE projects SET url = ?, deploy_url = ?, updated_at = datetime('now') WHERE id = ?`, [publicUrl, publicUrl, id]);
 
-        await transporter.sendMail(mailOptions);
-        console.log(`[Email] Build ${status} notification sent to ${userEmail} for project ${projectId}`);
-    } catch (err) {
-        console.error(`[Email] Failed to send build notification:`, err.message);
-    }
-}
+    res.json({ success: true, copied: total, url: publicUrl });
+  } catch (error) {
+    console.error('Resync preview failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 async function runBuildProcess(id, userContext, logoFile, parsedPages, userId, cost, query, stylePreset) {
-    console.log(`[${id}] Starting background build process...`);
-    
-    const logProgress = async (message, progress = null) => {
-        console.log(`[${id}] Progress: ${message}${progress !== null ? ` (${progress}%)` : ''}`);
-        if (db) {
-            try {
-                const updateData = {
-                    status: 'processing',
-                    logs: admin.firestore.FieldValue.arrayUnion({
-                        message,
-                        timestamp: new Date().toISOString()
-                    })
-                };
-                if (progress !== null) {
-                    updateData.buildProgress = progress;
-                    updateData.buildProgressMessage = message.replace(`[${id}] `, '');
-                }
-                await db.collection('projects').doc(id).update(updateData);
-            } catch (e) {
-                console.warn(`[${id}] Failed to update firestore log:`, e.message);
-            }
+  console.log(`[${id}] Starting background build process...`);
+
+  const logProgress = async (message, progress = null) => {
+    console.log(`[${id}] Progress: ${message}${progress !== null ? ` (${progress}%)` : ''}`);
+    try {
+      const row = await db.one('SELECT logs FROM projects WHERE id = ?', [id]);
+      const logs = row ? db.parseJSON(row.logs, []) : [];
+      logs.push({ message, timestamp: new Date().toISOString() });
+      if (progress !== null) {
+        await db.exec(
+          `UPDATE projects SET status = 'processing', logs = ?, build_progress = ?, build_progress_message = ? WHERE id = ?`,
+          [db.J(logs), progress, message.replace(`[${id}] `, ''), id]
+        );
+      } else {
+        await db.exec(
+          `UPDATE projects SET status = 'processing', logs = ? WHERE id = ?`,
+          [db.J(logs), id]
+        );
+      }
+      hub.emit(userId, 'project:progress', { projectId: id, progress, message });
+    } catch (e) {
+      console.warn(`[${id}] Failed to update log:`, e.message);
+    }
+  };
+
+  try {
+    await logProgress('Starting build engine...', 5);
+
+    const totalPages = parsedPages.length;
+    const wrappedProgress = async (message) => {
+      const msg = message.replace(`[${id}] `, '');
+      let pct = null;
+      if (msg.includes('Generating Design')) pct = 10;
+      else if (msg.includes('Fetching Images')) pct = 20;
+      else if (msg.includes('Copying skeleton')) pct = 25;
+      else if (msg.includes('Generating') && msg.includes('pages')) pct = 30;
+      else if (msg.includes('Generating Home') || (msg.includes('Generating') && !msg.includes('remaining'))) {
+        const pageMatch = msg.match(/Generating (.+?)\.\.\./);
+        if (pageMatch) {
+          const pageIndex = parsedPages.indexOf(pageMatch[1]);
+          pct = pageIndex >= 0 ? 30 + Math.round((pageIndex / totalPages) * 40) : 50;
         }
+      } else if (msg.includes('remaining pages')) pct = 45;
+      else if (msg.includes('Injecting configuration')) pct = 75;
+      await logProgress(message, pct);
     };
 
+    const buildResult = await buildSite(id, userContext, logoFile, parsedPages, wrappedProgress, stylePreset);
+    const distPath = buildResult.distDir;
+    if (buildResult.tokenUsageLog) await saveTokenUsage(buildResult.tokenUsageLog, id, userId);
+
+    await logProgress('Build success! Saving & Deploying...', 80);
+
+    const sourcePath = path.join(__dirname, 'projects_source', id);
+    const tempPath = path.join(__dirname, 'temp', id);
+    await fs.move(tempPath, sourcePath);
+    await logProgress('Source code saved.', 85);
+
+    await logProgress('Saving to Cloud Storage...', 90);
+    const savedUrl = await saveBuildArtifacts(id, path.join(sourcePath, 'dist'), userId);
+
     try {
-        await logProgress('Starting build engine...', 5);
-
-        const totalPages = parsedPages.length;
-        const wrappedProgress = async (message) => {
-            // Builder calls onProgress with messages; map them to percentages
-            const msg = message.replace(`[${id}] `, '');
-            let pct = null;
-            if (msg.includes('Generating Design')) pct = 10;
-            else if (msg.includes('Fetching Images')) pct = 20;
-            else if (msg.includes('Copying skeleton')) pct = 25;
-            else if (msg.includes('Generating') && msg.includes('pages')) pct = 30;
-            else if (msg.includes('Generating Home') || msg.includes('Generating') && !msg.includes('remaining')) {
-                // Individual page generation - distribute 30-70% across pages
-                const pageMatch = msg.match(/Generating (.+?)\.\.\./);
-                if (pageMatch) {
-                    const pageName = pageMatch[1];
-                    const pageIndex = parsedPages.indexOf(pageName);
-                    if (pageIndex >= 0) {
-                        pct = 30 + Math.round((pageIndex / totalPages) * 40);
-                    } else {
-                        pct = 50; // fallback
-                    }
-                }
-            }
-            else if (msg.includes('remaining pages')) pct = 45;
-            else if (msg.includes('Injecting configuration')) pct = 75;
-            await logProgress(message, pct);
-        };
-
-        const buildResult = await buildSite(id, userContext, logoFile, parsedPages, wrappedProgress, stylePreset);
-        const distPath = buildResult.distDir;
-
-        // Save token usage from the build
-        if (buildResult.tokenUsageLog) await saveTokenUsage(buildResult.tokenUsageLog, id, userId);
-
-        await logProgress('Build success! Saving & Deploying...', 80);
-
-        // 1. Move the entire project (source + dist) to projects_source
-        const sourcePath = path.join(__dirname, 'projects_source', id);
-        const tempPath = path.join(__dirname, 'temp', id);
-
-        await fs.move(tempPath, sourcePath);
-        await logProgress(`Source code saved.`, 85);
-
-        // 2. Post-Build: Save to Storage (GCS) + Preview
-        await logProgress('Saving to Cloud Storage...', 90);
-        const savedUrl = await saveBuildArtifacts(id, path.join(sourcePath, 'dist'), userId);
-
-        // 4. Deduct Credits (Only on Success)
-        try {
-            await deductCredits(userId, cost, `Generate ${parsedPages.length > 1 ? 'Multi-Page' : 'Single-Page'} Site (${id})`);
-            await logProgress('Credits deducted.', 95);
-        } catch (creditErr) {
-            console.error(`[${id}] Failed to deduct credits after success:`, creditErr);
-            // Don't fail the build for this, but log it critically
-        }
-
-        // Final DB Update
-        if (db) {
-            await db.collection('projects').doc(id).update({
-                status: 'completed',
-                isPublished: false,
-                url: savedUrl, // Default to preview URL until published
-                localUrl: savedUrl,
-                // deployUrl: null, // Don't wipe it if it exists, but don't set it either
-                completedAt: admin.firestore.FieldValue.serverTimestamp(),
-                logs: admin.firestore.FieldValue.arrayUnion({
-                    message: 'Process Finished Successfully.',
-                    timestamp: new Date().toISOString()
-                })
-            });
-        }
-        
-        console.log(`[${id}] Process Finished Successfully.`);
-
-        // Send success email notification
-        sendBuildNotification(userId, id, query, 'success').catch(err =>
-            console.error(`[${id}] Failed to send success email:`, err.message)
-        );
-
-    } catch (error) {
-        console.error(`[${id}] Build Process Failed:`, error);
-        const isRateLimited = error.message === 'RATE_LIMITED';
-        const userError = isRateLimited
-            ? 'We are currently experiencing high demand. Please retry after a few minutes.'
-            : error.message;
-
-        if (db) {
-            await db.collection('projects').doc(id).update({
-                status: 'failed',
-                error: userError,
-                isRateLimited: isRateLimited,
-                logs: admin.firestore.FieldValue.arrayUnion({
-                    message: `Error: ${userError}`,
-                    timestamp: new Date().toISOString()
-                })
-            });
-        }
-
-        // Send failure email notification
-        sendBuildNotification(userId, id, query, 'failed', userError).catch(err =>
-            console.error(`[${id}] Failed to send failure email:`, err.message)
-        );
-
-        // Cleanup temp if it exists and wasn't moved
-        try {
-             const tempPath = path.join(__dirname, 'temp', id);
-             if (await fs.pathExists(tempPath)) {
-                 await fs.remove(tempPath);
-             }
-        } catch (cleanupErr) { /* ignore */ }
+      await deductCredits(userId, cost, `Generate ${parsedPages.length > 1 ? 'Multi-Page' : 'Single-Page'} Site (${id})`);
+      await logProgress('Credits deducted.', 95);
+    } catch (creditErr) {
+      console.error(`[${id}] Failed to deduct credits after success:`, creditErr);
     }
+
+    const row = await db.one('SELECT logs FROM projects WHERE id = ?', [id]);
+    const logs = row ? db.parseJSON(row.logs, []) : [];
+    logs.push({ message: 'Process Finished Successfully.', timestamp: new Date().toISOString() });
+    await db.exec(
+      `UPDATE projects SET status = 'completed', is_published = 0, url = ?, completed_at = datetime('now'), logs = ? WHERE id = ?`,
+      [savedUrl, db.J(logs), id]
+    );
+
+    hub.emit(userId, 'project:updated', { projectId: id, status: 'completed' });
+    console.log(`[${id}] Process Finished Successfully.`);
+
+    sendBuildNotification(userId, id, query, 'success').catch(err =>
+      console.error(`[${id}] Failed to send success email:`, err.message)
+    );
+  } catch (error) {
+    console.error(`[${id}] Build Process Failed:`, error);
+    const isRateLimited = error.message === 'RATE_LIMITED';
+    const userError = isRateLimited
+      ? 'We are currently experiencing high demand. Please retry after a few minutes.'
+      : error.message;
+
+    try {
+      const row = await db.one('SELECT logs FROM projects WHERE id = ?', [id]);
+      const logs = row ? db.parseJSON(row.logs, []) : [];
+      logs.push({ message: `Error: ${userError}`, timestamp: new Date().toISOString() });
+      await db.exec(
+        `UPDATE projects SET status = 'failed', build_progress_message = ?, logs = ? WHERE id = ?`,
+        [userError, db.J(logs), id]
+      );
+      hub.emit(userId, 'project:updated', { projectId: id, status: 'failed', error: userError });
+    } catch (_) {}
+
+    sendBuildNotification(userId, id, query, 'failed', userError).catch(err =>
+      console.error(`[${id}] Failed to send failure email:`, err.message)
+    );
+
+    try {
+      const tempPath = path.join(__dirname, 'temp', id);
+      if (await fs.pathExists(tempPath)) await fs.remove(tempPath);
+    } catch (_) {}
+  }
 }
 
-// --- Payments (Razorpay) ---
+// ------------------------------------------------------------------
+// Payments (Razorpay)
+// ------------------------------------------------------------------
 
 app.post('/api/payments/order', verifyToken, async (req, res) => {
-    const { amount, currency } = req.body;
-    try {
-        const order = await createOrder(amount, currency);
-        res.json(order);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  const { amount, currency } = req.body;
+  try {
+    const order = await createOrder(amount, currency);
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/payments/verify', verifyToken, async (req, res) => {
-    const { orderId, paymentId, signature } = req.body;
-    const isValid = verifyPayment(orderId, paymentId, signature);
-    
-    if (isValid) {
-        res.json({ success: true });
-    } else {
-        res.status(400).json({ success: false, error: 'Invalid Signature' });
-    }
+  const { orderId, paymentId, signature } = req.body;
+  const isValid = verifyPayment(orderId, paymentId, signature);
+  if (isValid) res.json({ success: true });
+  else res.status(400).json({ success: false, error: 'Invalid Signature' });
 });
 
-// --- Credit System Endpoints ---
+// ------------------------------------------------------------------
+// Credits
+// ------------------------------------------------------------------
 
-// Get User Credits
 app.get('/api/credits', verifyToken, async (req, res) => {
-    try {
-        const credits = await getUserCredits(req.user.uid);
-        res.json({ credits });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const credits = await getUserCredits(req.user.uid);
+    res.json({ credits });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Get Credit History
 app.get('/api/credits/history', verifyToken, async (req, res) => {
-    try {
-        const transactions = await getTransactions(req.user.uid);
-        res.json(transactions);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    res.json(await getTransactions(req.user.uid));
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Buy Credits (Create Order)
 app.post('/api/credits/buy', verifyToken, async (req, res) => {
-    const { amount, credits } = req.body; // amount in INR, credits to add
-    try {
-        // Create Razorpay order (amount in paise)
-        const order = await createOrder(amount * 100, 'INR');
-        res.json({ order, credits }); // Pass back credits for client context
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  const { amount, credits } = req.body;
+  try {
+    const order = await createOrder(amount * 100, 'INR');
+    res.json({ order, credits });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Verify Credit Purchase
 app.post('/api/credits/verify', verifyToken, async (req, res) => {
-    const { orderId, paymentId, signature, credits, amount } = req.body;
-    
+  const { orderId, paymentId, signature, credits, amount } = req.body;
+  try {
+    const isValid = verifyPayment(orderId, paymentId, signature);
+    if (!isValid) return res.status(400).json({ success: false, error: 'Invalid Signature' });
+
+    await addCredits(req.user.uid, parseInt(credits), `Purchased ${credits} credits for ₹${amount}`, paymentId);
+
     try {
-        const isValid = verifyPayment(orderId, paymentId, signature);
-        
-        if (isValid) {
-            // Add credits to user wallet
-            await addCredits(req.user.uid, parseInt(credits), `Purchased ${credits} credits for ₹${amount}`, paymentId);
-
-            // Referral reward trigger: complete pending referrals on first purchase
-            try {
-                const referralSnap = await db.collection('referrals')
-                    .where('referredUserId', '==', req.user.uid)
-                    .where('status', '==', 'pending')
-                    .limit(1)
-                    .get();
-
-                if (!referralSnap.empty) {
-                    const referral = referralSnap.docs[0];
-                    const refData = referral.data();
-                    await addCredits(refData.referrerUserId, refData.rewardAmount, `Referral reward - referred user made a purchase`);
-                    await referral.ref.update({
-                        status: 'completed',
-                        completedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log(`[Referral] Completed referral ${referral.id}: rewarded ${refData.referrerUserId} with ${refData.rewardAmount} credits`);
-                }
-            } catch (refErr) {
-                console.error('[Referral] Failed to process referral reward:', refErr.message);
-            }
-
-            res.json({ success: true, message: 'Credits added successfully' });
-        } else {
-            res.status(400).json({ success: false, error: 'Invalid Signature' });
-        }
-    } catch (error) {
-        console.error('Credit verification failed:', error);
-        res.status(500).json({ error: error.message });
+      const referral = await db.one(
+        `SELECT id, referrer_user_id, reward_amount FROM referrals
+         WHERE referred_user_id = ? AND status = 'pending' LIMIT 1`,
+        [req.user.uid]
+      );
+      if (referral) {
+        await addCredits(referral.referrer_user_id, referral.reward_amount, 'Referral reward - referred user made a purchase');
+        await db.exec(
+          `UPDATE referrals SET status = 'completed', completed_at = datetime('now') WHERE id = ?`,
+          [referral.id]
+        );
+        console.log(`[Referral] Completed referral ${referral.id}`);
+      }
+    } catch (refErr) {
+      console.error('[Referral] Failed to process referral reward:', refErr.message);
     }
+
+    res.json({ success: true, message: 'Credits added successfully' });
+  } catch (error) {
+    console.error('Credit verification failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Unlock Publishing Plan & Deploy to Cloudflare
+// ------------------------------------------------------------------
+// Publish
+// ------------------------------------------------------------------
+
 app.post('/api/project/:id/publish', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { plan, subdomain, years = 1 } = req.body; // 'basic', 'single', 'multi'; years default 1
-    
-    const COSTS = {
-        'basic': 500,
-        'single': 2000,
-        'multi': 3000
-    };
-    
-    const cost = COSTS[plan];
-    if (!cost) {
-        return res.status(400).json({ error: 'Invalid plan' });
+  const { id } = req.params;
+  const { plan, subdomain, years = 1 } = req.body;
+  const COSTS = { basic: 500, single: 2000, multi: 3000 };
+  const cost = COSTS[plan];
+  if (!cost) return res.status(400).json({ error: 'Invalid plan' });
+
+  const duration = [1, 2, 3].includes(parseInt(years)) ? parseInt(years) : 1;
+  let totalCost = cost * duration;
+  if (duration === 2) totalCost *= 0.95;
+  if (duration === 3) totalCost *= 0.90;
+  totalCost = Math.round(totalCost);
+
+  try {
+    if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
+    const distPath = path.join(__dirname, 'projects_source', id, 'dist');
+    if (!await fs.pathExists(distPath)) {
+      return res.status(404).json({ error: 'Build artifacts (dist folder) not found. Please rebuild the project.' });
     }
 
-    const duration = [1, 2, 3].includes(parseInt(years)) ? parseInt(years) : 1;
-    let totalCost = cost * duration;
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(403).json({ error: 'Project not found or unauthorized' });
 
-    // Apply Discounts
-    if (duration === 2) totalCost *= 0.95; // 5% off
-    if (duration === 3) totalCost *= 0.90; // 10% off
-    
-    totalCost = Math.round(totalCost);
-    
-    try {
-        if (!await ensureProjectSource(id)) return res.status(404).json({ error: 'Project source not found' });
-
-        const distPath = path.join(__dirname, 'projects_source', id, 'dist');
-        if (!await fs.pathExists(distPath)) {
-            return res.status(404).json({ error: 'Build artifacts (dist folder) not found. Please rebuild the project.' });
-        }
-
-        // 1. Check ownership
-        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
-        const snapshot = await projectRef.get();
-        
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Project not found or unauthorized' });
-        }
-        
-        const projectDoc = snapshot.docs[0];
-        const projectData = projectDoc.data();
-
-        // 2. Update Subdomain if provided (and different)
-        let finalSubdomain = projectData.subdomain;
-        if (subdomain) {
-            const cleanName = subdomain.toLowerCase();
-            if (cleanName !== finalSubdomain) {
-                // Check availability
-                const availability = await checkSubdomainAvailability(cleanName);
-                if (!availability.available) {
-                     const existing = await db.collection('projects').where('subdomain', '==', cleanName).get();
-                     if (!existing.empty && existing.docs[0].data().projectId !== id) {
-                         return res.status(409).json({ error: availability.error });
-                     }
-                }
-                finalSubdomain = cleanName;
-                await projectDoc.ref.update({ subdomain: finalSubdomain });
-            }
-        }
-        
-        // 3. Deduct Credits
-        // Always deduct for renewal or new plan
-        // Note: If user is just changing subdomain without renewal, they shouldn't call this with years?
-        // Assuming client calls this ONLY for payment/publish actions.
-        await deductCredits(req.user.uid, totalCost, `Unlock/Renew ${plan} plan for project ${id} (${duration} years)`);
-        
-        // 4. Calculate Expiry
-        const now = admin.firestore.Timestamp.now();
-        let expiryDate;
-        let startDate = projectData.subscriptionStartDate || now;
-
-        // Check if currently active
-        const currentExpiry = projectData.subscriptionExpiryDate;
-        const isCurrentlyActive = currentExpiry && currentExpiry.toMillis() > Date.now() && !projectData.isExpired;
-
-        if (isCurrentlyActive) {
-            // Extend
-            const currentExpiryDate = currentExpiry.toDate();
-            currentExpiryDate.setFullYear(currentExpiryDate.getFullYear() + duration);
-            expiryDate = admin.firestore.Timestamp.fromDate(currentExpiryDate);
-        } else {
-            // New or Reactivation
-            const newExpiryDate = new Date();
-            newExpiryDate.setFullYear(newExpiryDate.getFullYear() + duration);
-            expiryDate = admin.firestore.Timestamp.fromDate(newExpiryDate);
-            startDate = now; // Reset start date if expired/new
-        }
-
-        // 5. Deploy to GCP (Ensure bucket is public)
-        console.log(`Publishing project ${id} to GCP (Subdomain: ${finalSubdomain})...`);
-        const deployResult = await deploySite(distPath, id, projectData.netlifySiteId); 
-        
-        // Ensure bucket is public (in case it was private due to expiry)
-        await makeBucketPublic(`site-${id}`);
-
-        // 6. Construct Public URL
-        const publicUrl = `https://${finalSubdomain}.genweb.in`;
-
-        // 7. Update Project Status & URL
-        await projectDoc.ref.update({
-            publishedPlan: plan,
-            isPublished: true,
-            isExpired: false,
-            subscriptionStartDate: startDate,
-            subscriptionExpiryDate: expiryDate,
-            subscriptionYears: duration, // Store last purchased duration or total? let's store last purchased
-            deployUrl: publicUrl, 
-            bucketUrl: deployResult.url,
-            publishedAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        
-        res.json({ success: true, url: publicUrl, expiry: expiryDate.toDate() });
-        
-    } catch (error) {
-        if (error.message === 'Insufficient credits') {
-            return res.status(402).json({ error: 'Insufficient credits' });
-        }
-        console.error('Publish unlock/deploy failed:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- Domain Management Endpoints ---
-
-// Check Domain Availability
-app.get('/api/domains/check', verifyToken, async (req, res) => {
-    const { domain } = req.query;
-    if (!domain) {
-        return res.status(400).json({ error: 'Domain is required' });
-    }
-
-    try {
-        const result = await checkAvailability(domain);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get Domain Suggestions
-app.get('/api/domains/suggest', verifyToken, async (req, res) => {
-    const { query } = req.query;
-    if (!query) {
-        return res.status(400).json({ error: 'Query is required' });
-    }
-
-    try {
-        const result = await getSuggestions(query);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get User's Domains
-app.get('/api/domains', verifyToken, async (req, res) => {
-    try {
-        if (!db) {
-            return res.json([]);
-        }
-        
-        const snapshot = await db.collection('domains')
-            .where('userId', '==', req.user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-            
-        const domains = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(domains);
-    } catch (error) {
-        console.error('Fetch domains failed:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- DNS Management (NameSilo) ---
-
-// List DNS Records
-app.get('/api/domains/:domain/dns', verifyToken, async (req, res) => {
-    const { domain } = req.params;
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
-
-        // Verify Ownership
-        const snapshot = await db.collection('domains')
-            .where('domain', '==', domain)
-            .where('userId', '==', req.user.uid)
-            .get();
-
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Unauthorized: Domain not found in your account.' });
-        }
-
-        const records = await listDNSRecords(domain);
-        res.json(records);
-
-    } catch (error) {
-        console.error(`List DNS failed for ${domain}:`, error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Add DNS Record
-app.post('/api/domains/:domain/dns', verifyToken, async (req, res) => {
-    const { domain } = req.params;
-    const { type, host, value, ttl, distance } = req.body;
-
-    if (!type || !value) {
-        return res.status(400).json({ error: 'Type and Value are required.' });
-    }
-
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
-
-        // Verify Ownership
-        const snapshot = await db.collection('domains')
-            .where('domain', '==', domain)
-            .where('userId', '==', req.user.uid)
-            .get();
-
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        const result = await addDNSRecordGeneric(domain, { type, host, value, ttl, distance });
-        res.json(result);
-
-    } catch (error) {
-        console.error(`Add DNS failed for ${domain}:`, error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete DNS Record
-app.delete('/api/domains/:domain/dns/:rrid', verifyToken, async (req, res) => {
-    const { domain, rrid } = req.params;
-
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
-
-        // Verify Ownership
-        const snapshot = await db.collection('domains')
-            .where('domain', '==', domain)
-            .where('userId', '==', req.user.uid)
-            .get();
-
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        await deleteDNSRecord(domain, rrid);
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error(`Delete DNS failed for ${domain}:`, error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Purchase Domain
-app.post('/api/domains/buy', verifyToken, async (req, res) => {
-    const { domain, contactInfo, projectId } = req.body;
-
-    if (!domain || !contactInfo) {
-        return res.status(400).json({ error: 'Domain and contactInfo are required' });
-    }
-
-    // Capture IP for 'agreedBy' field
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-    try {
-        // Prepare details object
-        const details = {
-            ip,
-            contact: contactInfo // Assuming contactInfo has the required fields (nameFirst, nameLast, etc.)
-        };
-
-        const result = await purchaseDomain(domain, details);
-        
-        let cfStatus = null;
-        
-        // If projectId is provided, we can auto-setup Cloudflare immediately
-        // Otherwise, user will have to "Connect" it later.
-        // For now, let's assume we want to setup Cloudflare Zone regardless to get NS.
-        // We use a placeholder project ID if none provided, or just init the zone.
-        
-        try {
-            // true = isManagedByUs (Auto update DNS)
-            // If no project ID, we might fail linking, but we can still Add DNS if we knew the IP.
-            // But setupGCPDomain requires projectId to know the target bucket.
-            // If no projectId, we can't fully setup the LB mapping, but we can point the A record if we assume a shared LB.
-            
-            if (projectId) {
-                 cfStatus = await setupGCPDomain(domain, projectId, true);
-            }
-        } catch (cfError) {
-            console.error("Auto-GCP setup failed during purchase:", cfError);
-            // Don't fail the purchase response, just log it.
-            cfStatus = { status: 'SETUP_FAILED', error: cfError.message };
-        }
-        
-        // Save to Firestore
-        if (db) {
-            await db.collection('domains').add({
-                domain,
-                userId: req.user.uid,
-                orderId: result.orderId || 'unknown',
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                provider: 'namesilo',
-                status: 'active',
-                autoRenew: true,
-                lbStatus: cfStatus,
-                ip: cfStatus?.ip || null
-            });
-        }
-
-        res.json({ success: true, order: result, lbStatus: cfStatus });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- Subdomain Management (*.genweb.in) ---
-
-// Check Subdomain Availability
-app.get('/api/subdomain/check', verifyToken, async (req, res) => {
-    const { name } = req.query;
-    if (!name) return res.status(400).json({ error: 'Name is required' });
-    
-    try {
-        const result = await checkSubdomainAvailability(name.toLowerCase());
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update Project Subdomain
-app.post('/api/project/:id/subdomain', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { subdomain } = req.body;
-    
-    if (!subdomain) return res.status(400).json({ error: 'Subdomain is required' });
-    
-    const cleanName = subdomain.toLowerCase();
-    
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
-        
-        // 1. Check availability
+    let finalSubdomain = project.subdomain;
+    if (subdomain) {
+      const cleanName = subdomain.toLowerCase();
+      if (cleanName !== finalSubdomain) {
         const availability = await checkSubdomainAvailability(cleanName);
-        
-        // If it's taken, check if it's taken by THIS project (idempotent)
         if (!availability.available) {
-             const existing = await db.collection('projects').where('subdomain', '==', cleanName).get();
-             if (!existing.empty && existing.docs[0].data().projectId === id) {
-                 // Same project, do nothing
-                 return res.json({ success: true, subdomain: cleanName });
-             }
-             return res.status(409).json({ error: availability.error });
+          const existing = await db.one('SELECT id FROM projects WHERE subdomain = ?', [cleanName]);
+          if (existing && existing.id !== id) {
+            return res.status(409).json({ error: availability.error });
+          }
         }
-
-        // 2. Verify Ownership
-        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
-        const snapshot = await projectRef.get();
-        
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Project not found or unauthorized' });
-        }
-
-        // 3. Update
-        await snapshot.docs[0].ref.update({
-            subdomain: cleanName,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        
-        res.json({ success: true, subdomain: cleanName });
-
-    } catch (error) {
-        console.error('Update subdomain failed:', error);
-        res.status(500).json({ error: error.message });
+        finalSubdomain = cleanName;
+        await db.exec('UPDATE projects SET subdomain = ? WHERE id = ?', [finalSubdomain, id]);
+      }
     }
+
+    await deductCredits(req.user.uid, totalCost, `Unlock/Renew ${plan} plan for project ${id} (${duration} years)`);
+
+    const nowIso = new Date().toISOString();
+    let startDate = project.subscriptionStartDate || nowIso;
+    let expiryDate;
+    const currentExpiry = project.subscriptionExpiryDate ? new Date(project.subscriptionExpiryDate) : null;
+    const isCurrentlyActive = currentExpiry && currentExpiry.getTime() > Date.now() && !project.isExpired;
+
+    if (isCurrentlyActive) {
+      currentExpiry.setFullYear(currentExpiry.getFullYear() + duration);
+      expiryDate = currentExpiry.toISOString();
+    } else {
+      const e = new Date();
+      e.setFullYear(e.getFullYear() + duration);
+      expiryDate = e.toISOString();
+      startDate = nowIso;
+    }
+
+    // Draft sites carry the runtime Tailwind script; live customer sites must
+    // ship compiled static CSS. Compile + strip runtime before deploying.
+    if (project.compileState === 'runtime') {
+      console.log(`[${id}] Compiling draft CSS for publish...`);
+      await prepareForPublish(id);
+    }
+
+    console.log(`Publishing project ${id} (Subdomain: ${finalSubdomain})...`);
+    const deployResult = await deploySite(distPath, id);
+
+    const publicUrl = `https://${finalSubdomain}.genweb.in`;
+
+    await db.exec(
+      `UPDATE projects SET
+         published_plan = ?, is_published = 1, is_expired = 0,
+         subscription_start = ?, subscription_expiry = ?,
+         deploy_url = ?, bucket_url = ?,
+         updated_at = datetime('now')
+       WHERE id = ?`,
+      [plan, startDate, expiryDate, publicUrl, deployResult.url, id]
+    );
+
+    hub.emit(req.user.uid, 'project:updated', { projectId: id, isPublished: true });
+    res.json({ success: true, url: publicUrl, expiry: expiryDate });
+  } catch (error) {
+    if (error.message === 'Insufficient credits') {
+      return res.status(402).json({ error: 'Insufficient credits' });
+    }
+    console.error('Publish unlock/deploy failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Delete Project
+// ------------------------------------------------------------------
+// Domains
+// ------------------------------------------------------------------
+
+app.get('/api/domains/check', verifyToken, async (req, res) => {
+  const { domain } = req.query;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  try { res.json(await checkAvailability(domain)); }
+  catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/domains/suggest', verifyToken, async (req, res) => {
+  const { query } = req.query;
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+  try { res.json(await getSuggestions(query)); }
+  catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/domains', verifyToken, async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT domain, user_id AS userId, order_id AS orderId, provider, status,
+              auto_renew AS autoRenew, lb_status AS lbStatus, ip, created_at AS createdAt
+       FROM domains WHERE user_id = ? ORDER BY created_at DESC`,
+      [req.user.uid]
+    );
+    res.json(rows.map(r => ({ ...r, lbStatus: db.parseJSON(r.lbStatus, null) })));
+  } catch (error) {
+    console.error('Fetch domains failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/domains/:domain/dns', verifyToken, async (req, res) => {
+  const { domain } = req.params;
+  try {
+    const own = await db.one('SELECT 1 FROM domains WHERE domain = ? AND user_id = ?', [domain, req.user.uid]);
+    if (!own) return res.status(403).json({ error: 'Unauthorized: Domain not found in your account.' });
+    res.json(await listDNSRecords(domain));
+  } catch (error) {
+    console.error(`List DNS failed for ${domain}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/domains/:domain/dns', verifyToken, async (req, res) => {
+  const { domain } = req.params;
+  const { type, host, value, ttl, distance } = req.body;
+  if (!type || !value) return res.status(400).json({ error: 'Type and Value are required.' });
+  try {
+    const own = await db.one('SELECT 1 FROM domains WHERE domain = ? AND user_id = ?', [domain, req.user.uid]);
+    if (!own) return res.status(403).json({ error: 'Unauthorized' });
+    res.json(await addDNSRecordGeneric(domain, { type, host, value, ttl, distance }));
+  } catch (error) {
+    console.error(`Add DNS failed for ${domain}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/domains/:domain/dns/:rrid', verifyToken, async (req, res) => {
+  const { domain, rrid } = req.params;
+  try {
+    const own = await db.one('SELECT 1 FROM domains WHERE domain = ? AND user_id = ?', [domain, req.user.uid]);
+    if (!own) return res.status(403).json({ error: 'Unauthorized' });
+    await deleteDNSRecord(domain, rrid);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Delete DNS failed for ${domain}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/domains/buy', verifyToken, async (req, res) => {
+  const { domain, contactInfo, projectId } = req.body;
+  if (!domain || !contactInfo) return res.status(400).json({ error: 'Domain and contactInfo are required' });
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+  try {
+    const details = { ip, contact: contactInfo };
+    const result = await purchaseDomain(domain, details);
+
+    let cfStatus = null;
+    try {
+      if (projectId) cfStatus = await setupCFDomain(domain, projectId, true);
+    } catch (cfError) {
+      console.error('Auto-CF setup failed during purchase:', cfError);
+      cfStatus = { status: 'SETUP_FAILED', error: cfError.message };
+    }
+
+    await db.exec(
+      `INSERT INTO domains (domain, user_id, order_id, provider, status, auto_renew, lb_status, ip)
+       VALUES (?, ?, ?, 'namesilo', 'active', 1, ?, ?)`,
+      [domain, req.user.uid, result.orderId || 'unknown', db.J(cfStatus), cfStatus?.ip || null]
+    );
+
+    res.json({ success: true, order: result, lbStatus: cfStatus });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/subdomain/check', verifyToken, async (req, res) => {
+  const { name } = req.query;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  try { res.json(await checkSubdomainAvailability(name.toLowerCase())); }
+  catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/api/project/:id/subdomain', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { subdomain } = req.body;
+  if (!subdomain) return res.status(400).json({ error: 'Subdomain is required' });
+  const cleanName = subdomain.toLowerCase();
+
+  try {
+    const availability = await checkSubdomainAvailability(cleanName);
+    if (!availability.available) {
+      const existing = await db.one('SELECT id FROM projects WHERE subdomain = ?', [cleanName]);
+      if (existing && existing.id === id) return res.json({ success: true, subdomain: cleanName });
+      return res.status(409).json({ error: availability.error });
+    }
+
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(403).json({ error: 'Project not found or unauthorized' });
+
+    await db.exec(
+      `UPDATE projects SET subdomain = ?, updated_at = datetime('now') WHERE id = ?`,
+      [cleanName, id]
+    );
+    res.json({ success: true, subdomain: cleanName });
+  } catch (error) {
+    console.error('Update subdomain failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/projects/:id', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+  const { id } = req.params;
+  try {
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(404).json({ error: 'Project not found or unauthorized' });
 
-        // Query by projectId (not doc ID if they differ, but usually id param is projectId)
-        // Wait, standard route is /api/projects/:id where id is projectId
-        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
-        const snapshot = await projectRef.get();
-        
-        if (snapshot.empty) {
-            return res.status(404).json({ error: 'Project not found or unauthorized' });
-        }
+    console.log(`[Delete Project] Starting deletion for ${id}...`);
 
-        const projectDoc = snapshot.docs[0];
-        const projectData = projectDoc.data();
-
-        console.log(`[Delete Project] Starting deletion for ${id} (Owner: ${req.user.uid})...`);
-
-        // 1. Cleanup Custom Domain Resources (if any)
-        if (projectData.customDomain) {
-            console.log(`[Delete Project] Cleaning up custom domain: ${projectData.customDomain}`);
-            try {
-                // This removes BackendBucket, URL Map rules, SSL Certs
-                await cleanupGCPDomain(projectData.customDomain, id);
-            } catch (err) {
-                console.warn(`[Delete Project] Failed to clean up custom domain resources:`, err.message);
-                // Continue deletion anyway
-            }
-        }
-
-        // 2. Cleanup Storage Bucket (site-{projectId})
-        // Even if not published, the bucket might exist if they ever tried to deploy
-        // Or if it's a draft, maybe it's just in temp. But deleteSiteBucket checks existence.
-        try {
-            await deleteSiteBucket(id);
-        } catch (err) {
-            console.warn(`[Delete Project] Failed to delete storage bucket site-${id}:`, err.message);
-        }
-
-        // 3. Delete Firestore Document
-        await projectDoc.ref.delete();
-
-        console.log(`[Delete Project] Project ${id} deleted successfully.`);
-        res.json({ success: true, message: 'Project deleted' });
-
-    } catch (error) {
-        console.error(`[Delete Project] Error:`, error);
-        res.status(500).json({ error: 'Failed to delete project: ' + error.message });
+    if (project.customDomain) {
+      try { await cleanupCFDomain(project.customDomain, id); }
+      catch (err) { console.warn(`[Delete Project] Failed to clean up custom domain:`, err.message); }
     }
+    try { await deleteSiteBucket(id); }
+    catch (err) { console.warn(`[Delete Project] Failed to delete storage bucket:`, err.message); }
+
+    await db.transaction([
+      { sql: 'DELETE FROM leads WHERE project_id = ?', params: [id] },
+      { sql: 'DELETE FROM projects WHERE id = ?', params: [id] },
+    ]);
+
+    hub.emit(req.user.uid, 'project:updated', { projectId: id, deleted: true });
+    res.json({ success: true, message: 'Project deleted' });
+  } catch (error) {
+    console.error('[Delete Project] Error:', error);
+    res.status(500).json({ error: 'Failed to delete project: ' + error.message });
+  }
 });
 
-// --- Custom Domain Hosting (Caddy Integration) ---
-
-
-
-// Verify Domain DNS Setup (GCP LB Check)
 app.get('/api/domains/verify-setup', verifyToken, async (req, res) => {
-    const { domain } = req.query;
-
-    if (!domain) {
-        return res.status(400).json({ error: 'Domain is required' });
-    }
-
-    try {
-        const result = await verifyDomainDNS(domain);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  const { domain } = req.query;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  try { res.json(await verifyDomainDNS(domain)); }
+  catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Assign Custom Domain to Project (GCP LB)
 app.post('/api/project/:id/domain', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const { domain } = req.body; 
+  const { id } = req.params;
+  const { domain } = req.body;
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  const cleanDomain = domain.toLowerCase().trim();
 
-    if (!domain) {
-        return res.status(400).json({ error: 'Domain is required' });
+  try {
+    const dup = await db.one('SELECT id FROM projects WHERE custom_domain = ?', [cleanDomain]);
+    if (dup) {
+      if (dup.id === id) return res.json({ success: true, message: 'Domain already assigned.' });
+      return res.status(409).json({ error: 'Domain already connected to another site.' });
     }
 
-    const cleanDomain = domain.toLowerCase().trim();
+    const project = await findProjectOwned(id, req.user.uid);
+    if (!project) return res.status(403).json({ error: 'Project not found or unauthorized' });
 
-    try {
-        if (!db) return res.status(503).json({ error: 'DB unavailable' });
+    let isManaged = false;
+    const domainRec = await db.one(
+      'SELECT provider FROM domains WHERE domain = ? AND user_id = ?',
+      [cleanDomain, req.user.uid]
+    );
+    if (domainRec && domainRec.provider === 'namesilo') isManaged = true;
 
-        // 1. Check if domain is taken
-        const duplicateCheck = await db.collection('projects')
-            .where('customDomain', '==', cleanDomain)
-            .get();
+    const cfResult = await setupCFDomain(cleanDomain, id, isManaged);
 
-        if (!duplicateCheck.empty) {
-            if (duplicateCheck.docs[0].data().projectId === id) {
-                return res.json({ success: true, message: 'Domain already assigned.' });
-            }
-            return res.status(409).json({ error: 'Domain already connected to another site.' });
-        }
+    await db.exec(
+      `UPDATE projects SET custom_domain = ?, updated_at = datetime('now') WHERE id = ?`,
+      [cleanDomain, id]
+    );
 
-        // 2. Verify Ownership
-        const projectRef = db.collection('projects').where('projectId', '==', id).where('userId', '==', req.user.uid);
-        const snapshot = await projectRef.get();
-
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Project not found or unauthorized' });
-        }
-
-        const projectDoc = snapshot.docs[0];
-
-        // 3. Setup GCP Domain
-        // Check if we manage this domain in our 'domains' collection to set isManagedByUs
-        let isManaged = false;
-        const domainDoc = await db.collection('domains').where('domain', '==', cleanDomain).where('userId', '==', req.user.uid).get();
-        if (!domainDoc.empty && domainDoc.docs[0].data().provider === 'namesilo') {
-            isManaged = true;
-        }
-
-        const cfResult = await setupGCPDomain(cleanDomain, id, isManaged);
-
-        // 4. Update Project
-        await projectDoc.ref.update({
-            customDomain: cleanDomain,
-            domainUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            lbIp: cfResult.ip, // Store the IP
-            domainStatus: cfResult.status // 'CONFIGURED' or 'ACTION_REQUIRED'
-        });
-
-        res.json({ 
-            success: true, 
-            domain: cleanDomain,
-            ip: cfResult.ip,
-            message: cfResult.message,
-            managed: isManaged
-        });
-
-    } catch (error) {
-        console.error('Assign domain failed:', error);
-        res.status(500).json({ error: error.message });
-    }
+    res.json({
+      success: true,
+      domain: cleanDomain,
+      ip: cfResult.ip,
+      message: cfResult.message,
+      managed: isManaged,
+    });
+  } catch (error) {
+    console.error('Assign domain failed:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Claim Free Domain
 app.post('/api/domains/claim', verifyToken, async (req, res) => {
-    const { domain, projectId, contact } = req.body;
+  const { domain, projectId, contact } = req.body;
+  if (!domain || !projectId) return res.status(400).json({ error: 'Domain and Project ID are required' });
+  if (!contact || !contact.nameFirst || !contact.nameLast || !contact.email || !contact.phone || !contact.address1 || !contact.city || !contact.state || !contact.postalCode || !contact.country) {
+    return res.status(400).json({ error: 'Incomplete contact details provided for domain registration.' });
+  }
+  const cleanDomain = domain.toLowerCase().trim();
+  if (!cleanDomain.endsWith('.in') && !cleanDomain.endsWith('.com')) {
+    return res.status(400).json({ error: 'Only .in and .com domains are allowed for free claim.' });
+  }
 
-    if (!domain || !projectId) {
-        return res.status(400).json({ error: 'Domain and Project ID are required' });
-    }
+  try {
+    const project = await findProjectOwned(projectId, req.user.uid);
+    if (!project) return res.status(403).json({ error: 'Project not found or unauthorized' });
 
-    if (!contact || !contact.nameFirst || !contact.nameLast || !contact.email || !contact.phone || !contact.address1 || !contact.city || !contact.state || !contact.postalCode || !contact.country) {
-        return res.status(400).json({ error: 'Incomplete contact details provided for domain registration.' });
-    }
+    const availability = await checkAvailability(cleanDomain);
+    if (!availability.available) return res.status(400).json({ error: 'Domain is not available.' });
+    const priceINR = availability.priceDisplay ? availability.priceDisplay.amount : 9999;
+    if (priceINR > 1000) return res.status(400).json({ error: `Domain price (₹${priceINR}) exceeds the free claim limit of ₹1000.` });
 
-    const cleanDomain = domain.toLowerCase().trim();
-    if (!cleanDomain.endsWith('.in') && !cleanDomain.endsWith('.com')) {
-        return res.status(400).json({ error: 'Only .in and .com domains are allowed for free claim.' });
-    }
-
-    try {
-        // 1. Verify Project Ownership
-        const projectRef = db.collection('projects').where('projectId', '==', projectId).where('userId', '==', req.user.uid);
-        const snapshot = await projectRef.get();
-        if (snapshot.empty) {
-            return res.status(403).json({ error: 'Project not found or unauthorized' });
-        }
-        const projectDoc = snapshot.docs[0];
-
-        // 2. Check Availability & Price
-        const availability = await checkAvailability(cleanDomain);
-        if (!availability.available) {
-            return res.status(400).json({ error: 'Domain is not available.' });
-        }
-
-        // Price Check (Max 1000 INR)
-        const priceINR = availability.priceDisplay ? availability.priceDisplay.amount : 9999;
-        if (priceINR > 1000) {
-            return res.status(400).json({ error: `Domain price (₹${priceINR}) exceeds the free claim limit of ₹1000.` });
-        }
-
-        // 3. Purchase Domain (Using Backend Wallet)
-        const contactInfo = {
-            nameFirst: contact.nameFirst,
-            nameLast: contact.nameLast,
-            email: contact.email,
-            phone: contact.phone,
-            addressMailing: {
-                address1: contact.address1,
-                city: contact.city,
-                state: contact.state,
-                postalCode: contact.postalCode,
-                country: contact.country
-            }
-        };
-
-        const purchaseResult = await purchaseDomain(cleanDomain, { contact: contactInfo });
-
-        // 4. Setup GCP & DNS (Automated)
-        let cfResult = { status: 'PENDING', ip: process.env.GCP_LB_IP || '34.50.155.64' };
-        try {
-            cfResult = await setupGCPDomain(cleanDomain, projectId, true);
-        } catch (e) {
-            console.error("Post-claim setup failed:", e);
-            // Don't fail the whole request, as domain is bought.
-        }
-
-        // 5. Save to DB
-        // Add to User's Domains
-        await db.collection('domains').add({
-            domain: cleanDomain,
-            userId: req.user.uid,
-            projectId: projectId, // Linked Project
-            orderId: purchaseResult.orderId || 'FREE_CLAIM',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            provider: 'namesilo',
-            status: 'active',
-            autoRenew: true,
-            isFreeClaim: true,
-            price: priceINR,
-            lbStatus: cfResult
-        });
-
-        // Update Project
-        await projectDoc.ref.update({
-            customDomain: cleanDomain,
-            domainUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            lbIp: cfResult.ip,
-            domainStatus: cfResult.status
-        });
-
-        res.json({ success: true, domain: cleanDomain, message: 'Domain claimed and configuring.' });
-
-    } catch (error) {
-        console.error('Claim domain failed:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- Cron Jobs ---
-// Check for expired sites daily at 1 AM
-cron.schedule('0 1 * * *', async () => {
-    console.log('[Cron] Checking for expired subscriptions...');
-    if (!db) return;
-
-    try {
-        const now = admin.firestore.Timestamp.now();
-        
-        // Query projects that are published and have passed expiry date
-        // Note: Projects without subscriptionExpiryDate (legacy) will be ignored by the '<' filter
-        const snapshot = await db.collection('projects')
-            .where('isPublished', '==', true)
-            .where('subscriptionExpiryDate', '<', now)
-            .get();
-
-        if (snapshot.empty) {
-            console.log('[Cron] No expired subscriptions found.');
-            return;
-        }
-
-        let expiredCount = 0;
-
-        for (const doc of snapshot.docs) {
-            const project = doc.data();
-            
-            // Skip if already marked expired
-            if (project.isExpired === true) continue;
-
-            const projectId = project.projectId;
-            console.log(`[Cron] Expiring project ${projectId}...`);
-            
-            try {
-                // 1. Make Bucket Private
-                // This will remove public access
-                await makeBucketPrivate(`site-${projectId}`);
-                
-                // 2. Update Firestore
-                await doc.ref.update({ 
-                    isExpired: true, 
-                    expiredAt: now 
-                });
-                
-                expiredCount++;
-            } catch (err) {
-                console.error(`[Cron] Failed to expire project ${projectId}:`, err);
-            }
-        }
-        
-        console.log(`[Cron] Expiry check complete. Expired ${expiredCount} sites.`);
-
-    } catch (error) {
-        console.error('[Cron] Expiry check failed:', error);
-    }
-});
-
-// --- Email Verification ---
-const crypto = require('crypto');
-
-function generateVerificationToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
-async function sendVerificationEmail(email, token, userName) {
-    const baseUrl = process.env.APP_URL || `http://localhost:${PORT}`;
-    const verifyLink = `${baseUrl}/api/auth/verify-email?token=${token}`;
-
-    const mailOptions = {
-        from: `"GenWeb" <${SMTP_FROM}>`,
-        to: email,
-        subject: 'Verify your email address - GenWeb',
-        html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h1 style="font-size: 24px; font-weight: 700; color: #1a1a2e; margin: 0;">GenWeb</h1>
-                </div>
-                <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px;">
-                    <h2 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0 0 12px;">Verify your email</h2>
-                    <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
-                        Hi${userName ? ' ' + userName : ''}, please verify your email address to start using GenWeb. Click the button below to confirm your email.
-                    </p>
-                    <div style="text-align: center; margin: 32px 0;">
-                        <a href="${verifyLink}" style="display: inline-block; background: #f97316; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
-                            Verify Email
-                        </a>
-                    </div>
-                    <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0;">
-                        If the button doesn't work, copy and paste this link into your browser:<br/>
-                        <a href="${verifyLink}" style="color: #f97316; word-break: break-all;">${verifyLink}</a>
-                    </p>
-                    <p style="color: #9ca3af; font-size: 13px; margin: 24px 0 0;">This link expires in 24 hours.</p>
-                </div>
-                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
-                    &copy; GenWeb &middot; <a href="https://genweb.in" style="color: #9ca3af;">genweb.in</a>
-                </p>
-            </div>
-        `
+    const contactInfo = {
+      nameFirst: contact.nameFirst, nameLast: contact.nameLast, email: contact.email, phone: contact.phone,
+      addressMailing: { address1: contact.address1, city: contact.city, state: contact.state, postalCode: contact.postalCode, country: contact.country }
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`[Email] Verification email sent to ${email}`);
+    const purchaseResult = await purchaseDomain(cleanDomain, { contact: contactInfo });
+
+    let cfResult = { status: 'PENDING' };
+    try { cfResult = await setupCFDomain(cleanDomain, projectId, true); }
+    catch (e) { console.error('Post-claim setup failed:', e); }
+
+    await db.exec(
+      `INSERT INTO domains (domain, user_id, order_id, provider, status, auto_renew, lb_status, ip)
+       VALUES (?, ?, ?, 'namesilo', 'active', 1, ?, ?)`,
+      [cleanDomain, req.user.uid, purchaseResult.orderId || 'FREE_CLAIM', db.J(cfResult), cfResult?.ip || null]
+    );
+    await db.exec(
+      `UPDATE projects SET custom_domain = ?, updated_at = datetime('now') WHERE id = ?`,
+      [cleanDomain, projectId]
+    );
+
+    res.json({ success: true, domain: cleanDomain, message: 'Domain claimed and configuring.' });
+  } catch (error) {
+    console.error('Claim domain failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ------------------------------------------------------------------
+// Cron: expire published projects
+// ------------------------------------------------------------------
+
+cron.schedule('0 1 * * *', async () => {
+  console.log('[Cron] Checking for expired subscriptions...');
+  try {
+    const nowIso = new Date().toISOString();
+    const expired = await db.query(
+      `SELECT id FROM projects WHERE is_published = 1 AND is_expired = 0 AND subscription_expiry < ?`,
+      [nowIso]
+    );
+    if (expired.length === 0) {
+      console.log('[Cron] No expired subscriptions found.');
+      return;
+    }
+    for (const { id } of expired) {
+      try {
+        await db.exec(`UPDATE projects SET is_expired = 1 WHERE id = ?`, [id]);
+      } catch (err) {
+        console.error(`[Cron] Failed to expire project ${id}:`, err);
+      }
+    }
+    console.log(`[Cron] Expired ${expired.length} site(s).`);
+  } catch (error) {
+    console.error('[Cron] Expiry check failed:', error);
+  }
+});
+
+// ------------------------------------------------------------------
+// Auth — Email OTP
+// ------------------------------------------------------------------
+
+function genReferralCode(uid) {
+  return 'GW' + uid.slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
 }
 
-// Send verification email
-app.post('/api/auth/send-verification-email', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
+app.post('/api/auth/send-otp', async (req, res) => {
+  let { email } = req.body || {};
+  if (!email || typeof email !== 'string') return res.status(400).json({ error: 'Email is required' });
+  email = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Invalid email' });
 
-        if (!userDoc.exists) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+  try {
+    const code = generateOtp();
+    const codeHash = hashOtp(email, code);
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = now + OTP_TTL_SECONDS;
 
-        const userData = userDoc.data();
-        const email = req.body.email || userData.email;
+    await db.exec(
+      `INSERT INTO email_otps (email, code_hash, expires_at, attempts, created_at)
+       VALUES (?, ?, ?, 0, ?)
+       ON CONFLICT(email) DO UPDATE SET
+         code_hash = excluded.code_hash,
+         expires_at = excluded.expires_at,
+         attempts = 0,
+         created_at = excluded.created_at`,
+      [email, codeHash, expiresAt, now]
+    );
 
-        if (!email) {
-            return res.status(400).json({ error: 'No email address provided' });
-        }
-
-        // Generate token and store
-        const token = generateVerificationToken();
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-        await userRef.set({
-            emailVerificationToken: token,
-            emailVerificationExpires: expiresAt.toISOString(),
-            emailVerified: false,
-            email: email
-        }, { merge: true });
-
-        await sendVerificationEmail(email, token, userData.name);
-
-        res.json({ success: true, message: 'Verification email sent' });
-    } catch (error) {
-        console.error('Send verification email error:', error);
-        res.status(500).json({ error: 'Failed to send verification email' });
-    }
+    sendOtpEmail(email, code).catch(err => console.error('[OTP] send failed:', err.message));
+    res.json({ success: true, expiresIn: OTP_TTL_SECONDS });
+  } catch (error) {
+    console.error('send-otp error:', error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
 });
 
-// Verify email (clicked from email link — no auth required)
-app.get('/api/auth/verify-email', async (req, res) => {
-    const { token } = req.query;
+app.post('/api/auth/verify-otp', async (req, res) => {
+  let { email, code, name, referralCode } = req.body || {};
+  if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
+  email = email.trim().toLowerCase();
 
-    if (!token) {
-        return res.status(400).send('Invalid verification link.');
+  try {
+    const otp = await db.one('SELECT code_hash, expires_at, attempts FROM email_otps WHERE email = ?', [email]);
+    if (!otp) return res.status(400).json({ error: 'No active code. Request a new one.' });
+
+    const now = Math.floor(Date.now() / 1000);
+    if (otp.expires_at < now) {
+      await db.exec('DELETE FROM email_otps WHERE email = ?', [email]);
+      return res.status(400).json({ error: 'Code expired. Request a new one.' });
+    }
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      await db.exec('DELETE FROM email_otps WHERE email = ?', [email]);
+      return res.status(429).json({ error: 'Too many attempts. Request a new code.' });
     }
 
-    try {
-        // Find user with this token
-        const usersSnap = await db.collection('users')
-            .where('emailVerificationToken', '==', token)
-            .limit(1)
-            .get();
-
-        if (usersSnap.empty) {
-            return res.send(verificationResultPage('Invalid or expired verification link.', false));
-        }
-
-        const userDoc = usersSnap.docs[0];
-        const userData = userDoc.data();
-
-        // Check expiry
-        if (userData.emailVerificationExpires && new Date(userData.emailVerificationExpires) < new Date()) {
-            return res.send(verificationResultPage('This verification link has expired. Please request a new one from your account.', false));
-        }
-
-        // Mark email as verified
-        await userDoc.ref.update({
-            emailVerified: true,
-            emailVerifiedAt: new Date().toISOString(),
-            emailVerificationToken: admin.firestore.FieldValue.delete(),
-            emailVerificationExpires: admin.firestore.FieldValue.delete()
-        });
-
-        console.log(`[Email] Email verified for user ${userDoc.id}: ${userData.email}`);
-        return res.send(verificationResultPage('Your email has been verified successfully! You can now close this page and continue using GenWeb.', true));
-    } catch (error) {
-        console.error('Email verification error:', error);
-        return res.status(500).send(verificationResultPage('Something went wrong. Please try again.', false));
+    const expected = hashOtp(email, String(code).trim());
+    if (expected !== otp.code_hash) {
+      await db.exec('UPDATE email_otps SET attempts = attempts + 1 WHERE email = ?', [email]);
+      return res.status(401).json({ error: 'Incorrect code' });
     }
+
+    // Code valid — consume it.
+    await db.exec('DELETE FROM email_otps WHERE email = ?', [email]);
+
+    let user = await db.one('SELECT * FROM users WHERE email = ?', [email]);
+    let isNew = false;
+
+    if (!user) {
+      isNew = true;
+      const uid = crypto.randomUUID();
+      const refCode = genReferralCode(uid);
+      await db.exec(
+        `INSERT INTO users (id, email, name, credits, is_admin, email_verified, referral_code, setup_complete)
+         VALUES (?, ?, ?, 0, 0, 1, ?, 0)`,
+        [uid, email, name ? String(name).trim() : null, refCode]
+      );
+
+      // Apply signup gift + referral bonus
+      const cfgRow = await db.one("SELECT value FROM platform_config WHERE key = 'general'");
+      const cfg = cfgRow ? db.parseJSON(cfgRow.value, {}) : {};
+      const giftAmount = cfg.signupGiftCredits || 200;
+      const referralBonusAmount = cfg.referralBonusAmount || 50;
+      const referralRewardAmount = cfg.referralRewardAmount || 100;
+
+      try { await addCredits(uid, giftAmount, 'Welcome bonus credits'); } catch (_) {}
+
+      if (referralCode) {
+        try {
+          const referrer = await db.one('SELECT id FROM users WHERE referral_code = ?', [String(referralCode).toUpperCase()]);
+          if (referrer && referrer.id !== uid) {
+            await db.exec(
+              `INSERT INTO referrals (id, referrer_user_id, referred_user_id, status, reward_amount)
+               VALUES (?, ?, ?, 'pending', ?)`,
+              [crypto.randomUUID(), referrer.id, uid, referralRewardAmount]
+            );
+            try { await addCredits(uid, referralBonusAmount, 'Referral signup bonus'); } catch (_) {}
+          }
+        } catch (e) {
+          console.warn('[Referral] Apply failed:', e.message);
+        }
+      }
+
+      await db.exec('UPDATE users SET setup_complete = 1 WHERE id = ?', [uid]);
+      user = await db.one('SELECT * FROM users WHERE id = ?', [uid]);
+    } else if (name && !user.name) {
+      await db.exec('UPDATE users SET name = ? WHERE id = ?', [String(name).trim(), user.id]);
+      user.name = String(name).trim();
+    }
+
+    const token = issueToken({ uid: user.id, email: user.email, is_admin: !!user.is_admin });
+    res.json({ token, user: userRow(user), isNew });
+  } catch (error) {
+    console.error('verify-otp error:', error);
+    res.status(500).json({ error: 'Failed to verify code' });
+  }
 });
 
-function verificationResultPage(message, success) {
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Verification - GenWeb</title></head>
-    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f9fafb;">
-        <div style="text-align:center;max-width:420px;padding:40px 24px;">
-            <div style="font-size:48px;margin-bottom:16px;">${success ? '&#9989;' : '&#10060;'}</div>
-            <h1 style="font-size:22px;font-weight:700;color:#1a1a2e;margin:0 0 12px;">Email Verification</h1>
-            <p style="color:#6b7280;font-size:15px;line-height:1.6;margin:0 0 24px;">${message}</p>
-            <a href="${process.env.APP_URL || 'https://app.genweb.in'}" style="display:inline-block;background:#f97316;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 24px;border-radius:8px;">Go to GenWeb</a>
-        </div>
-    </body></html>`;
-}
+app.post('/api/auth/logout', verifyToken, (_req, res) => res.json({ success: true }));
 
-// Check email verification status
-app.get('/api/auth/email-status', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userDoc = await db.collection('users').doc(userId).get();
-
-        if (!userDoc.exists) {
-            return res.json({ emailVerified: false, email: null });
-        }
-
-        const data = userDoc.data();
-        res.json({
-            emailVerified: data.emailVerified === true,
-            email: data.email || null
-        });
-    } catch (error) {
-        console.error('Email status check error:', error);
-        res.status(500).json({ error: error.message });
-    }
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+  try {
+    const user = await db.one('SELECT * FROM users WHERE id = ?', [req.user.uid]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user: userRow(user) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Update email (requires re-verification)
-app.post('/api/auth/update-email', verifyToken, async (req, res) => {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+// ------------------------------------------------------------------
+// SSE stream
+// ------------------------------------------------------------------
 
-    try {
-        const userId = req.user.uid;
-        const userRef = db.collection('users').doc(userId);
+// Allow token via query string for EventSource (no custom headers possible).
+app.get('/api/stream', (req, res, next) => {
+  if (!req.headers.authorization && req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  return verifyToken(req, res, next);
+}, sseHandler);
 
-        const token = generateVerificationToken();
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+// ------------------------------------------------------------------
+// Profile / Referrals
+// ------------------------------------------------------------------
 
-        const userDoc = await userRef.get();
-        const userName = userDoc.exists ? userDoc.data().name : '';
-
-        await userRef.set({
-            email: email,
-            emailVerified: false,
-            emailVerificationToken: token,
-            emailVerificationExpires: expiresAt.toISOString()
-        }, { merge: true });
-
-        await sendVerificationEmail(email, token, userName);
-
-        res.json({ success: true, message: 'Verification email sent to new address' });
-    } catch (error) {
-        console.error('Update email error:', error);
-        res.status(500).json({ error: 'Failed to update email' });
-    }
-});
-
-// --- New User Setup (Signup Gift Credits + Referral Bonus) ---
-app.post('/api/auth/setup-new-user', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-
-        if (userDoc.exists && userDoc.data().setupComplete) {
-            return res.json({ success: true, message: 'Already setup' });
-        }
-
-        // Read platform config for gift amount
-        const configDoc = await db.collection('platformConfig').doc('general').get();
-        const config = configDoc.exists ? configDoc.data() : {};
-        const giftAmount = config.signupGiftCredits || 200;
-
-        // Add welcome credits
-        await addCredits(userId, giftAmount, 'Welcome bonus credits');
-
-        // Check for pending referral bonus (referred user bonus)
-        const referralBonusAmount = config.referralBonusAmount || 50;
-        const referralSnap = await db.collection('referrals')
-            .where('referredUserId', '==', userId)
-            .where('status', '==', 'pending')
-            .limit(1)
-            .get();
-
-        const hasReferral = !referralSnap.empty;
-        if (hasReferral) {
-            await addCredits(userId, referralBonusAmount, 'Referral signup bonus');
-        }
-
-        // Mark setup complete
-        await userRef.set({ setupComplete: true }, { merge: true });
-
-        res.json({
-            success: true,
-            giftCredits: giftAmount,
-            hasReferral,
-            referralBonusAmount: hasReferral ? referralBonusAmount : 0,
-            referrerReward: config.referralRewardAmount || 100
-        });
-    } catch (error) {
-        console.error('Setup new user error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- Referral System ---
-app.post('/api/referral/generate', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-
-        if (userDoc.exists && userDoc.data().referralCode) {
-            return res.json({ code: userDoc.data().referralCode });
-        }
-
-        // Generate unique code
-        const code = 'GW' + userId.slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
-        await userRef.set({ referralCode: code }, { merge: true });
-
-        res.json({ code });
-    } catch (error) {
-        console.error('Generate referral error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/referral/apply', verifyToken, async (req, res) => {
-    try {
-        const { code } = req.body;
-        if (!code) return res.status(400).json({ error: 'Referral code required' });
-
-        const referredUserId = req.user.uid;
-
-        // Find referrer by code
-        const referrerSnap = await db.collection('users')
-            .where('referralCode', '==', code.toUpperCase())
-            .limit(1)
-            .get();
-
-        if (referrerSnap.empty) {
-            return res.status(404).json({ error: 'Invalid referral code' });
-        }
-
-        const referrerDoc = referrerSnap.docs[0];
-        if (referrerDoc.id === referredUserId) {
-            return res.status(400).json({ error: 'Cannot refer yourself' });
-        }
-
-        // Check if already referred
-        const existingSnap = await db.collection('referrals')
-            .where('referredUserId', '==', referredUserId)
-            .limit(1)
-            .get();
-
-        if (!existingSnap.empty) {
-            return res.json({ success: true, message: 'Referral already applied' });
-        }
-
-        // Read config for reward amount
-        const configDoc = await db.collection('platformConfig').doc('general').get();
-        const config = configDoc.exists ? configDoc.data() : {};
-        const rewardAmount = config.referralRewardAmount || 100;
-
-        // Create referral record
-        await db.collection('referrals').add({
-            referrerUserId: referrerDoc.id,
-            referredUserId,
-            referralCode: code.toUpperCase(),
-            status: 'pending',
-            rewardAmount,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Apply referral error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// --- Profile & Billing Address ---
 app.get('/api/profile', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userDoc = await db.collection('users').doc(userId).get();
-        const data = userDoc.exists ? userDoc.data() : {};
-        res.json({
-            name: data.name || '',
-            email: data.email || '',
-            phoneNumber: data.phoneNumber || req.user.phone_number || '',
-            emailVerified: data.emailVerified || false,
-            createdAt: data.createdAt || null,
-            billingAddress: data.billingAddress || null
-        });
-    } catch (error) {
-        console.error('Get profile error:', error);
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const user = await db.one('SELECT * FROM users WHERE id = ?', [req.user.uid]);
+    const billing = await db.one("SELECT value FROM platform_config WHERE key = ?", [`billing:${req.user.uid}`]);
+    res.json({
+      name: user?.name || '',
+      email: user?.email || '',
+      emailVerified: !!user?.email_verified,
+      createdAt: user?.created_at || null,
+      preferredLanguage: user?.preferred_language || null,
+      freeBuildUsed: !!user?.free_build_used,
+      billingAddress: billing ? db.parseJSON(billing.value, null) : null,
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.put('/api/profile', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const { name } = req.body;
-        if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
-        await db.collection('users').doc(userId).set({ name: name.trim() }, { merge: true });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Update profile error:', error);
-        res.status(500).json({ error: error.message });
+  try {
+    const { name, preferredLanguage } = req.body;
+    if (name !== undefined) {
+      if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+      await db.exec('UPDATE users SET name = ? WHERE id = ?', [name.trim(), req.user.uid]);
     }
+    if (preferredLanguage !== undefined) {
+      const { getLanguage } = require('./services/genni/languages');
+      await db.exec('UPDATE users SET preferred_language = ? WHERE id = ?', [getLanguage(preferredLanguage).code, req.user.uid]);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.put('/api/profile/billing-address', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const { firstName, lastName, email, phone, address1, city, state, postalCode, country } = req.body;
-        const required = { firstName, lastName, email, phone, address1, city, state, postalCode, country };
-        const missing = Object.entries(required).filter(([, v]) => !v || !v.trim());
-        if (missing.length > 0) {
-            return res.status(400).json({ error: `Missing fields: ${missing.map(([k]) => k).join(', ')}` });
-        }
-        await db.collection('users').doc(userId).set({
-            billingAddress: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim(), address1: address1.trim(), city: city.trim(), state: state.trim(), postalCode: postalCode.trim(), country: country.trim().toUpperCase() }
-        }, { merge: true });
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Update billing address error:', error);
-        res.status(500).json({ error: error.message });
+  try {
+    const { firstName, lastName, email, phone, address1, city, state, postalCode, country } = req.body;
+    const required = { firstName, lastName, email, phone, address1, city, state, postalCode, country };
+    const missing = Object.entries(required).filter(([, v]) => !v || !v.trim());
+    if (missing.length > 0) {
+      return res.status(400).json({ error: `Missing fields: ${missing.map(([k]) => k).join(', ')}` });
     }
+    const payload = {
+      firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(),
+      phone: phone.trim(), address1: address1.trim(), city: city.trim(), state: state.trim(),
+      postalCode: postalCode.trim(), country: country.trim().toUpperCase(),
+    };
+    await db.exec(
+      `INSERT INTO platform_config (key, value, updated_at, updated_by)
+       VALUES (?, ?, datetime('now'), ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+      [`billing:${req.user.uid}`, db.J(payload), req.user.uid]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update billing address error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// --- Referral Stats ---
+app.post('/api/referral/generate', verifyToken, async (req, res) => {
+  try {
+    const user = await db.one('SELECT referral_code FROM users WHERE id = ?', [req.user.uid]);
+    if (user && user.referral_code) return res.json({ code: user.referral_code });
+    const code = genReferralCode(req.user.uid);
+    await db.exec('UPDATE users SET referral_code = ? WHERE id = ?', [code, req.user.uid]);
+    res.json({ code });
+  } catch (error) {
+    console.error('Generate referral error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/referral/apply', verifyToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'Referral code required' });
+
+    const referrer = await db.one('SELECT id FROM users WHERE referral_code = ?', [String(code).toUpperCase()]);
+    if (!referrer) return res.status(404).json({ error: 'Invalid referral code' });
+    if (referrer.id === req.user.uid) return res.status(400).json({ error: 'Cannot refer yourself' });
+
+    const existing = await db.one('SELECT id FROM referrals WHERE referred_user_id = ?', [req.user.uid]);
+    if (existing) return res.json({ success: true, message: 'Referral already applied' });
+
+    const cfgRow = await db.one("SELECT value FROM platform_config WHERE key = 'general'");
+    const cfg = cfgRow ? db.parseJSON(cfgRow.value, {}) : {};
+    const rewardAmount = cfg.referralRewardAmount || 100;
+
+    await db.exec(
+      `INSERT INTO referrals (id, referrer_user_id, referred_user_id, status, reward_amount)
+       VALUES (?, ?, ?, 'pending', ?)`,
+      [crypto.randomUUID(), referrer.id, req.user.uid, rewardAmount]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Apply referral error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/referral/stats', verifyToken, async (req, res) => {
-    try {
-        const userId = req.user.uid;
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.exists ? userDoc.data() : {};
-        const referralCode = userData.referralCode || null;
+  try {
+    const user = await db.one('SELECT referral_code FROM users WHERE id = ?', [req.user.uid]);
+    const referralCode = user ? user.referral_code : null;
 
-        const referralsSnap = await db.collection('referrals')
-            .where('referrerUserId', '==', userId)
-            .orderBy('createdAt', 'desc')
-            .get();
+    const referralRows = await db.query(
+      `SELECT r.id, r.referrer_user_id, r.referred_user_id, r.status, r.reward_amount, r.created_at,
+              u.name AS referred_name,
+              EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = r.referred_user_id AND t.type = 'credit' AND t.razorpay_id IS NOT NULL) AS has_paid
+       FROM referrals r
+       LEFT JOIN users u ON u.id = r.referred_user_id
+       WHERE r.referrer_user_id = ?
+       ORDER BY r.created_at DESC`,
+      [req.user.uid]
+    );
 
-        const referrals = [];
-        let totalCompleted = 0;
-        let totalCreditsEarned = 0;
+    let totalCompleted = 0;
+    let totalCreditsEarned = 0;
+    const referrals = referralRows.map(d => {
+      if (d.status === 'completed') {
+        totalCompleted++;
+        totalCreditsEarned += (d.reward_amount || 0);
+      }
+      return {
+        id: d.id,
+        referredUserName: d.referred_name || 'User',
+        hasPaid: !!d.has_paid,
+        status: d.status || 'pending',
+        rewardAmount: d.reward_amount || 0,
+        createdAt: d.created_at || null,
+      };
+    });
 
-        // Collect referred user IDs to batch-fetch names
-        const referralDocs = [];
-        referralsSnap.forEach(doc => {
-            referralDocs.push({ id: doc.id, ...doc.data() });
-        });
+    const cfgRow = await db.one("SELECT value FROM platform_config WHERE key = 'general'");
+    const cfg = cfgRow ? db.parseJSON(cfgRow.value, {}) : {};
 
-        // Fetch referred user names in parallel
-        const userNameMap = {};
-        const uniqueUserIds = [...new Set(referralDocs.map(d => d.referredUserId).filter(Boolean))];
-        if (uniqueUserIds.length > 0) {
-            const userFetches = uniqueUserIds.map(async (uid) => {
-                try {
-                    const uDoc = await db.collection('users').doc(uid).get();
-                    if (uDoc.exists && uDoc.data().name) {
-                        userNameMap[uid] = uDoc.data().name;
-                    } else {
-                        // Fallback to Firebase Auth display name
-                        const authUser = await admin.auth().getUser(uid);
-                        userNameMap[uid] = authUser.displayName || 'User';
-                    }
-                } catch { userNameMap[uid] = 'User'; }
-            });
-            await Promise.all(userFetches);
-        }
-
-        // Check which referred users have made a payment
-        const paidUserSet = new Set();
-        if (uniqueUserIds.length > 0) {
-            const txFetches = uniqueUserIds.map(async (uid) => {
-                try {
-                    const txSnap = await db.collection('transactions')
-                        .where('userId', '==', uid)
-                        .where('type', '==', 'purchase')
-                        .limit(1)
-                        .get();
-                    if (!txSnap.empty) paidUserSet.add(uid);
-                } catch { /* ignore */ }
-            });
-            await Promise.all(txFetches);
-        }
-
-        for (const d of referralDocs) {
-            referrals.push({
-                id: d.id || d.__id,
-                referredUserName: userNameMap[d.referredUserId] || 'User',
-                hasPaid: paidUserSet.has(d.referredUserId),
-                status: d.status || 'pending',
-                rewardAmount: d.rewardAmount || 0,
-                createdAt: d.createdAt ? d.createdAt.toDate().toISOString() : null
-            });
-            if (d.status === 'completed') {
-                totalCompleted++;
-                totalCreditsEarned += (d.rewardAmount || 0);
-            }
-        }
-
-        const configDoc = await db.collection('platformConfig').doc('general').get();
-        const config = configDoc.exists ? configDoc.data() : {};
-
-        res.json({
-            referralCode,
-            totalReferred: referrals.length,
-            totalCompleted,
-            totalCreditsEarned,
-            referrals,
-            program: {
-                referrerReward: config.referralRewardAmount || 100,
-                signupBonus: config.referralBonusAmount || 50
-            }
-        });
-    } catch (error) {
-        console.error('Referral stats error:', error);
-        res.status(500).json({ error: error.message });
-    }
+    res.json({
+      referralCode,
+      totalReferred: referrals.length,
+      totalCompleted,
+      totalCreditsEarned,
+      referrals,
+      program: {
+        referrerReward: cfg.referralRewardAmount || 100,
+        signupBonus: cfg.referralBonusAmount || 50,
+      },
+    });
+  } catch (error) {
+    console.error('Referral stats error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// --- Admin Routes ---
+// ------------------------------------------------------------------
+// Admin routes
+// ------------------------------------------------------------------
+
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+const genniRoutes = require('./routes/genni');
+app.use('/api/genni', verifyToken, genniRoutes);
+
+// The legacy pipeline stays the rollback path while the agent engine soaks;
+// build-runner dispatches to it when flags say engine='legacy'.
+registerLegacyRunner(runBuildProcess);
+
+// Crash-orphan sweep: builds are in-process, so a server restart strands
+// 'starting'/'processing' projects forever. Fail anything stale so the user
+// gets a Retry button instead of a stuck progress bar.
+async function sweepOrphanedBuilds() {
+  try {
+    const rows = await db.query(
+      `SELECT id, user_id FROM projects
+       WHERE status IN ('starting', 'processing')
+         AND created_at < datetime('now', '-45 minutes')`
+    );
+    for (const row of rows) {
+      const message = 'Build interrupted — please retry.';
+      await db.exec(
+        `UPDATE projects SET status = 'failed', build_progress_message = ? WHERE id = ?`,
+        [message, row.id]
+      );
+      hub.emit(row.user_id, 'project:updated', { projectId: row.id, status: 'failed', error: message });
+      console.log(`[Sweep] Marked orphaned build ${row.id} as failed.`);
+    }
+    if (rows.length) console.log(`[Sweep] Failed ${rows.length} orphaned build(s).`);
+  } catch (e) {
+    console.warn('[Sweep] Orphaned-build sweep failed:', e.message);
+  }
+}
+sweepOrphanedBuilds();
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

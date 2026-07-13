@@ -57,7 +57,8 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         console.log(msgImages);
         onProgress(msgImages);
         const keywords = designSystem.imageKeywords || ['business', 'minimal'];
-        designSystem.imageUrls = await fetchImages(keywords, 12);
+        const businessPhotos = (userContext && typeof userContext === 'object' && userContext.placePhotos) || [];
+        designSystem.imageUrls = await fetchImages(keywords, 12, businessPhotos);
         
         // 2. Setup Temp Dir & Copy Skeleton
         const msgSkeleton = `[${id}] Copying skeleton...`;
@@ -166,19 +167,21 @@ async function buildSite(id, userContext, logoFile, pages = ['Home'], onProgress
         const remainingPages = pages.filter(p => p !== homePage);
         
         if (remainingPages.length > 0) {
-            console.log(`[${id}] Generating ${remainingPages.length} remaining pages sequentially...`);
+            const CONCURRENCY = 3;
+            console.log(`[${id}] Generating ${remainingPages.length} remaining pages with concurrency ${CONCURRENCY}...`);
             onProgress(`[${id}] Generating remaining pages (${remainingPages.join(', ')})...`);
-            
-            for (const pageName of remainingPages) {
-                try {
+
+            const queue = remainingPages.slice();
+            const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+                while (queue.length > 0) {
+                    const pageName = queue.shift();
+                    if (!pageName) return;
                     const pageCode = await generatePage(pageName, layoutReference);
                     const filename = `${pageName.toLowerCase().replace(/\s+/g, '-')}.html`;
                     await fs.writeFile(path.join(distDir, filename), pageCode);
-                } catch (err) {
-                     console.error(`[${id}] Failed to generate ${pageName}:`, err);
-                     throw err;
                 }
-            }
+            });
+            await Promise.all(workers);
         }
 
         // 3.5 Generate site-config.json & copy site-nav.js
@@ -255,7 +258,10 @@ function getTailwindConfigFromDesign(designSystem) {
     };
 }
 
-async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = null) {
+async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = null, options = {}) {
+    // css: 'compiled' links ./style.css (Tailwind CLI output); 'runtime' injects
+    // the self-hosted Play runtime + inline config — no compile step (drafts).
+    const cssMode = options.css || 'compiled';
     const { googleFonts, businessName, logoUrl } = designSystem || {};
 
     // 1. Construct Google Fonts URL
@@ -274,7 +280,14 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         faviconLink = `<link rel="icon" type="image/png" href="${logoUrl}" />`;
     }
 
-    const tailwindScript = `<link rel="stylesheet" href="./style.css">`;
+    let tailwindScript;
+    if (cssMode === 'runtime') {
+        const { runtimeInjectSnippet } = require('./tailwind-runtime');
+        const themeOnly = overrideConfig ? { theme: overrideConfig.theme || {} } : {};
+        tailwindScript = await runtimeInjectSnippet(themeOnly);
+    } else {
+        tailwindScript = `<link rel="stylesheet" href="./style.css">`;
+    }
 
     // 4. Update ALL HTML files
     const files = await fs.readdir(distDir);
@@ -296,11 +309,14 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
         // Also remove any old versioned CDN tags (e.g., cdn.tailwindcss.com/3.4.1) - we'll inject a fresh one
         html = html.replace(/<script[^>]*src=["'][^"']*cdn\.tailwindcss\.com[^"']*["'][^>]*>\s*<\/script>\s*/gi, '');
 
+        // Remove any self-hosted Play runtime tags (draft state being republished/switched)
+        html = html.replace(/<script[^>]*src=["'][^"']*\/assets\/tailwind\/[^"']*["'][^>]*>\s*<\/script>\s*/gi, '');
+
         // Remove any existing tailwind.config script blocks
         const configRegex = /<script>\s*tailwind\.config\s*=\s*[\s\S]*?<\/script>\s*/g;
         html = html.replace(configRegex, '');
 
-        // Always inject fresh style.css
+        // Inject fresh CSS strategy (compiled stylesheet or runtime script)
         html = html.replace('</head>', `${tailwindScript}\n</head>`);
     
         // Inject AOS CSS (Animation Library)
@@ -406,7 +422,28 @@ async function setupConfig(rootDir, distDir, designSystem, id, overrideConfig = 
     }
 }
 
-async function rebuildSite(id) {
+/**
+ * Compile a project's Tailwind CSS in place. Thin wrapper around the exact
+ * CLI invocation buildSite() uses, exported so other build paths (e.g. the
+ * agentic prototype in services/agent/) can reuse production assembly without
+ * duplicating the command. Expects `tempDir` to contain src/input.css,
+ * tailwind.config.js and a (symlinked) node_modules — i.e. a copied skeleton.
+ *
+ * @param {string} tempDir - project root that already has the skeleton + dist/
+ */
+async function compileSite(tempDir) {
+    await exec('./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify', { cwd: tempDir });
+}
+
+/**
+ * Re-apply config/injections and refresh the public preview.
+ * mode 'publish' (default): compile static style.css via the Tailwind CLI —
+ *   what live customer sites ship.
+ * mode 'draft': inject the self-hosted Play runtime instead and SKIP the CLI —
+ *   edits become near-instant; used by editor paths when the
+ *   tailwindRuntimeDrafts flag is on.
+ */
+async function rebuildSite(id, { mode = 'publish' } = {}) {
     const sourceDir = path.join(__dirname, '../projects_source', id);
     const configPath = path.join(sourceDir, 'tailwind.config.js');
     const distDir = path.join(sourceDir, 'dist');
@@ -416,8 +453,8 @@ async function rebuildSite(id) {
         throw new Error(`Project source not found: ${id}`);
     }
 
-    console.log(`[${id}] Re-applying Tailwind Config and compiling CSS...`);
-    
+    console.log(`[${id}] Re-applying Tailwind config (${mode} mode)...`);
+
     try {
         let config = null;
         if (await fs.pathExists(configPath)) {
@@ -431,32 +468,34 @@ async function rebuildSite(id) {
             // We can still continue to ensure other injections
         }
 
-        await setupConfig(sourceDir, distDir, null, id, config);
+        await setupConfig(sourceDir, distDir, null, id, config, { css: mode === 'draft' ? 'runtime' : 'compiled' });
 
-        // Compile CSS using Tailwind CLI
-        console.log(`[${id}] Running Tailwind CLI...`);
-        const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
-        
-        // Ensure symlink exists in projects_source
-        try {
-            await fs.ensureSymlink(path.join(skeletonDir, 'node_modules'), path.join(sourceDir, 'node_modules'));
-        } catch(err) {
-            console.error(`[${id}] Error symlinking node_modules:`, err);
-        }
-        
-        // Ensure src/input.css exists
-        try {
-            await fs.ensureSymlink(path.join(skeletonDir, 'src'), path.join(sourceDir, 'src'));
-        } catch(err) {
-            console.error(`[${id}] Error symlinking src:`, err);
-        }
-        
-        try {
-            await exec('./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify', { cwd: sourceDir });
-            console.log(`[${id}] Tailwind CLI compilation successful.`);
-        } catch (err) {
-            console.error(`[${id}] Tailwind CLI error:`, err.stdout, err.stderr);
-            throw err;
+        if (mode !== 'draft') {
+            // Compile CSS using Tailwind CLI
+            console.log(`[${id}] Running Tailwind CLI...`);
+            const skeletonDir = path.join(__dirname, '../templates/html-skeleton');
+
+            // Ensure symlink exists in projects_source
+            try {
+                await fs.ensureSymlink(path.join(skeletonDir, 'node_modules'), path.join(sourceDir, 'node_modules'));
+            } catch(err) {
+                console.error(`[${id}] Error symlinking node_modules:`, err);
+            }
+
+            // Ensure src/input.css exists
+            try {
+                await fs.ensureSymlink(path.join(skeletonDir, 'src'), path.join(sourceDir, 'src'));
+            } catch(err) {
+                console.error(`[${id}] Error symlinking src:`, err);
+            }
+
+            try {
+                await exec('./node_modules/.bin/tailwindcss -i src/input.css -o dist/style.css --minify', { cwd: sourceDir });
+                console.log(`[${id}] Tailwind CLI compilation successful.`);
+            } catch (err) {
+                console.error(`[${id}] Tailwind CLI error:`, err.stdout, err.stderr);
+                throw err;
+            }
         }
 
         // Ensure public preview is synced
@@ -470,4 +509,30 @@ async function rebuildSite(id) {
     }
 }
 
-module.exports = { buildSite, rebuildSite };
+/**
+ * Editor rebuild: draft (runtime, no compile) when the tailwindRuntimeDrafts
+ * flag is on, otherwise the classic compiled rebuild. Tracks compile_state so
+ * publish knows whether a compile pass is still needed.
+ */
+async function rebuildForEdit(id) {
+    const { getBuildFlags } = require('./flags');
+    const flags = await getBuildFlags();
+    const mode = flags.tailwindRuntimeDrafts ? 'draft' : 'publish';
+    const dist = await rebuildSite(id, { mode });
+    if (mode === 'draft') {
+        await require('./db').exec(`UPDATE projects SET compile_state = 'runtime' WHERE id = ?`, [id]).catch(() => {});
+    }
+    return dist;
+}
+
+/**
+ * Publish-time pass: always compile static CSS and strip the runtime script,
+ * regardless of the project's current draft state.
+ */
+async function prepareForPublish(id) {
+    const dist = await rebuildSite(id, { mode: 'publish' });
+    await require('./db').exec(`UPDATE projects SET compile_state = 'compiled' WHERE id = ?`, [id]).catch(() => {});
+    return dist;
+}
+
+module.exports = { buildSite, rebuildSite, rebuildForEdit, prepareForPublish, compileSite, setupConfig, getTailwindConfigFromDesign };

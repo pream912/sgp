@@ -1,6 +1,21 @@
 const queryString = require('querystring');
 
-async function fetchImages(keywords, count = 10) {
+async function fetchImages(keywords, count = 10, businessPhotos = []) {
+    let images = [];
+
+    // 0. Real photos of the business (Google Places) come first — a site built
+    // from the owner's actual storefront/food/interior beats stock imagery.
+    const realPhotos = (businessPhotos || []).filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, count);
+    if (realPhotos.length >= count) return realPhotos;
+    if (realPhotos.length > 0) {
+        const stock = await fetchStockImages(keywords, count - realPhotos.length);
+        return [...realPhotos, ...stock];
+    }
+
+    return fetchStockImages(keywords, count);
+}
+
+async function fetchStockImages(keywords, count) {
     let images = [];
 
     // 1. Try Unsplash

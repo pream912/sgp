@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const Domains = () => {
     const [myDomains, setMyDomains] = useState([]);
@@ -12,7 +12,7 @@ const Domains = () => {
 
     const fetchMyDomains = async () => {
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get('/api/domains', { headers: { Authorization: `Bearer ${token}` } });
             setMyDomains(response.data);
         } catch (error) {

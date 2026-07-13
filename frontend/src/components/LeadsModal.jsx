@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 
 const LeadsModal = ({ isOpen, onClose, projectId }) => {
   const [leads, setLeads] = useState([]);
@@ -10,7 +10,7 @@ const LeadsModal = ({ isOpen, onClose, projectId }) => {
     const fetchLeads = async () => {
         setLoading(true);
         try {
-          const token = await auth.currentUser.getIdToken();
+          const token = getToken();
           // Added /api prefix to route through Vite proxy
           const response = await axios.get(`/api/project/${projectId}/leads`, {
             headers: { Authorization: `Bearer ${token}` }

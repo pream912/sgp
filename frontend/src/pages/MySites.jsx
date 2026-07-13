@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { auth, db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { getToken, getCurrentUser } from '../lib/auth';
+import { subscribe } from '../lib/sse';
 import LeadsModal from '../components/LeadsModal';
 import BuyCreditsModal from '../components/BuyCreditsModal';
 import DomainConnectModal from '../components/DomainConnectModal';
@@ -46,13 +46,9 @@ const MySites = () => {
       if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone and will remove all associated resources.")) {
           return;
       }
-
       try {
-          const token = await auth.currentUser.getIdToken();
-          await axios.delete(`/api/projects/${projectId}`, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-          // Optimistic update handled by realtime listener, but we can clear dropdown
+          await axios.delete(`/api/projects/${projectId}`);
+          setProjects(prev => prev.filter(p => (p.projectId || p.id) !== projectId));
           setActiveDropdownId(null);
       } catch (error) {
           console.error("Delete failed:", error);
@@ -62,10 +58,7 @@ const MySites = () => {
 
   const handleRetryBuild = async (projectId) => {
       try {
-          const token = await auth.currentUser.getIdToken();
-          await axios.post(`/api/project/${projectId}/retry`, {}, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
+          await axios.post(`/api/project/${projectId}/retry`);
       } catch (error) {
           console.error("Retry failed:", error);
           alert("Retry failed: " + (error.response?.data?.error || error.message));
@@ -74,13 +67,7 @@ const MySites = () => {
 
   const handleRegeneratePreview = async (projectId) => {
       try {
-          const token = await auth.currentUser.getIdToken();
-          // We can use a non-blocking toast here if we had one, but alert is fine for admin actions
-          await axios.post(`/api/project/${projectId}/screenshot`, {}, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-          // Force reload images by updating timestamp in URL (effectively by refreshing data or page)
-          // Ideally we update local state to force re-render with new timestamp
+          await axios.post(`/api/project/${projectId}/screenshot`);
           alert('Preview regenerated! Refresh to see changes.');
       } catch (error) {
           console.error("Preview generation failed:", error);
@@ -88,39 +75,39 @@ const MySites = () => {
       }
   };
 
-  useEffect(() => {
-    let unsubscribe;
-
-    const setupRealtimeListener = async () => {
-      if (auth.currentUser) {
-        // Fetch Token for Previews
-        try {
-            const t = await auth.currentUser.getIdToken();
-            setToken(t);
-        } catch (e) { console.error("Token fetch failed", e); }
-
-        const q = query(
-            collection(db, 'projects'), 
-            where('userId', '==', auth.currentUser.uid),
-            orderBy('createdAt', 'desc')
-        );
-        
-        unsubscribe = onSnapshot(q, (snapshot) => {
-            const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProjects(projectsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Realtime error:", error);
-            setLoading(false);
-        });
-      } else {
+  const refreshProjects = async () => {
+      try {
+          const { data } = await axios.get('/api/projects');
+          setProjects(data);
+          setLoading(false);
+      } catch (e) {
+          console.error('Failed to load projects:', e);
           setLoading(false);
       }
-    };
+  };
 
-    setupRealtimeListener();
+  useEffect(() => {
+      if (!getCurrentUser()) { setLoading(false); return; }
+      setToken(getToken());
+      refreshProjects();
 
-    return () => unsubscribe && unsubscribe();
+      const offUpdated = subscribe('project:updated', (data) => {
+          if (!data) return;
+          if (data.deleted) {
+              setProjects(prev => prev.filter(p => (p.projectId || p.id) !== data.projectId));
+          } else {
+              refreshProjects();
+          }
+      });
+      const offProgress = subscribe('project:progress', (data) => {
+          if (!data || !data.projectId) return;
+          setProjects(prev => prev.map(p => (
+              (p.projectId || p.id) === data.projectId
+                  ? { ...p, buildProgress: data.progress ?? p.buildProgress, buildProgressMessage: data.message ?? p.buildProgressMessage, status: 'processing' }
+                  : p
+          )));
+      });
+      return () => { offUpdated && offUpdated(); offProgress && offProgress(); };
   }, []);
 
   const openLeads = (projectId) => {
@@ -173,7 +160,7 @@ const MySites = () => {
                 className="flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-500/30"
               >
                 <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                <span className="whitespace-nowrap">New Project</span>
+                <span className="whitespace-nowrap">Create with Genni</span>
               </Link>
             </div>
           </div>
@@ -198,14 +185,9 @@ const MySites = () => {
                     if (isBuilding) {
                         const progress = project.buildProgress || 0;
                         const progressMessage = project.buildProgressMessage || 'Starting...';
-                        // Estimate time remaining based on progress (rough ~8 min total build)
-                        const totalEstimatedSeconds = 480;
-                        const elapsed = progress > 0 ? (progress / 100) * totalEstimatedSeconds : 0;
-                        const remaining = Math.max(0, totalEstimatedSeconds - elapsed);
-                        const minsLeft = Math.ceil(remaining / 60);
 
                         return (
-                            <div key={project.id} className="group bg-white dark:bg-[#1e1c2e] rounded-2xl shadow-sm border-2 border-orange-500/50 overflow-hidden flex flex-col relative h-[360px]">
+                            <Link key={project.id} to={`/build/${project.projectId}`} className="group bg-white dark:bg-[#1e1c2e] rounded-2xl shadow-sm border-2 border-orange-500/50 hover:border-orange-500 overflow-hidden flex flex-col relative h-[360px] transition-colors">
                                 <div className="absolute inset-0 bg-orange-50 dark:bg-orange-900/5 flex flex-col items-center justify-center p-8 text-center">
                                     <div className="w-16 h-16 mb-6 relative">
                                         <div className="absolute inset-0 border-4 border-orange-200 rounded-full"></div>
@@ -213,16 +195,17 @@ const MySites = () => {
                                         <Loader className="absolute inset-0 m-auto text-orange-600 w-6 h-6 animate-pulse" />
                                     </div>
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3">Building your site</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-[240px] mb-1">{progressMessage}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-[240px] mb-2">{progressMessage}</p>
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 dark:text-orange-400 group-hover:underline">
+                                        Watch it live
+                                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
+                                    </span>
                                 </div>
 
                                 {/* Bottom progress bar */}
                                 <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-white dark:from-[#1e1c2e] via-white/90 dark:via-[#1e1c2e]/90 to-transparent pt-10">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">{progress}%</span>
-                                        <span className="text-xs text-slate-400 dark:text-slate-500">
-                                            {progress > 0 ? `~${minsLeft} min${minsLeft !== 1 ? 's' : ''} left` : 'Estimating...'}
-                                        </span>
                                     </div>
                                     <div className="w-full h-2 bg-orange-100 dark:bg-orange-900/30 rounded-full overflow-hidden">
                                         <div
@@ -231,7 +214,7 @@ const MySites = () => {
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         );
                     }
 
@@ -377,7 +360,7 @@ const MySites = () => {
                             
                             <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
                                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-4">
-                                    <span>{project.createdAt?.seconds ? new Date(project.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</span>
+                                    <span>{project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'Just now'}</span>
                                     {/* <div className="flex items-center gap-1">
                                         <span className="material-symbols-outlined text-[14px]">visibility</span>
                                         1.2k views
@@ -412,8 +395,8 @@ const MySites = () => {
                 <div className="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                     <span className="material-symbols-outlined text-3xl text-orange-500">add</span>
                 </div>
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Create New Project</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-[200px]">Use AI to generate a complete website in seconds.</p>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">Create with Genni</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-[200px]">Chat with Genni in your language and get a complete website in minutes.</p>
             </Link>
 
         </div>

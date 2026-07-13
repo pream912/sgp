@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { auth } from '../firebase';
+import { getToken, getCurrentUser } from '../lib/auth';
 import { X, Check, Rocket, ShieldCheck, Globe, Zap, Layout } from 'lucide-react';
 
 const PLANS = [
@@ -71,7 +71,7 @@ const PublishModal = ({ isOpen, onClose, projectId, currentCredits, onSuccess, p
 
         setSubdomainStatus('checking');
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const response = await axios.get(`/api/subdomain/check?name=${name}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -101,7 +101,7 @@ const PublishModal = ({ isOpen, onClose, projectId, currentCredits, onSuccess, p
     const checkProjectType = async () => {
         setPageCheckLoading(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             const res = await axios.get(`/api/project/${projectId}/pages`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -124,7 +124,7 @@ const PublishModal = ({ isOpen, onClose, projectId, currentCredits, onSuccess, p
         
         setLoading(true);
         try {
-            const token = await auth.currentUser.getIdToken();
+            const token = getToken();
             await axios.post(`/api/project/${projectId}/publish`, {
                 plan: selectedPlan.id,
                 subdomain: subdomain // Send selected subdomain

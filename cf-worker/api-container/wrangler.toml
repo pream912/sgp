@@ -1,0 +1,79 @@
+name = "genweb-api"
+main = "index.js"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "6f192f9074e96c46bff187631f5d3568"
+
+[observability]
+enabled = true
+
+# Cloudflare Containers — runs the repo's Dockerfile.
+# Build context is the repo root (two levels up from this file).
+[[containers]]
+class_name = "GenwebApiContainer"
+image = "../../Dockerfile"
+instances = 1
+max_instances = 5
+
+[containers.ssh]
+enabled = true
+
+# Durable Object class that fronts the container — site-router binds to this.
+[[durable_objects.bindings]]
+name = "API_CONTAINER"
+class_name = "GenwebApiContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GenwebApiContainer"]
+
+# R2 bindings (also accessible from the container via env vars; bound here for
+# direct Worker access if any thin shim ever needs them).
+[[r2_buckets]]
+binding = "PROJECTS_BUCKET"
+bucket_name = "genweb-projects"
+
+[[r2_buckets]]
+binding = "SITES_BUCKET"
+bucket_name = "genweb-sites"
+
+[[r2_buckets]]
+binding = "HOSTING_BUCKET"
+bucket_name = "genweb-hosting"
+
+# Plain env vars consumed by server.js / services inside the container.
+[vars]
+NODE_ENV = "production"
+PORT = "8080"
+R2_BUCKET_NAME = "genweb-projects"
+R2_HOSTING_BUCKET = "genweb-hosting"
+R2_SITES_BUCKET = "genweb-sites"
+R2_PUBLIC_DOMAIN = "pub-r2.genweb.in"
+AI_JOB_WORKER_URL = "https://genweb-ai-jobs.preamkumar912.workers.dev"
+
+# Secrets to set with `wrangler secret put`:
+#   CF_ACCOUNT_ID
+#   CF_API_TOKEN
+#   CF_AI_GATEWAY_ID
+#   CF_AI_GATEWAY_TOKEN
+#   R2_ACCESS_KEY_ID
+#   R2_SECRET_ACCESS_KEY
+#   CF_EMAIL_WORKER_URL
+#   CF_EMAIL_WORKER_SECRET
+#   D1_DATABASE_ID                (Cloudflare D1 database UUID)
+#   JWT_SECRET                    (32+ random bytes — signs auth tokens)
+#   RAZORPAY_KEY_ID
+#   RAZORPAY_KEY_SECRET
+#   NAMESILO_KEY                  (fallback for .in TLD purchases)
+#   NAMESILO_ENV                  (LIVE or SANDBOX)
+#   GOOGLE_SEARCH_API_KEY         (business-extractor)
+#   GOOGLE_SEARCH_CX              (Google Custom Search engine ID)
+#   PEXELS_API_KEY                (image search)
+#   UNSPLASH_ACCESS_KEY           (image search)
+#   APP_URL                       (e.g. https://app.genweb.in)
+#   EMAIL_FROM                    (e.g. noreply@genweb.in)
+#   RESEND_API_KEY                (Resend transactional email key, re_...)
+
+[env.production]
+workers_dev = false

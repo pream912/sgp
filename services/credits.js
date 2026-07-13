@@ -1,114 +1,65 @@
-const { db, admin } = require('./firebase');
+const crypto = require('crypto');
+const db = require('./db');
+const { hub } = require('./sse');
 
-// Get User Credits
 async function getUserCredits(userId) {
-    if (!db) return 0; // Fallback if DB not connected
-    
-    try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-            // Initialize user if not exists
-            await db.collection('users').doc(userId).set({ credits: 0 }, { merge: true });
-            return 0;
-        }
-        return userDoc.data().credits || 0;
-    } catch (error) {
-        console.error('Error getting credits:', error);
-        throw error;
-    }
+  const row = await db.one('SELECT credits FROM users WHERE id = ?', [userId]);
+  return row ? (row.credits || 0) : 0;
 }
 
-// Add Credits
-async function addCredits(userId, amount, description, transactionId = null) {
-    if (!db) return;
+async function addCredits(userId, amount, description, razorpayId = null) {
+  const user = await db.one('SELECT credits FROM users WHERE id = ?', [userId]);
+  const current = user ? (user.credits || 0) : 0;
+  const newBalance = current + amount;
+  const txId = crypto.randomUUID();
 
-    const userRef = db.collection('users').doc(userId);
-    
-    try {
-        await db.runTransaction(async (t) => {
-            const doc = await t.get(userRef);
-            const currentCredits = doc.exists ? (doc.data().credits || 0) : 0;
-            const newBalance = currentCredits + amount;
-            
-            t.set(userRef, { credits: newBalance }, { merge: true });
-            
-            // Log transaction
-            const transactionRef = db.collection('transactions').doc();
-            t.set(transactionRef, {
-                userId,
-                amount,
-                type: 'credit',
-                description,
-                balanceAfter: newBalance,
-                transactionId,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        });
-        console.log(`Added ${amount} credits to user ${userId}`);
-    } catch (error) {
-        console.error('Error adding credits:', error);
-        throw error;
-    }
+  await db.transaction([
+    {
+      sql: 'UPDATE users SET credits = ? WHERE id = ?',
+      params: [newBalance, userId],
+    },
+    {
+      sql: `INSERT INTO transactions (id, user_id, amount, type, description, balance_after, razorpay_id)
+            VALUES (?, ?, ?, 'credit', ?, ?, ?)`,
+      params: [txId, userId, amount, description, newBalance, razorpayId],
+    },
+  ]);
+
+  hub.emit(userId, 'credits', { balance: newBalance, delta: amount });
+  return newBalance;
 }
 
-// Deduct Credits
 async function deductCredits(userId, amount, description) {
-    if (!db) return true; // Dev mode / No DB -> Free
+  const user = await db.one('SELECT credits FROM users WHERE id = ?', [userId]);
+  const current = user ? (user.credits || 0) : 0;
+  if (current < amount) throw new Error('Insufficient credits');
+  const newBalance = current - amount;
+  const txId = crypto.randomUUID();
 
-    const userRef = db.collection('users').doc(userId);
-    
-    try {
-        await db.runTransaction(async (t) => {
-            const doc = await t.get(userRef);
-            const currentCredits = doc.exists ? (doc.data().credits || 0) : 0;
-            
-            if (currentCredits < amount) {
-                throw new Error('Insufficient credits');
-            }
-            
-            const newBalance = currentCredits - amount;
-            
-            t.update(userRef, { credits: newBalance });
-            
-            // Log transaction
-            const transactionRef = db.collection('transactions').doc();
-            t.set(transactionRef, {
-                userId,
-                amount: -amount,
-                type: 'debit',
-                description,
-                balanceAfter: newBalance,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        });
-        console.log(`Deducted ${amount} credits from user ${userId}`);
-        return true;
-    } catch (error) {
-        console.error('Error deducting credits:', error);
-        throw error;
-    }
+  await db.transaction([
+    {
+      sql: 'UPDATE users SET credits = ? WHERE id = ?',
+      params: [newBalance, userId],
+    },
+    {
+      sql: `INSERT INTO transactions (id, user_id, amount, type, description, balance_after)
+            VALUES (?, ?, ?, 'debit', ?, ?)`,
+      params: [txId, userId, -amount, description, newBalance],
+    },
+  ]);
+
+  hub.emit(userId, 'credits', { balance: newBalance, delta: -amount });
+  return true;
 }
 
-// Get Transactions History
-async function getTransactions(userId) {
-    if (!db) return [];
-
-    try {
-        const snapshot = await db.collection('transactions')
-            .where('userId', '==', userId)
-            .orderBy('createdAt', 'desc')
-            .limit(50)
-            .get();
-            
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-        }));
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-        throw error;
-    }
+async function getTransactions(userId, limit = 50) {
+  const rows = await db.query(
+    `SELECT id, user_id AS userId, amount, type, description, balance_after AS balanceAfter,
+            razorpay_id AS transactionId, created_at AS createdAt
+     FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
+    [userId, limit]
+  );
+  return rows;
 }
 
 module.exports = { getUserCredits, addCredits, deductCredits, getTransactions };

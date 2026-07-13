@@ -1,0 +1,24 @@
+name = "genweb-email"
+main = "email-worker.js"
+compatibility_date = "2024-12-01"
+
+account_id = "6f192f9074e96c46bff187631f5d3568"
+workers_dev = true
+
+# Email Routing send_email binding — sends mail via genweb.in's Email Routing.
+# `destination_address` must be a verified destination on Email Routing.
+[[send_email]]
+name = "SEND_EMAIL"
+
+# Secrets to set with `wrangler secret put --config wrangler.email.toml`:
+#   EMAIL_WORKER_SECRET   Shared secret matching CF_EMAIL_WORKER_SECRET on the API container
+
+[env.production]
+workers_dev = false
+
+[[env.production.routes]]
+pattern = "email.genweb.in/*"
+zone_name = "genweb.in"
+
+[[env.production.send_email]]
+name = "SEND_EMAIL"
